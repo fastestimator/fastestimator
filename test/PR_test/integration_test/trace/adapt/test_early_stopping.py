@@ -24,6 +24,7 @@ from fastestimator.util.data import Data
 
 
 class TestEarlyStopping(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.data = Data({'loss': 10})

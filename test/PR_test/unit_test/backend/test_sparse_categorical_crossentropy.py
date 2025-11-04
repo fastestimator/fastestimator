@@ -21,6 +21,7 @@ from fastestimator.backend import sparse_categorical_crossentropy
 
 
 class TestSparseCategoricalCrossEntropy(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.torch_true = torch.Tensor([0, 1, 0])

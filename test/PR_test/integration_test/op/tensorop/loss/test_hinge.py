@@ -21,6 +21,7 @@ from fastestimator.op.tensorop.loss import Hinge
 
 
 class TestHinge(unittest.TestCase):
+
     def test_torch(self):
         true = torch.tensor([[-1, 1, 1, -1], [1, 1, 1, 1], [-1, -1, 1, -1], [1, -1, -1, -1]])
         pred = torch.tensor([[0.1, 0.9, 0.05, 0.05], [0.1, -0.2, 0.0, -0.7], [0.0, 0.15, 0.8, 0.05],

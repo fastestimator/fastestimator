@@ -20,6 +20,7 @@ from fastestimator.summary.logs.log_plot import _MetricGroup
 
 
 class TestMetricGroups(unittest.TestCase):
+
     def test_add(self):
         group = _MetricGroup()
         group.add(exp_id=0, mode='train', ds_id='ds1', values={0: 5, 10: 17})

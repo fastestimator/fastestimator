@@ -840,6 +840,7 @@ class HistoryReader:
 class _GroupAction(argparse._AppendAction):
     """An argparse action which can be invoked multiple times in order to build a dictionary of entries.
     """
+
     def __call__(self, parser, namespace, values, option_string=None):
         if len(values) < 2:
             raise argparse.ArgumentError(self, "--group arguments should of the form <name> <idx1> [<idx2> ...]")

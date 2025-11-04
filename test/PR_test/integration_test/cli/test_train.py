@@ -24,6 +24,7 @@ class TestGetEstimator(unittest.TestCase):
     * fe.cli.train._get_estimator
     * fe.cli.cli_util.parse_cli_to_dictionary
     """
+
     def test_get_estimator_no_hyperparameters_json(self):
         args = {
             "entry_point": os.path.join(os.path.abspath(__file__), "..", "resources", "sample.py"),

@@ -32,24 +32,31 @@ from fastestimator.dataset.numpy_dataset import NumpyDataset
 from fastestimator.op.numpyop import Batch, NumpyOp
 from fastestimator.op.tensorop.model.model import ModelOp
 from fastestimator.op.tensorop.tensorop import LambdaOp
-from fastestimator.test.unittest_util import sample_system_object, sample_system_object_torch
+from fastestimator.test.unittest_util import (
+    sample_system_object,
+    sample_system_object_torch,
+)
 from fastestimator.trace.trace import Trace
 from fastestimator.util import get_num_gpus
 
 
 class Plus(NumpyOp):
+
     def forward(self, data, state):
         return data + 0.5
 
 
 class TestDataset(NumpyDataset):
+
     def __init__(self, data, var):
         super().__init__(data)
         self.var = var
 
 
 class TestInterleaveDatasetRestoreWizard(unittest.TestCase):
+
     def test_save_and_load_state_with_batch_dataset_tf(self):
+
         def instantiate_system():
             system = sample_system_object()
             x_train = np.ones((2, 28, 28, 3))
@@ -77,6 +84,7 @@ class TestInterleaveDatasetRestoreWizard(unittest.TestCase):
         self.assertEqual(loaded_var, new_var)
 
     def test_save_and_load_state_with_batch_dataset_torch(self):
+
         def instantiate_system():
             system = sample_system_object_torch()
             x_train = np.ones((2, 3, 28, 28))
@@ -105,6 +113,7 @@ class TestInterleaveDatasetRestoreWizard(unittest.TestCase):
 
 
 class TestInterleaveDataset(unittest.TestCase):
+
     @classmethod
     def setUpClass(self):
         self.data1 = {"x": [x for x in range(1, 11)], "ds_id": [0 for _ in range(10)]}
@@ -177,12 +186,14 @@ class TestInterleaveDataset(unittest.TestCase):
         self.assertAlmostEqual(len(results[3]['x'].numpy()), 1)
 
     def test_interleave_dataset_with_different_shapes(self):
+
         def mymodel(input_shape):
             model = Sequential()
             model.add(layers.Conv2D(1, (3, 3), activation='relu', input_shape=input_shape))
             return model
 
         class Collector(Trace):
+
             def __init__(self) -> None:
                 super().__init__(inputs="x")
                 self.shapes = []
@@ -199,9 +210,7 @@ class TestInterleaveDataset(unittest.TestCase):
         dataset = InterleaveDataset(datasets=[ds1, ds2])
         pipeline = fe.Pipeline(train_data=dataset, batch_size=2)
         model = fe.build(model_fn=lambda: mymodel(input_shape=(None, None, 1)), optimizer_fn="adam")
-        network = fe.Network(ops=[
-            ModelOp(inputs="x", outputs="y_pred", model=model)
-        ])
+        network = fe.Network(ops=[ModelOp(inputs="x", outputs="y_pred", model=model)])
         estimator = fe.Estimator(pipeline=pipeline, network=network, epochs=1, traces=Collector())
         summary = estimator.fit("test")
         self.assertEqual(summary.history['train']['epoch'][20], 1)
@@ -213,6 +222,7 @@ class TestInterleaveDataset(unittest.TestCase):
         self.assertEqual(list(summary.history['train']['batch_shapes'][20][3]), target_28)
 
     def test_interleave_dataset_with_different_dtypes(self):
+
         def mymodel(input_shape):
             model = Sequential()
             model.add(layers.Conv2D(1, (3, 3), activation='relu', input_shape=input_shape))

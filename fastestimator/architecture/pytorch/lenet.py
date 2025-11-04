@@ -34,6 +34,7 @@ class LeNet(torch.nn.Module):
         ValueError: Length of `input_shape` is not 3.
         ValueError: `input_shape`[1] or `input_shape`[2] is smaller than 18.
     """
+
     def __init__(self, input_shape: Tuple[int, int, int] = (1, 28, 28), classes: int = 10) -> None:
         LeNet._check_input_shape(input_shape)
         super().__init__()

@@ -26,10 +26,11 @@ class TestCSVDataset(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         tmpdirname = tempfile.mkdtemp()
-        data = {'idx': [0, 1, 2, 3, 4, 5, 6, 7, 8],
-                'mode': ['train', 'eval', 'test', 'train', 'eval', 'test', 'train', 'eval', 'test'],
-                'type': [0, 1, 2, 2, 0, 1, 1, 0, None]
-                }
+        data = {
+            'idx': [0, 1, 2, 3, 4, 5, 6, 7, 8],
+            'mode': ['train', 'eval', 'test', 'train', 'eval', 'test', 'train', 'eval', 'test'],
+            'type': [0, 1, 2, 2, 0, 1, 1, 0, None]
+        }
         df = pd.DataFrame(data=data)
         df.to_csv(os.path.join(tmpdirname, 'data.csv'), index=False)
         cls.csv_path = os.path.join(tmpdirname, 'data.csv')
@@ -72,30 +73,34 @@ class TestCSVDataset(unittest.TestCase):
 
     def test_filter_with_raw_None(self):
         dataset = fe.dataset.CSVDataset(file_path=self.csv_path,
-                                        include_if={'mode': 'test', 'type': None},
+                                        include_if={
+                                            'mode': 'test', 'type': None
+                                        },
                                         fill_na=None)
         self.assertSetEqual(set(dataset['idx']), {8})
 
     def test_filter_with_wrapped_None(self):
         dataset = fe.dataset.CSVDataset(file_path=self.csv_path,
-                                        include_if={'mode': 'test', 'type': [None]},
+                                        include_if={
+                                            'mode': 'test', 'type': [None]
+                                        },
                                         fill_na=None)
         self.assertSetEqual(set(dataset['idx']), {8})
 
     def test_filter_with_multi_None(self):
         dataset = fe.dataset.CSVDataset(file_path=self.csv_path,
-                                        include_if={'mode': 'test', 'type': [2, None]},
+                                        include_if={
+                                            'mode': 'test', 'type': [2, None]
+                                        },
                                         fill_na=None)
         self.assertSetEqual(set(dataset['idx']), {2, 8})
 
     def test_filter_query_string(self):
-        dataset = fe.dataset.CSVDataset(file_path=self.csv_path,
-                                        include_if='type >= 1')
+        dataset = fe.dataset.CSVDataset(file_path=self.csv_path, include_if='type >= 1')
         self.assertSetEqual(set(dataset['idx']), {1, 2, 3, 5, 6})
 
     def test_filter_function_one_inp(self):
-        dataset = fe.dataset.CSVDataset(file_path=self.csv_path,
-                                        include_if=lambda mode: mode == 'test')
+        dataset = fe.dataset.CSVDataset(file_path=self.csv_path, include_if=lambda mode: mode == 'test')
         self.assertSetEqual(set(dataset['idx']), {2, 5, 8})
 
     def test_filter_function_two_inp(self):
@@ -105,5 +110,4 @@ class TestCSVDataset(unittest.TestCase):
 
     def test_filter_function_bad_col(self):
         with self.assertRaises(ValueError):
-            fe.dataset.CSVDataset(file_path=self.csv_path,
-                                  include_if=lambda mode, idf: mode == 'test' or idf % 2 == 1)
+            fe.dataset.CSVDataset(file_path=self.csv_path, include_if=lambda mode, idf: mode == 'test' or idf % 2 == 1)

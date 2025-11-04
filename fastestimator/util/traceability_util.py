@@ -24,9 +24,18 @@ from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Type, TypeVa
 
 import numpy as np
 import pandas as pd
-
 import torch
-from pylatex import Document, Label, Marker, MultiColumn, NoEscape, Package, Table, Tabularx, TextColor
+from pylatex import (
+    Document,
+    Label,
+    Marker,
+    MultiColumn,
+    NoEscape,
+    Package,
+    Table,
+    Tabularx,
+    TextColor,
+)
 from pylatex.base_classes import LatexObject
 from pylatex.utils import bold, escape_latex, italic
 
@@ -84,6 +93,7 @@ _RestorableClasses = (int,
                       pd.DataFrame)
 
 Model = TypeVar('Model', bound=torch.nn.Module)
+
 
 class FeInputSpec:
     """A class to keep track of a model's input so that fake inputs can be generated.
@@ -188,10 +198,8 @@ class FeSplitSummary(LatexObject):
         return " $\\rightarrow$ ".join([
             f"{HrefFEID(parent, name='').dumps() if isinstance(parent, FEID) else parent}({escape_latex(fraction)}" +
             (f", seed={seed}" if seed is not None else "") +
-            (f", stratify=`{escape_latex(stratify)}'" if stratify is not None else "") + ")" for parent,
-            fraction,
-            seed,
-            stratify in self.data
+            (f", stratify=`{escape_latex(stratify)}'" if stratify is not None else "") + ")"
+            for parent, fraction, seed, stratify in self.data
         ])
 
 
@@ -545,8 +553,7 @@ def _trace_value(inp: Any, tables: Dict[FEID, FeSummaryTable], ret_ref: Flag, wr
         return PyContainer(
             data={
                 _trace_value(k, tables, ret_ref, wrap_str=wrap_str): _trace_value(v, tables, ret_ref, wrap_str=True)
-                for k,
-                v in inp.items()
+                for k, v in inp.items()
             },
             truncate=_CollectionSizeLimit)
     elif isinstance(inp, (torch.Tensor, np.ndarray)):

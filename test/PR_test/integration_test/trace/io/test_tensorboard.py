@@ -26,7 +26,11 @@ import torch
 from PIL import Image
 
 import fastestimator as fe
-from fastestimator.test.unittest_util import is_equal, sample_system_object, sample_system_object_torch
+from fastestimator.test.unittest_util import (
+    is_equal,
+    sample_system_object,
+    sample_system_object_torch,
+)
 from fastestimator.trace.io import TensorBoard
 from fastestimator.trace.io.tensorboard import _TfWriter, _TorchWriter
 from fastestimator.util.data import Data
@@ -40,6 +44,7 @@ def getfilepath():
 
 
 class TestTensorboard(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.tf_data = Data({

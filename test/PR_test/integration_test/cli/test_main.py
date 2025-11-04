@@ -26,6 +26,7 @@ class TestMain(unittest.TestCase):
     * fe.cli.train.configure_train_parser
     * fe.cli.run_main
     """
+
     def test_cli_main_run_train(self):
         with patch('fastestimator.cli.train.train') as fake:
             fe.cli.run_main(["train", "example_entry.py", "--epochs", "3", "--batch_size", "64"])

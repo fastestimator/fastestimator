@@ -56,6 +56,7 @@ class Rotate(MultiVariateAlbumentation):
     Image types:
         uint8, float32
     """
+
     def __init__(self,
                  limit: Union[int, Tuple[int, int]] = 90,
                  interpolation: int = cv2.INTER_LINEAR,

@@ -23,6 +23,7 @@ from fastestimator.util.util import get_num_gpus
 
 
 class TestTrainEssential(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.data = Data({'loss': 10})

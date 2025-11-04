@@ -21,6 +21,7 @@ from fastestimator.dataset.numpy_dataset import NumpyDataset
 
 
 class TestInterleaveDataset(unittest.TestCase):
+
     @classmethod
     def setUpClass(self):
         self.data1 = {"x": [x for x in range(1, 11)], "ds_id": [0 for _ in range(10)]}

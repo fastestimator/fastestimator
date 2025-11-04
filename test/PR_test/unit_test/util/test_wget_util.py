@@ -18,6 +18,7 @@ import fastestimator as fe
 
 
 class TestWgetUtil(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.op = " 10% [......                                                        ] 0.00 / 0.00 MB"

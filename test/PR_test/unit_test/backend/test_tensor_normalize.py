@@ -16,10 +16,11 @@ import unittest
 
 import numpy as np
 
-from fastestimator.backend import to_tensor, normalize
+from fastestimator.backend import normalize, to_tensor
 
 
 class TestNormalize(unittest.TestCase):
+
     @classmethod
     def setUpClass(self):
         self.numpy_array = np.arange(0.0, 12.0, 1.0, dtype=np.float32).reshape((1, 2, 2, 3))
@@ -40,7 +41,8 @@ class TestNormalize(unittest.TestCase):
 
     def test_normalize_torch_value(self):
         np.testing.assert_array_almost_equal(
-            normalize(to_tensor(self.numpy_array_float, 'torch'), 0.5, 0.31382295, 11.0).numpy(), self.expected_result_torch)
+            normalize(to_tensor(self.numpy_array_float, 'torch'), 0.5, 0.31382295, 11.0).numpy(),
+            self.expected_result_torch)
 
     def test_normalize_torch_value_int(self):
         np.testing.assert_array_almost_equal(

@@ -17,12 +17,14 @@ import inspect
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple, TypeVar, Union
 
 import torch
+
 from fastestimator.network import BaseNetwork
 from fastestimator.op.tensorop.tensorop import TensorOp
 from fastestimator.util.traceability_util import traceable
 
 Tensor = TypeVar('Tensor', bound=torch.Tensor)
 Model = TypeVar('Model', bound=torch.nn.Module)
+
 
 @traceable()
 class Repeat(TensorOp):
@@ -59,6 +61,7 @@ class Repeat(TensorOp):
     Raises:
         ValueError: If `repeat`, `op`, or max_iter are invalid.
     """
+
     def __init__(self, op: TensorOp, repeat: Union[int, Callable[..., bool]] = 1,
                  max_iter: Optional[int] = None) -> None:
         self.repeat_inputs = []

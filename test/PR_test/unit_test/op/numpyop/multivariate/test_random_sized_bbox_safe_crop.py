@@ -21,6 +21,7 @@ from fastestimator.op.numpyop.multivariate import RandomSizedBBoxSafeCrop
 
 
 class TestRandomSizedBBoxSafeCrop(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.height = 12

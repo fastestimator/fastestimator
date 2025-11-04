@@ -18,6 +18,7 @@ from fastestimator.schedule import EpochScheduler
 
 
 class TestEpochScheduler(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.input_data = {1: "a", 3: "b", 4: None, 100: "c"}

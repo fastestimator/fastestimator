@@ -21,6 +21,7 @@ from fastestimator.trace.metric import F1Score
 
 
 class TestF1Score(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.f1_key = "f1_score"

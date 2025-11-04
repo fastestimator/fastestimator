@@ -12,7 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Set, TypeVar, Union
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Sequence,
+    Set,
+    TypeVar,
+    Union,
+)
 
 import torch
 
@@ -22,12 +33,14 @@ from fastestimator.util.traceability_util import traceable
 Tensor = TypeVar('Tensor', bound=torch.Tensor)
 Model = TypeVar('Model', bound=torch.nn.Module)
 
+
 @traceable()
 class TensorOp(Op):
     """An Operator class which takes and returns tensor data.
 
     These Operators are used in fe.Network to perform graph-based operations like neural network training.
     """
+
     def forward(self, data: Union[Tensor, List[Tensor]], state: Dict[str, Any]) -> Union[Tensor, List[Tensor]]:
         """A method which will be invoked in order to transform data.
 
@@ -102,6 +115,7 @@ class TensorOp(Op):
         """
         return None
 
+
 @traceable()
 class LambdaOp(TensorOp):
     """An Operator that performs any specified function as forward function.
@@ -116,6 +130,7 @@ class LambdaOp(TensorOp):
         ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
             ds_ids except for a particular one, you can pass an argument like "!ds1".
     """
+
     def __init__(self,
                  fn: Callable,
                  inputs: Union[None, str, Iterable[str]] = None,
@@ -128,6 +143,7 @@ class LambdaOp(TensorOp):
 
     def forward(self, data: List[Tensor], state: Dict[str, Any]) -> Union[Tensor, List[Tensor]]:
         return self.fn(*data)
+
 
 @traceable()
 class Delete(TensorOp):
@@ -143,6 +159,7 @@ class Delete(TensorOp):
         ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
             ds_ids except for a particular one, you can pass an argument like "!ds1".
     """
+
     def __init__(self,
                  keys: Union[str, Sequence[str]],
                  mode: Union[None, str, Iterable[str]] = None,

@@ -12,11 +12,10 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 # ==============================================================================
-from typing import Any, Dict, List, Optional, Tuple, TypeVar, Iterable, Union
+from typing import Any, Dict, Iterable, List, Optional, Tuple, TypeVar, Union
 
 import cv2
 import numpy as np
-
 import torch
 
 from fastestimator.backend._argmax import argmax
@@ -26,11 +25,12 @@ from fastestimator.backend._reduce_max import reduce_max
 from fastestimator.backend._squeeze import squeeze
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
-from fastestimator.util.img_data import GridDisplay, BatchDisplay
+from fastestimator.util.img_data import BatchDisplay, GridDisplay
 from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import to_number
 
 Tensor = TypeVar('Tensor', torch.Tensor, np.ndarray)
+
 
 @traceable()
 class EigenCAM(Trace):
@@ -61,6 +61,7 @@ class EigenCAM(Trace):
         ds_id: What dataset id(s) to execute this Trace in. To execute regardless of ds_id, pass None. To execute in all
             ds_ids except for a particular one, you can pass an argument like "!ds1".
     """
+
     def __init__(self,
                  images: str,
                  activations: str,
@@ -119,7 +120,7 @@ class EigenCAM(Trace):
                     for i in range(activation.shape[0]):
                         small_activations.append(
                             cv2.resize(src=activation[i, ...],
-                                       dsize=(int(activation.shape[1]*scale), int(activation.shape[2]*scale)),
+                                       dsize=(int(activation.shape[1] * scale), int(activation.shape[2] * scale)),
                                        interpolation=cv2.INTER_AREA))
                     activation = np.array(small_activations)
             flat = activation.reshape(activation.shape[0], -1).transpose()
@@ -182,7 +183,7 @@ class EigenCAM(Trace):
                     mask = cv2.resize(mask, (width, height))
                     mask = mask - np.min(mask)
                     mask = mask / np.max(mask)
-                    mask = cv2.cvtColor(cv2.applyColorMap(np.uint8(255*mask), cv2.COLORMAP_JET), cv2.COLOR_BGR2RGB)
+                    mask = cv2.cvtColor(cv2.applyColorMap(np.uint8(255 * mask), cv2.COLORMAP_JET), cv2.COLOR_BGR2RGB)
                     mask = np.float32(mask) / 255
                     # switch to channel first for pytorch
                     if isinstance(base_image, torch.Tensor):

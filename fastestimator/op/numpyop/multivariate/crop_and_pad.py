@@ -53,6 +53,7 @@ class CropAndPad(MultiVariateAlbumentation):
     Image types:
         uint8, float32
     """
+
     def __init__(self,
                  px: Union[None, int, Tuple[int, int]] = None,
                  percent: Union[None, float, Tuple[float, float]] = None,
@@ -70,18 +71,18 @@ class CropAndPad(MultiVariateAlbumentation):
                  mask_out: Optional[str] = None,
                  masks_out: Optional[Iterable[str]] = None):
         order = {'nearest_neighbor': 0, 'bilinear': 1, 'bicubic': 3, 'biquartic': 4, 'biquintic': 5}[interpolation]
-        border = {'constant':0, 'reflect':1}[pad_mode]
+        border = {'constant': 0, 'reflect': 1}[pad_mode]
         if not pad_cval_mask:
             pad_cval_mask = pad_cval
         super().__init__(
             CropAndPadAlb(px=px,
-                             percent=percent,
-                             pad_mode=border,
-                             pad_cval=pad_cval,
-                             pad_cval_mask=pad_cval_mask,
-                             keep_size=keep_size,
-                             interpolation=order,
-                             always_apply=True),
+                          percent=percent,
+                          pad_mode=border,
+                          pad_cval=pad_cval,
+                          pad_cval_mask=pad_cval_mask,
+                          keep_size=keep_size,
+                          interpolation=order,
+                          always_apply=True),
             image_in=image_in,
             mask_in=mask_in,
             masks_in=masks_in,

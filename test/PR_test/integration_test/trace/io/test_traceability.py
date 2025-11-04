@@ -74,6 +74,7 @@ def _build_estimator(model: torch.nn.Module, trace: Traceability, axis: int = -1
 
 
 class TestTraceability(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.root_dir = os.path.join(tempfile.gettempdir(), "FEUnitTestReports")

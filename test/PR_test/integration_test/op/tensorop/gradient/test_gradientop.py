@@ -18,7 +18,11 @@ import numpy as np
 import torch
 
 from fastestimator.op.tensorop.gradient import GradientOp
-from fastestimator.test.unittest_util import OneLayerTorchModel, is_equal, one_layer_tf_model
+from fastestimator.test.unittest_util import (
+    OneLayerTorchModel,
+    is_equal,
+    one_layer_tf_model,
+)
 
 
 class TestGradientOp(unittest.TestCase):

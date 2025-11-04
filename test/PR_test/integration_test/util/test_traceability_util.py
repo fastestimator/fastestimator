@@ -18,12 +18,18 @@ import numpy as np
 from pylatex.utils import NoEscape
 
 from fastestimator.schedule.lr_schedule import cosine_decay
-from fastestimator.util.latex_util import ContainerList, HrefFEID
-from fastestimator.util.traceability_util import _parse_lambda, _parse_lambda_fallback, _trace_value, traceable
 from fastestimator.util.base_util import Flag
+from fastestimator.util.latex_util import ContainerList, HrefFEID
+from fastestimator.util.traceability_util import (
+    _parse_lambda,
+    _parse_lambda_fallback,
+    _trace_value,
+    traceable,
+)
 
 
 class NonTraceableObject:
+
     def __init__(self, a, b):
         self._private = a
         self.public = b
@@ -31,12 +37,14 @@ class NonTraceableObject:
 
 @traceable()
 class TraceableObject:
+
     def __init__(self, a, b):
         self._private = a
         self.public = b
 
 
 class TestTraceValue(unittest.TestCase):
+
     def test_simple_lambda_inlining(self):
         tables = {}
         ret_ref = Flag()
@@ -76,6 +84,7 @@ class TestTraceValue(unittest.TestCase):
 
 
 class TestParseLambda(unittest.TestCase):
+
     def test_conditional_lambda(self):
         tables = {}
         ret_ref = Flag()
@@ -93,6 +102,7 @@ class TestParseLambda(unittest.TestCase):
 
 
 class TestParseLambdaFallback(unittest.TestCase):
+
     def test_lambda_simple(self):
         tables = {}
         ret_ref = Flag()

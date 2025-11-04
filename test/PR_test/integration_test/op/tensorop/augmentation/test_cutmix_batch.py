@@ -19,8 +19,12 @@ import numpy as np
 import torch
 
 from fastestimator.op.tensorop.augmentation import CutMixBatch
-from fastestimator.test.unittest_util import MockBetaDistribution, MockUniformDistribution, check_img_similar, \
-    img_to_rgb_array
+from fastestimator.test.unittest_util import (
+    MockBetaDistribution,
+    MockUniformDistribution,
+    check_img_similar,
+    img_to_rgb_array,
+)
 
 
 class TestCutMixBatch(unittest.TestCase):

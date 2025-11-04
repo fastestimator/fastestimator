@@ -22,6 +22,7 @@ from fastestimator.test.unittest_util import is_equal
 
 
 class TestRoll(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.test_np = np.array([[1.0, 2.0, 3.0], [5.0, 6.0, 7.0]])

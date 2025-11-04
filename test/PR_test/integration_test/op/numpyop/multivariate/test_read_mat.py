@@ -22,6 +22,7 @@ from fastestimator.test.unittest_util import is_equal
 
 
 class TestReadMat(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.mat_path = os.path.abspath(

@@ -40,6 +40,7 @@ class AutoContrast(NumpyOp):
     Image types:
         uint8
     """
+
     def __init__(self,
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],

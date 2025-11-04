@@ -21,6 +21,7 @@ from fastestimator.test.unittest_util import is_equal
 
 
 class testIsEqual(unittest.TestCase):
+
     def test_is_equal_numpy_array(self):
         obj1 = np.array([1, 2.2, -3])
         obj2 = np.array([1, 2.2, -3])
@@ -110,7 +111,6 @@ class testIsEqual(unittest.TestCase):
 
         obj2 = {"1": [-1, 2.5], "2": {"3": torch.Tensor([1.5])}}
         self.assertFalse(is_equal(obj1, obj2))
-
 
     def test_is_equal_dtype_torch(self):
         obj1 = torch.tensor([1, 2], dtype=torch.float32)

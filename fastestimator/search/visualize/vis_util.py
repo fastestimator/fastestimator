@@ -40,6 +40,7 @@ def _load_search_file(path: str) -> Search:
 
 
 class SearchData:
+
     def __init__(self, search: Search, ignore_keys: Union[None, str, Sequence[str]] = None):
         self.params = []
         self.results = []

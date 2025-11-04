@@ -26,14 +26,26 @@ DEFAULT_LOG_KEEP = 500
 
 
 class TestConnect(unittest.TestCase):
+
     def test_make_schema(self):
         db = connect(":memory:")
         with closing(db.cursor()) as cursor:
             cursor.execute("SELECT name FROM sqlite_master WHERE type = 'table'")
             results = cursor.fetchall()
         results = {result['name'] for result in results}
-        expected = {"datasets", "errors", "features", "history", "pipeline", "network", "postprocess", "traces",
-                    "errors", "logs", "settings"}
+        expected = {
+            "datasets",
+            "errors",
+            "features",
+            "history",
+            "pipeline",
+            "network",
+            "postprocess",
+            "traces",
+            "errors",
+            "logs",
+            "settings"
+        }
         self.assertSetEqual(results, expected)
         db.close()
 
@@ -90,6 +102,7 @@ class TestConnect(unittest.TestCase):
 
 
 class TestDelete(unittest.TestCase):
+
     def setUp(self):
         self.db_dir = tempfile.mkdtemp()
         self.db_path = os.path.join(self.db_dir, 'tmp.db')
@@ -139,6 +152,7 @@ class TestDelete(unittest.TestCase):
 
 
 class TestUpdateSettings(unittest.TestCase):
+
     def setUp(self):
         self.db_dir = tempfile.mkdtemp()
         self.db_path = os.path.join(self.db_dir, 'tmp.db')

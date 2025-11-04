@@ -25,6 +25,7 @@ from fastestimator.util.base_util import NonContext, to_list, warn
 from fastestimator.util.traceability_util import FeInputSpec, traceable
 from fastestimator.util.util import get_num_devices
 
+
 @traceable()
 class ModelOp(TensorOp):
     """This class performs forward passes of a neural network over batch data to generate predictions.
@@ -148,6 +149,7 @@ def _capture_call_torch(module: torch.nn.Module,
         fe_storage: A place to store the output from the layer.
     """
     fe_storage[input[0].device] = output
+
 
 def _unpack_output(output_dict: Dict[Union[str, torch.device], Tensor], device: Union[str, torch.device]) -> Tensor:
     """A function to convert a collection of layer outputs into a single output.

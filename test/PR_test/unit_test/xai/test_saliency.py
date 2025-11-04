@@ -21,6 +21,7 @@ from fastestimator.architecture.pytorch import LeNet
 
 
 class TestSaliencyNetGetMask(unittest.TestCase):
+
     def test_salency_net_get_masks(self):
         outputs = "saliency"
         batch = {"x": np.random.uniform(0, 1, size=[4, 1, 28, 28]).astype(np.float32)}
@@ -37,6 +38,7 @@ class TestSaliencyNetGetMask(unittest.TestCase):
 
 
 class TestSaliencyGetSmoothedMasks(unittest.TestCase):
+
     def test_salency_net_get_smoothed_masks(self):
         outputs = "saliency"
         batch = {"x": np.random.uniform(0, 1, size=[4, 1, 28, 28]).astype(np.float32)}
@@ -53,6 +55,7 @@ class TestSaliencyGetSmoothedMasks(unittest.TestCase):
 
 
 class TestSaliencyGetIntegratedMasks(unittest.TestCase):
+
     def test_salency_net_get_integrated_masks(self):
         outputs = "saliency"
         batch = {"x": np.random.uniform(0, 1, size=[4, 1, 28, 28]).astype(np.float32)}

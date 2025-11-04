@@ -19,11 +19,9 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple, TypeVar, Union
 import cv2
 import numpy as np
 import tensorboard as tb
-
 import torch
 from keras import backend
 from plotly.graph_objs import Figure
-
 from torch.utils.tensorboard import SummaryWriter
 
 from fastestimator.backend._abs import abs
@@ -44,6 +42,7 @@ from fastestimator.util.util import get_num_gpus, to_number
 
 Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
 Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
+
 
 class _BaseWriter:
     """A class to write various types of data into TensorBoard summary files.
@@ -189,6 +188,8 @@ class _BaseWriter:
         # Not possible to handle 3D convnets etc.
         if len(shape) == 4 and shape[-1] in [1, 3, 4]:
             return w_img
+
+
 class _TorchWriter(_BaseWriter):
     """A class to write various Pytorch data into TensorBoard summary files.
 
@@ -214,6 +215,7 @@ class _TorchWriter(_BaseWriter):
                                                               img_tensor=weight,
                                                               global_step=step,
                                                               dataformats='NHWC')
+
 
 @traceable()
 class TensorBoard(Trace):
@@ -291,16 +293,16 @@ class TensorBoard(Trace):
 
         else:
             embedding_images = [None for _ in range(len(write_embeddings))]
-        self.write_embeddings = [(feature, label, img_label) for feature,
-                                 label,
-                                 img_label in zip(write_embeddings, embedding_labels, embedding_images)]
+        self.write_embeddings = [
+            (feature, label, img_label)
+            for feature, label, img_label in zip(write_embeddings, embedding_labels, embedding_images)
+        ]
         self.collected_embeddings = defaultdict(list)
 
     def on_begin(self, data: Data) -> None:
         print("FastEstimator-Tensorboard: writing logs to {}".format(
             os.path.abspath(os.path.join(self.root_log_dir, self.system.experiment_time))))
-        self.writer = _TorchWriter(
-                self.root_log_dir, self.system.experiment_time, self.system.network)
+        self.writer = _TorchWriter(self.root_log_dir, self.system.experiment_time, self.system.network)
         if self.write_graph and self.system.global_step == 1:
             self.painted_graphs = set()
 

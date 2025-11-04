@@ -20,6 +20,7 @@ from fastestimator.op.numpyop.univariate import Normalize
 
 
 class TestNormalize(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.single_input = [np.random.rand(28, 28, 3)]

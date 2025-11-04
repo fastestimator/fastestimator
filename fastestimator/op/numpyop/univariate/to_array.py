@@ -34,6 +34,7 @@ class ToArray(NumpyOp):
             ds_ids except for a particular one, you can pass an argument like "!ds1".
         dtype: The dtype to apply to the output array, or None to infer the type.
     """
+
     def __init__(self,
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],

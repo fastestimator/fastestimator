@@ -35,6 +35,7 @@ class Sometimes(NumpyOp):
         numpy_op: The operator to be performed.
         prob: The probability of execution, which should be in the range: [0-1).
     """
+
     def __init__(self, numpy_op: NumpyOp, prob: float = 0.5) -> None:
         # We're going to try to collect any missing output keys from the data dictionary so that they don't get
         # overridden when Sometimes chooses not to execute.

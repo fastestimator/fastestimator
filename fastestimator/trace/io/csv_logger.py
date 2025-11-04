@@ -43,6 +43,7 @@ class CSVLogger(Trace):
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
     """
+
     def __init__(self,
                  filename: str,
                  monitor_names: Optional[Union[List[str], str]] = None,

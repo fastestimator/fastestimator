@@ -31,6 +31,7 @@ class PickleDataset(InMemoryDataset):
     Args:
         file_path: The (absolute) path to the pickle file.
     """
+
     def __init__(self, file_path: str) -> None:
         df = pd.read_pickle(file_path)
         self.parent_path = os.path.dirname(file_path)

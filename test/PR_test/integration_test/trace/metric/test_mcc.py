@@ -26,6 +26,7 @@ def mcc_func(tp, tn, fp, fn):
 
 
 class TestMCC(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.mcc_key = "mcc"

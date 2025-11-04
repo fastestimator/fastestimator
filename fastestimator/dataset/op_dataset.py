@@ -118,6 +118,7 @@ class OpDataset(Dataset):
         deep_remainder: Whether data which is not modified by Ops should be deep copied or not. This argument is used to
             help with RAM management, but end users can almost certainly ignore it.
     """
+
     def __init__(self,
                  dataset: Dataset,
                  ops: List[NumpyOp],

@@ -21,6 +21,7 @@ import fastestimator as fe
 
 
 class TestToShape(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.data_np = {"x": np.ones((10, 15)), "y": [np.ones((4)), np.ones((5, 3))], "z": {"key": np.ones((2, 2))}}

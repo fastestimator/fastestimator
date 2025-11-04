@@ -31,8 +31,10 @@ def per_ds(clz):
         which is set to False, or has outputs containing the '|' character, then a normal (non-ds-aware) instance will
         be returned instead.
     """
+
     @functools.wraps(clz, updated=())
     class PerDS(clz, PerDSTrace):
+
         def __new__(cls, *args, **kwargs):
             # We will dynamically determine whether to return a base object or a PerDS variant
             # If any of the outputs already use the | character then we cannot make this a PerDS variant

@@ -44,6 +44,7 @@ class RandomRain(ImageOnlyAlbumentation):
     Image types:
         uint8, float32
     """
+
     def __init__(self,
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
@@ -58,15 +59,16 @@ class RandomRain(ImageOnlyAlbumentation):
                  brightness_coefficient: float = 0.7,
                  rain_type: Optional[str] = None):
         super().__init__(
-            RandomRainAlb(slant_lower=slant_lower,
-                          slant_upper=slant_upper,
-                          drop_length=drop_length,
-                          drop_width=drop_width,
-                          drop_color=drop_color,  # Their docstring type hint doesn't match the real code
-                          blur_value=blur_value,
-                          brightness_coefficient=brightness_coefficient,
-                          rain_type=rain_type,
-                          always_apply=True),
+            RandomRainAlb(
+                slant_lower=slant_lower,
+                slant_upper=slant_upper,
+                drop_length=drop_length,
+                drop_width=drop_width,
+                drop_color=drop_color,  # Their docstring type hint doesn't match the real code
+                blur_value=blur_value,
+                brightness_coefficient=brightness_coefficient,
+                rain_type=rain_type,
+                always_apply=True),
             inputs=inputs,
             outputs=outputs,
             mode=mode,

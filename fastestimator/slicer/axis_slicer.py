@@ -43,6 +43,7 @@ class AxisSlicer(Slicer):
         ds_id: What dataset id(s) to invoke this Slicer in. To invoke regardless of ds_id, pass None. To invoke in all
             ds_ids except for a particular one, you can pass an argument like "!ds1".
     """
+
     def __init__(self,
                  axis: int,
                  slice: Union[None, str, Sequence[str]] = None,

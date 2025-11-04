@@ -18,11 +18,11 @@ from copy import deepcopy
 import numpy as np
 import tensorflow as tf
 import torch
+from fastestimator.architecture.tensorflow import LeNet
+from fastestimator.architecture.tensorflow import LeNet as LeNetTf
 
 import fastestimator as fe
 from fastestimator.architecture.pytorch import LeNet as LeNetTorch
-from fastestimator.architecture.tensorflow import LeNet
-from fastestimator.architecture.tensorflow import LeNet as LeNetTf
 from fastestimator.dataset.data import mnist
 from fastestimator.network import TFNetwork, TorchNetwork
 from fastestimator.op.numpyop import NumpyOp
@@ -377,7 +377,6 @@ class TestNetworkBuild(unittest.TestCase):
         with self.subTest("specify model_name"):
             model = fe.build(model_fn=one_layer_tf_model, optimizer_fn="adam", model_name="test")
             self.assertEqual(model.model_name, "test")
-
 
     def test_network_build_torch_model_torch_optimizer_check_model_optimizer_instance(self):
         model = fe.build(model_fn=OneLayerTorchModel, optimizer_fn=lambda x: torch.optim.SGD(params=x, lr=0.01))

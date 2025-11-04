@@ -49,6 +49,7 @@ class RandomCrop(MultiVariateAlbumentation):
     Image types:
         uint8, float32
     """
+
     def __init__(self,
                  height: int,
                  width: int,

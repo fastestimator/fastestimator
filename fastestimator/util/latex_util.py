@@ -15,7 +15,13 @@
 from typing import Iterable, Optional, Union
 
 from pylatex import NoEscape, Package, escape_latex
-from pylatex.base_classes import Container, ContainerCommand, Environment, LatexObject, Options
+from pylatex.base_classes import (
+    Container,
+    ContainerCommand,
+    Environment,
+    LatexObject,
+    Options,
+)
 from pylatex.lists import Enumerate
 from pylatex.utils import bold, dumps_list
 
@@ -27,6 +33,7 @@ class ContainerList(Container):
 
     This class is intentionally not @traceable.
     """
+
     def dumps(self) -> str:
         """Get a string representation of this container.
 
@@ -46,6 +53,7 @@ class PyContainer(ContainerList):
         truncate: How many values to display before truncating with an ellipsis. This should be a positive integer or
             None to disable truncation.
     """
+
     def __init__(self, data: Union[list, tuple, set, dict], truncate: Optional[int] = None):
         self.packages.add(Package('enumitem', options='inline'))
         assert isinstance(data, (list, tuple, set, dict)), f"Unacceptable data type for PyContainer: {type(data)}"
@@ -73,6 +81,7 @@ class Verbatim(Environment):
     Args:
         data: The string to be wrapped.
     """
+
     def __init__(self, data: str):
         super().__init__(options=None, arguments=None, start_arguments=None, data=NoEscape(data))
         self.content_separator = '\n'
@@ -151,6 +160,7 @@ class HrefFEID(ContainerList):
         id_in_name: Whether to include the id in front of the name text.
         bold_name: Whether to bold the name.
     """
+
     def __init__(self,
                  fe_id: FEID,
                  name: str,
@@ -166,7 +176,8 @@ class HrefFEID(ContainerList):
         self.name = name
         data = [
             NoEscape(r'\hyperref['),
-            escape_latex(f"{link_prefix}:"), fe_id,
+            escape_latex(f"{link_prefix}:"),
+            fe_id,
             NoEscape(r']{\textcolor{' + color + r'}{\uline{')
         ]
         if id_in_name:
@@ -186,6 +197,7 @@ class IterJoin(Container):
         data: Data of the cell.
         token: String to serve as separator among items of `data`.
     """
+
     def __init__(self, data: Iterable, token: str):
         super().__init__(data=data)
         self.token = token
@@ -212,6 +224,7 @@ class WrapText(LatexObject):
     Raises:
         AssertionError: If `data` is not a string, int, or float.
     """
+
     def __init__(self, data: Union[str, int, float], threshold: int):
         assert isinstance(data, (str, int, float)), "the self.data type needs to be str, int, float"
         self.threshold = threshold

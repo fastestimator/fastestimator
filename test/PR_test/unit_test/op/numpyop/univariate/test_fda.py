@@ -20,6 +20,7 @@ from fastestimator.op.numpyop.univariate import FDA
 
 
 class TestFDA(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.single_input = [np.random.rand(28, 28, 3)]
@@ -35,7 +36,6 @@ class TestFDA(unittest.TestCase):
             self.assertEqual(type(output), list)
         with self.subTest('Check output image shape'):
             self.assertEqual(output[0].shape, self.single_output_shape)
-
 
     def test_input_image_and_mask(self):
         fda = FDA(inputs='x', outputs='x', reference_images=self.ref_image_multiple)

@@ -15,9 +15,16 @@
 from typing import Optional, Sequence, Union
 
 from fastestimator.search.search import Search
-from fastestimator.search.visualize.cartesian import visualize_cartesian, _cartesian_supports_data
-from fastestimator.search.visualize.heatmap import visualize_heatmap, _heatmap_supports_data
-from fastestimator.search.visualize.parallel_coordinate_plot import visualize_parallel_coordinates
+from fastestimator.search.visualize.cartesian import (
+    _cartesian_supports_data,
+    visualize_cartesian,
+)
+from fastestimator.search.visualize.heatmap import (
+    _heatmap_supports_data,
+    visualize_heatmap,
+)
+from fastestimator.search.visualize.parallel_coordinate_plot import (
+    visualize_parallel_coordinates, )
 from fastestimator.search.visualize.vis_util import SearchData, _load_search_file
 
 

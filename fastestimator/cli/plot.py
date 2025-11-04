@@ -39,15 +39,18 @@ def search(args: Dict[str, Any], unknown: List[str]) -> None:
         from fastestimator.search.visualize.heatmap import visualize_heatmap
         fn = visualize_heatmap
     elif args['draw'] == 'parallel':
-        from fastestimator.search.visualize.parallel_coordinate_plot import visualize_parallel_coordinates
+        from fastestimator.search.visualize.parallel_coordinate_plot import (
+            visualize_parallel_coordinates, )
         fn = visualize_parallel_coordinates
     else:
         from fastestimator.search.visualize.visualize import visualize_search
         fn = visualize_search
-    kwargs = {'search': args['search_path'],
-              'title': args['title'],
-              'ignore_keys': args['ignore'],
-              'save_path': args['save_dir']}
+    kwargs = {
+        'search': args['search_path'],
+        'title': args['title'],
+        'ignore_keys': args['ignore'],
+        'save_path': args['save_dir']
+    }
     # Only add the function specific args if the user provides them to avoid clashing with manually specified plot type
     if args['color_by']:
         kwargs['color_by'] = args['color_by']
@@ -75,18 +78,15 @@ def configure_plot_parser(subparsers: argparse._SubParsersAction) -> None:
                         type=str,
                         nargs='+',
                         help="The names of parameters or results to ignore when visualizing")
-    parser.add_argument('--title',
-                        metavar='T',
-                        type=str,
-                        help="A custom title for the generated plot",
-                        default=None)
-    parser.add_argument('--draw',
-                        metavar='D',
-                        choices=['cartesian', 'heatmap', 'parallel'],
-                        help="Force the system to attempt to draw a particular type of plot. This may raise an error if"
-                             " the given search instance is incompatible with the desired type of visualization. "
-                             "Choices are 'cartesian', 'heatmap', or 'parallel'.",
-                        default=None)
+    parser.add_argument('--title', metavar='T', type=str, help="A custom title for the generated plot", default=None)
+    parser.add_argument(
+        '--draw',
+        metavar='D',
+        choices=['cartesian', 'heatmap', 'parallel'],
+        help="Force the system to attempt to draw a particular type of plot. This may raise an error if"
+        " the given search instance is incompatible with the desired type of visualization. "
+        "Choices are 'cartesian', 'heatmap', or 'parallel'.",
+        default=None)
     parser.add_argument('--color_by',
                         metavar='C',
                         type=str,

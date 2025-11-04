@@ -18,37 +18,65 @@ import sys
 import tempfile
 from collections import ChainMap
 from threading import Lock
-from typing import Any, Callable, Dict, Iterable, List, MutableMapping, Optional, Sequence, Set, Tuple, Type, TypeVar, \
-    Union, overload
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    List,
+    MutableMapping,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+    overload,
+)
 
 import gdown
-
 import torch
-
 from typing_extensions import Self
 
 import fastestimator as fe
 from fastestimator.backend._load_model import load_model
 from fastestimator.backend._to_tensor import to_tensor
-from fastestimator.op.numpyop import Batch
+from fastestimator.op.numpyop import Batch, NumpyOp, RemoveIf, forward_numpyop
 from fastestimator.op.numpyop import Delete as DeleteNP
-from fastestimator.op.numpyop import NumpyOp, RemoveIf, forward_numpyop
 from fastestimator.op.op import get_inputs_by_op, write_outputs_by_op
 from fastestimator.op.tensorop.model.update import UpdateOp
 from fastestimator.op.tensorop.tensorop import Delete, TensorOp
 from fastestimator.pipeline import Pipeline
-from fastestimator.schedule.schedule import EpochScheduler, RepeatScheduler, Scheduler, get_current_items
-from fastestimator.slicer.slicer import Slicer, forward_slicers, reverse_slicers, sanity_assert_slicers
+from fastestimator.schedule.schedule import (
+    EpochScheduler,
+    RepeatScheduler,
+    Scheduler,
+    get_current_items,
+)
+from fastestimator.slicer.slicer import (
+    Slicer,
+    forward_slicers,
+    reverse_slicers,
+    sanity_assert_slicers,
+)
 from fastestimator.types import Array, Model
 from fastestimator.util.base_util import NonContext, filter_nones, to_list, warn
 from fastestimator.util.traceability_util import trace_model, traceable
-from fastestimator.util.util import Suppressor, detach_tensors, get_batch_size, get_device, get_num_gpus, \
-    move_tensors_to_device
+from fastestimator.util.util import (
+    Suppressor,
+    detach_tensors,
+    get_batch_size,
+    get_device,
+    get_num_gpus,
+    move_tensors_to_device,
+)
 
 T = TypeVar('T')
 
 GOOGLE_DRIVE_URL = "https://drive.google.com"
 _MAC_BUILD_WARNING = False
+
 
 @traceable(blacklist=('ctx_lock', ))
 class BaseNetwork:
@@ -399,6 +427,7 @@ class BaseNetwork:
         """
         return self.run_step(batch)
 
+
 def _collect_models(
     ops: Union[None, TensorOp, Scheduler[TensorOp], Iterable[Union[None, TensorOp,
                                                                    Scheduler[TensorOp]]]]) -> Set[Model]:
@@ -415,6 +444,7 @@ def _collect_models(
     for op in get_current_items(ops_list):
         models |= op.get_fe_models()
     return models
+
 
 # noinspection PyPep8Naming
 def Network(
@@ -463,6 +493,7 @@ def Network(
     else:
         raise ValueError("Unknown model type")
     return network
+
 
 @traceable(blacklist=('ctx_lock', ))
 class TorchNetwork(BaseNetwork):
@@ -608,6 +639,7 @@ class TorchNetwork(BaseNetwork):
             prediction = {key: detach_tensors(batch_in[key]) for key in self.ctx_outputs if key in batch_in}
         return batch, prediction
 
+
 @overload
 def build(model_fn: Callable[[], Model],
           optimizer_fn: Union[None, str, Scheduler, Callable],
@@ -616,6 +648,7 @@ def build(model_fn: Callable[[], Model],
           mixed_precision: bool = False) -> Model:
     ...
 
+
 @overload
 def build(model_fn: Callable[[], Sequence[Model]],
           optimizer_fn: Union[None, str, Scheduler, Callable, Sequence[Union[None, str, Callable, Scheduler]]],
@@ -623,6 +656,7 @@ def build(model_fn: Callable[[], Sequence[Model]],
           model_name: Union[str, List[str], None] = None,
           mixed_precision: bool = False) -> List[Model]:
     ...
+
 
 def build(model_fn: Callable[[], Union[Model, Sequence[Model]]],
           optimizer_fn: Union[None, str, Scheduler, Callable, Sequence[Union[None, str, Callable, Scheduler]]],
@@ -699,6 +733,7 @@ def build(model_fn: Callable[[], Union[Model, Sequence[Model]]],
         models = models[0]
     return models
 
+
 def _fe_compile(model: Model,
                 optimizer_fn: Union[str, Scheduler, Callable, None],
                 weight: Union[str, None],
@@ -749,9 +784,9 @@ def _fe_compile(model: Model,
     model.model_name = name
     return model
 
-def _build_optimizer(
-    optimizer_fn: Union[str, Callable, None], model: Model, framework: str, mixed_precision: bool
-) -> Union[None, torch.optim.Optimizer]:
+
+def _build_optimizer(optimizer_fn: Union[str, Callable, None], model: Model, framework: str,
+                     mixed_precision: bool) -> Union[None, torch.optim.Optimizer]:
     """A helper method to instantiate an optimizer.
 
     Args:
@@ -768,6 +803,7 @@ def _build_optimizer(
         optimizer_fn = _optimizer_fn_from_string(optimizer_fn, framework)
     optimizer = _optimizer_fn_to_optimizer(optimizer_fn, model, framework, mixed_precision)
     return optimizer
+
 
 def _optimizer_fn_from_string(name: str, framework: str) -> Callable:
     """A function to construct default optimizers based on string keys.
@@ -790,9 +826,9 @@ def _optimizer_fn_from_string(name: str, framework: str) -> Callable:
     optimizer_fn = pytorch_optimizer_fn[name]
     return optimizer_fn
 
-def _optimizer_fn_to_optimizer(
-        optimizer_fn: Union[Callable, None], model: Model, framework: str,
-        mixed_precision: bool) -> Union[None, torch.optim.Optimizer]:
+
+def _optimizer_fn_to_optimizer(optimizer_fn: Union[Callable, None], model: Model, framework: str,
+                               mixed_precision: bool) -> Union[None, torch.optim.Optimizer]:
     """A helper function to invoke an optimizer function.
 
     Args:

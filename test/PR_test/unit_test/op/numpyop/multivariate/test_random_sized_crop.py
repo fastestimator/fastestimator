@@ -20,6 +20,7 @@ from fastestimator.op.numpyop.multivariate import RandomSizedCrop
 
 
 class TestRandomSizedCrop(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.min_max_height = (20, 25)

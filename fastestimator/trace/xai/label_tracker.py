@@ -18,10 +18,10 @@ from typing import Any, Dict, Iterable, Optional, Union
 
 from fastestimator.summary.summary import Summary, ValWithError
 from fastestimator.trace.trace import Trace
+from fastestimator.util.base_util import DefaultKeyDict, to_set
 from fastestimator.util.data import Data
 from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import to_number
-from fastestimator.util.base_util import to_set, DefaultKeyDict
 
 
 @traceable()
@@ -51,6 +51,7 @@ class LabelTracker(Trace):
     Raises:
         ValueError: If `bounds` is not one of the allowed options.
     """
+
     def __init__(self,
                  label: str,
                  metric: str,

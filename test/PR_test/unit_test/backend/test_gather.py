@@ -22,6 +22,7 @@ from fastestimator.test.unittest_util import is_equal
 
 
 class TestGather(unittest.TestCase):
+
     def test_np_input_3x2(self):
         ind = np.array([1, 0, 1])
         n = np.array([[0, 1], [2, 3], [4, 5]])

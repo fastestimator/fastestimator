@@ -12,11 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
+import math
 from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 
 import numpy as np
 from skimage.draw import random_shapes
-import math
 
 from fastestimator.backend._get_image_dims import get_image_dims
 from fastestimator.op.numpyop.numpyop import NumpyOp
@@ -44,6 +44,7 @@ class RandomShapes(NumpyOp):
     Raises:
         AssertionError: If the `intensity_range` or `transparency_range` arguments are invalid.
     """
+
     def __init__(self,
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],

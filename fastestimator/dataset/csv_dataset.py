@@ -47,6 +47,7 @@ class CSVDataset(InMemoryDataset):
         kwargs: Other arguments to be passed through to pandas csv reader function. See the pandas docs for details:
             https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_csv.html.
     """
+
     def __init__(self,
                  file_path: str,
                  delimiter: str = ",",

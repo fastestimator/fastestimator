@@ -22,6 +22,7 @@ from fastestimator.slicer.slicer import forward_slicers, reverse_slicers
 
 
 class TestSlidingSlicer(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.batch = np.array([i for i in range(600)], dtype=np.int16).reshape((2, 10, 10, 3))
@@ -306,7 +307,6 @@ class TestSlidingSlicer(unittest.TestCase):
             combined = combined['x']
             self.assertListEqual(list(combined.shape), [2, 10, 10, 3])
             np.testing.assert_array_equal(combined.numpy(), self.batch)
-
 
     def test_overlapping_pad_avg_unslice_mirror(self):
         slicer = SlidingSlicer(slice="x",

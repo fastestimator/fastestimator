@@ -56,6 +56,7 @@ class MultiVariateAlbumentation(NumpyOp):
     Raises:
         AssertionError: If none of the various inputs such as `image_in` or `mask_in` are provided.
     """
+
     def __init__(self,
                  func: DualTransform,
                  mode: Union[None, str, Iterable[str]] = None,

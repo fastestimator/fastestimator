@@ -16,8 +16,9 @@ import os
 import tempfile
 import unittest
 
-import fastestimator as fe
 from fastestimator.architecture.tensorflow import LeNet
+
+import fastestimator as fe
 from fastestimator.dataset.data import mnist
 from fastestimator.op.numpyop.univariate import ExpandDims, Minmax
 from fastestimator.op.tensorop.model import ModelOp
@@ -29,6 +30,7 @@ class TestSaliency(unittest.TestCase):
     """ This test has dependency on:
     * fe.trace.ImageSaver
     """
+
     def test_saliency(self):
         label_mapping = {
             'zero': 0,

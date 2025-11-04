@@ -20,6 +20,7 @@ from fastestimator.util.traceability_util import FeInputSpec, _extract_args
 
 
 class TestFeInputSpec(unittest.TestCase):
+
     def test_simple_input(self):
         inp = torch.ones(size=(32, 1, 28, 28), dtype=torch.float16)
         model = torch.nn.Sequential(torch.nn.Linear(28 * 28, 100))
@@ -78,6 +79,7 @@ class TestFeInputSpec(unittest.TestCase):
 
 
 class TestExtractArgs(unittest.TestCase):
+
     def test_single_arg(self):
         resp = _extract_args("x:")
         self.assertSetEqual({"x"}, resp)

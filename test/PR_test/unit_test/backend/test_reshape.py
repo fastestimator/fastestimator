@@ -21,6 +21,7 @@ from fastestimator.backend import reshape
 
 
 class TestReshape(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.test_np = np.array([[1, 2], [3, 3]])

@@ -21,6 +21,7 @@ from fastestimator.test.unittest_util import is_equal
 
 
 class TestWordToId(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.map_dict = {'a': 0, 'b': 11, 'test': 90, 'op': 25, 'c': 100, 'id': 10, 'word': 55, 'to': 5}

@@ -20,6 +20,7 @@ import fastestimator as fe
 
 
 class TestNumpyDataset(unittest.TestCase):
+
     def test_dataset(self):
         ## TODO: replace with torch data
         '''(x_train, y_train), _ = tf.keras.datasets.mnist.load_data()
@@ -28,8 +29,9 @@ class TestNumpyDataset(unittest.TestCase):
         self.assertEqual(len(train_data), 60000)'''
 
     def test_single_frac_split(self):
-        ds1 = fe.dataset.NumpyDataset(
-            {"idx": np.array([i for i in range(100)]), "clz": np.array([i % 4 for i in range(100)])})
+        ds1 = fe.dataset.NumpyDataset({
+            "idx": np.array([i for i in range(100)]), "clz": np.array([i % 4 for i in range(100)])
+        })
         ds2 = ds1.split(0.3)
         with self.subTest("Source Dataset Size"):
             self.assertEqual(len(ds1), 70)
@@ -39,8 +41,9 @@ class TestNumpyDataset(unittest.TestCase):
             self.assertEqual(set(), set(ds1["idx"]) & set(ds2["idx"]))
 
     def test_single_frac_split_seed(self):
-        ds1 = fe.dataset.NumpyDataset(
-            {"idx": np.array([i for i in range(100)]), "clz": np.array([i % 4 for i in range(100)])})
+        ds1 = fe.dataset.NumpyDataset({
+            "idx": np.array([i for i in range(100)]), "clz": np.array([i % 4 for i in range(100)])
+        })
         ds2 = ds1.split(0.3, seed=42)
         with self.subTest("Source Dataset Size"):
             self.assertEqual(len(ds1), 70)
@@ -49,8 +52,9 @@ class TestNumpyDataset(unittest.TestCase):
         with self.subTest("Disjoint datasets"):
             self.assertEqual(set(), set(ds1["idx"]) & set(ds2["idx"]))
 
-        ds3 = fe.dataset.NumpyDataset(
-            {"idx": np.array([i for i in range(100)]), "clz": np.array([i % 4 for i in range(100)])})
+        ds3 = fe.dataset.NumpyDataset({
+            "idx": np.array([i for i in range(100)]), "clz": np.array([i % 4 for i in range(100)])
+        })
         ds4 = ds3.split(0.3, seed=42)
         with self.subTest("Both source datasets should be equivalent"):
             self.assertEqual(ds1["idx"], ds3["idx"])
@@ -58,8 +62,9 @@ class TestNumpyDataset(unittest.TestCase):
             self.assertEqual(ds2["idx"], ds4["idx"])
 
     def test_single_frac_split_stratify(self):
-        ds1 = fe.dataset.NumpyDataset(
-            {"idx": np.array([i for i in range(100)]), "clz": np.array([i % 4 for i in range(100)])})
+        ds1 = fe.dataset.NumpyDataset({
+            "idx": np.array([i for i in range(100)]), "clz": np.array([i % 4 for i in range(100)])
+        })
         ds2 = ds1.split(0.4, stratify="clz")
         with self.subTest("Source Dataset Size"):
             self.assertEqual(len(ds1), 60)
@@ -79,8 +84,9 @@ class TestNumpyDataset(unittest.TestCase):
             self.assertEqual(ds2["clz"].count(3), 10)
 
     def test_single_frac_split_seed_stratify(self):
-        ds1 = fe.dataset.NumpyDataset(
-            {"idx": np.array([i for i in range(100)]), "clz": np.array([i % 4 for i in range(100)])})
+        ds1 = fe.dataset.NumpyDataset({
+            "idx": np.array([i for i in range(100)]), "clz": np.array([i % 4 for i in range(100)])
+        })
         ds2 = ds1.split(0.4, seed=17, stratify="clz")
         with self.subTest("Source Dataset Size"):
             self.assertEqual(len(ds1), 60)
@@ -99,8 +105,9 @@ class TestNumpyDataset(unittest.TestCase):
             self.assertEqual(ds2["clz"].count(2), 10)
             self.assertEqual(ds2["clz"].count(3), 10)
 
-        ds3 = fe.dataset.NumpyDataset(
-            {"idx": np.array([i for i in range(100)]), "clz": np.array([i % 4 for i in range(100)])})
+        ds3 = fe.dataset.NumpyDataset({
+            "idx": np.array([i for i in range(100)]), "clz": np.array([i % 4 for i in range(100)])
+        })
         ds4 = ds3.split(0.4, seed=17, stratify="clz")
         with self.subTest("Both source datasets should be equivalent"):
             self.assertEqual(ds1["idx"], ds3["idx"])
@@ -108,8 +115,9 @@ class TestNumpyDataset(unittest.TestCase):
             self.assertEqual(ds2["idx"], ds4["idx"])
 
     def test_multi_frac_split(self):
-        ds1 = fe.dataset.NumpyDataset(
-            {"idx": np.array([i for i in range(100)]), "clz": np.array([i % 4 for i in range(100)])})
+        ds1 = fe.dataset.NumpyDataset({
+            "idx": np.array([i for i in range(100)]), "clz": np.array([i % 4 for i in range(100)])
+        })
         ds2, ds3 = ds1.split(0.3, 0.4)
         with self.subTest("Source Dataset Size"):
             self.assertEqual(len(ds1), 30)
@@ -122,8 +130,9 @@ class TestNumpyDataset(unittest.TestCase):
             self.assertEqual(set(), set(ds1["idx"]) & set(ds3["idx"]))
 
     def test_multi_frac_split_seed(self):
-        ds1 = fe.dataset.NumpyDataset(
-            {"idx": np.array([i for i in range(100)]), "clz": np.array([i % 4 for i in range(100)])})
+        ds1 = fe.dataset.NumpyDataset({
+            "idx": np.array([i for i in range(100)]), "clz": np.array([i % 4 for i in range(100)])
+        })
         ds2, ds3 = ds1.split(0.3, 0.4, seed=42)
         with self.subTest("Source Dataset Size"):
             self.assertEqual(len(ds1), 30)
@@ -135,8 +144,9 @@ class TestNumpyDataset(unittest.TestCase):
             self.assertEqual(set(), set(ds2["idx"]) & set(ds3["idx"]))
             self.assertEqual(set(), set(ds1["idx"]) & set(ds3["idx"]))
 
-        ds4 = fe.dataset.NumpyDataset(
-            {"idx": np.array([i for i in range(100)]), "clz": np.array([i % 4 for i in range(100)])})
+        ds4 = fe.dataset.NumpyDataset({
+            "idx": np.array([i for i in range(100)]), "clz": np.array([i % 4 for i in range(100)])
+        })
         ds5, ds6 = ds4.split(0.3, 0.4, seed=42)
         with self.subTest("Both source datasets should be equivalent"):
             self.assertEqual(ds1["idx"], ds4["idx"])
@@ -145,8 +155,9 @@ class TestNumpyDataset(unittest.TestCase):
             self.assertEqual(ds3["idx"], ds6["idx"])
 
     def test_multi_frac_split_stratify(self):
-        ds1 = fe.dataset.NumpyDataset(
-            {"idx": np.array([i for i in range(100)]), "clz": np.array([i % 4 for i in range(100)])})
+        ds1 = fe.dataset.NumpyDataset({
+            "idx": np.array([i for i in range(100)]), "clz": np.array([i % 4 for i in range(100)])
+        })
         ds2, ds3 = ds1.split(0.4, 0.2, stratify="clz")
         with self.subTest("Source Dataset Size"):
             self.assertEqual(len(ds1), 40)
@@ -173,8 +184,9 @@ class TestNumpyDataset(unittest.TestCase):
             self.assertEqual(ds3["clz"].count(3), 5)
 
     def test_multi_frac_split_seed_stratify(self):
-        ds1 = fe.dataset.NumpyDataset(
-            {"idx": np.array([i for i in range(100)]), "clz": np.array([i % 4 for i in range(100)])})
+        ds1 = fe.dataset.NumpyDataset({
+            "idx": np.array([i for i in range(100)]), "clz": np.array([i % 4 for i in range(100)])
+        })
         ds2, ds3 = ds1.split(0.4, 0.2, seed=17, stratify="clz")
         with self.subTest("Source Dataset Size"):
             self.assertEqual(len(ds1), 40)
@@ -200,8 +212,9 @@ class TestNumpyDataset(unittest.TestCase):
             self.assertEqual(ds3["clz"].count(2), 5)
             self.assertEqual(ds3["clz"].count(3), 5)
 
-        ds4 = fe.dataset.NumpyDataset(
-            {"idx": np.array([i for i in range(100)]), "clz": np.array([i % 4 for i in range(100)])})
+        ds4 = fe.dataset.NumpyDataset({
+            "idx": np.array([i for i in range(100)]), "clz": np.array([i % 4 for i in range(100)])
+        })
         ds5, ds6 = ds4.split(0.4, 0.2, seed=17, stratify="clz")
         with self.subTest("Both source datasets should be equivalent"):
             self.assertEqual(ds1["idx"], ds4["idx"])
@@ -211,12 +224,12 @@ class TestNumpyDataset(unittest.TestCase):
 
     def test_heavily_imbalanced_stratify_split(self):
         idx_array = np.array([i for i in range(100)])
-        clz_array = np.array(
-            [0 if i < 10 else 1 if i < 40 else 2 if i < 77 else 3 if i < 84 else 4 if i < 97 else 5 if i < 99 else 6 for
-             i in range(100)])
+        clz_array = np.array([
+            0 if i < 10 else 1 if i < 40 else 2 if i < 77 else 3 if i < 84 else 4 if i < 97 else 5 if i < 99 else 6
+            for i in range(100)
+        ])
         # 0: 10%, 1: 30%, 2: 37%, 3: 7%, 4: 13%, 5: 2%, 6: 1%
-        ds1 = fe.dataset.NumpyDataset(
-            {"idx": idx_array, "clz": clz_array})
+        ds1 = fe.dataset.NumpyDataset({"idx": idx_array, "clz": clz_array})
         ds2, ds3 = ds1.split(0.3, 0.25, stratify="clz")
         with self.subTest("Source Dataset Size"):
             self.assertEqual(len(ds1), 45)

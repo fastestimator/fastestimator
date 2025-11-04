@@ -22,6 +22,7 @@ from fastestimator.test.unittest_util import is_equal
 
 
 class TestMaximum(unittest.TestCase):
+
     def test_maximum_np_input(self):
         n1 = np.array([[2, 7, 6]])
         n2 = np.array([[2, 7, 5]])

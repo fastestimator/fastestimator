@@ -87,14 +87,15 @@ def configure_log_parser(subparsers: argparse._SubParsersAction) -> None:
                         help="The amount of gaussian smoothing to apply (zero for no smoothing)",
                         default=0)
     parser.add_argument('--pretty_names', help="Clean up the metric names for display", action='store_true')
-    parser.add_argument('--group_by',
-                        metavar='G',
-                        type=str,
-                        nargs=1,
-                        help="A regex pattern to group different logs together and display their mean+-stdev. For "
-                             r"example, you could use --G '(.*)_[\d]+\.txt' to group files of the form "
-                             "<name>_<number>.txt by their <name>. We anticipate this being the common usecase, so you "
-                             "can use --G _n as a shortcut for that functionality.")
+    parser.add_argument(
+        '--group_by',
+        metavar='G',
+        type=str,
+        nargs=1,
+        help="A regex pattern to group different logs together and display their mean+-stdev. For "
+        r"example, you could use --G '(.*)_[\d]+\.txt' to group files of the form "
+        "<name>_<number>.txt by their <name>. We anticipate this being the common usecase, so you "
+        "can use --G _n as a shortcut for that functionality.")
 
     save_group = parser.add_argument_group('output arguments')
     save_x_group = save_group.add_mutually_exclusive_group(required=False)

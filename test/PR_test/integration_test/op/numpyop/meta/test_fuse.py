@@ -5,16 +5,21 @@ import torch
 
 import fastestimator as fe
 from fastestimator.op.numpyop import Delete, NumpyOp
-from fastestimator.test.unittest_util import sample_system_object, sample_system_object_torch
+from fastestimator.test.unittest_util import (
+    sample_system_object,
+    sample_system_object_torch,
+)
 
 
 class TestNumpyOp(NumpyOp):
+
     def __init__(self, inputs, outputs, mode, var):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.var = var
 
 
 class TestFuse(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.torch_data = torch.tensor([[1., 2., 4.], [1., 2., 6.]])
@@ -34,6 +39,7 @@ class TestFuse(unittest.TestCase):
         self.assertEqual(ops.outputs, ['x'])
 
     def test_save_and_load_state_torch(self):
+
         def instantiate_system():
             system = sample_system_object_torch()
             system.pipeline.ops = [

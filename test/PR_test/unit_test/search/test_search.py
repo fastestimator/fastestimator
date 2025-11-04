@@ -20,6 +20,7 @@ from fastestimator.search.search import Search
 
 
 class TestSearch(unittest.TestCase):
+
     def test_scoring_wo_index(self):
         with self.assertRaises(AssertionError):
             Search(eval_fn=lambda x: x)

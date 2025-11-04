@@ -19,6 +19,7 @@ from fastestimator.schedule.lr_schedule import cosine_decay
 
 
 class TestLRSchedule(unittest.TestCase):
+
     def test_cosine_decay(self):
         learning_rate = cosine_decay(time=5, cycle_length=10, init_lr=0.01, min_lr=0.0)
         self.assertEqual(learning_rate, 0.005)

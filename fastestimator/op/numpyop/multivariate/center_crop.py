@@ -49,6 +49,7 @@ class CenterCrop(MultiVariateAlbumentation):
     Image types:
         uint8, float32 (but uint8 is more efficient)
     """
+
     def __init__(self,
                  height: int,
                  width: int,

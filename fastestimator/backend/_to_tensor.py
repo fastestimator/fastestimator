@@ -25,7 +25,6 @@ def to_tensor(data: CollectionT, target_type: str, shared_memory: bool = False) 
     ...
 
 
-
 @overload
 def to_tensor(data: Union[Array, float, int], target_type: Literal['torch'],
               shared_memory: bool = False) -> torch.Tensor:
@@ -73,9 +72,7 @@ def to_tensor(data: Union[Collection, Array, float, int, None], target_type: str
     Returns:
         A collection with the same structure as `data`, but with any tensors converted to the `target_type`.
     """
-    target_instance = {
-        "torch": torch.Tensor, "np": np.ndarray
-    }
+    target_instance = {"torch": torch.Tensor, "np": np.ndarray}
     conversion_function = {"torch": torch.from_numpy, "np": np.array}
     if isinstance(data, target_instance[target_type]):
         if shared_memory and target_type == "torch":

@@ -16,7 +16,6 @@ from operator import gt, lt
 from typing import Optional, Union
 
 import numpy as np
-
 import torch
 
 from fastestimator.backend._load_model import load_model
@@ -24,6 +23,7 @@ from fastestimator.backend._save_model import save_model
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
 from fastestimator.util.traceability_util import traceable
+
 
 @traceable()
 class BestModelSaver(Trace):
@@ -45,6 +45,7 @@ class BestModelSaver(Trace):
         AssertionError: If a `metric` is not provided and it cannot be inferred from the `model`.
         ValueError: If `save_best_mode` is an unacceptable string, or `save_architecture` is used with a PyTorch model.
     """
+
     def __init__(self,
                  model: torch.nn.Module,
                  save_dir: str,

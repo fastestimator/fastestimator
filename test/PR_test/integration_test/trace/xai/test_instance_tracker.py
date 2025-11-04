@@ -24,6 +24,7 @@ from fastestimator.util import Data
 
 
 class TestInstanceTracker(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         # Epoch 1 Data
@@ -42,13 +43,27 @@ class TestInstanceTracker(unittest.TestCase):
         batch6_idx = torch.Tensor([1, 19, 24, 10, 0, 29, 17, 14, 4, 26])
 
         cls.training_data = [[
-            Data({'ce': batch1_metrics, 'idx': batch1_idx}),
-            Data({'ce': batch2_metrics, 'idx': batch2_idx}),
-            Data({'ce': batch3_metrics, 'idx': batch3_idx})
-        ], [Data({'ce': batch4_metrics, 'idx': batch4_idx}),
-            Data({'ce': batch5_metrics, 'idx': batch5_idx}),
-            Data({'ce': batch6_metrics, 'idx': batch6_idx})
-            ]]
+            Data({
+                'ce': batch1_metrics, 'idx': batch1_idx
+            }),
+            Data({
+                'ce': batch2_metrics, 'idx': batch2_idx
+            }),
+            Data({
+                'ce': batch3_metrics, 'idx': batch3_idx
+            })
+        ],
+                             [
+                                 Data({
+                                     'ce': batch4_metrics, 'idx': batch4_idx
+                                 }),
+                                 Data({
+                                     'ce': batch5_metrics, 'idx': batch5_idx
+                                 }),
+                                 Data({
+                                     'ce': batch6_metrics, 'idx': batch6_idx
+                                 })
+                             ]]
 
     def _simulate_training(self, trace: InstanceTracker, data: Data):
         trace.on_begin(Data())
@@ -158,6 +173,7 @@ class TestInstanceTracker(unittest.TestCase):
                 self.assertIn(key, recorded_indices)
 
     def test_save_and_load_state(self):
+
         def instantiate_system():
             tracker = InstanceTracker(index='idx',
                                       metric='ce',

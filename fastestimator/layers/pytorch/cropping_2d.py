@@ -44,6 +44,7 @@ class Cropping2D(nn.Module):
     Raises:
         ValueError: If `cropping` has an unacceptable data type.
     """
+
     def __init__(self, cropping: Union[int, Tuple[Union[int, Tuple[int, int]], Union[int, Tuple[int,
                                                                                                 int]]]] = 0) -> None:
         super().__init__()

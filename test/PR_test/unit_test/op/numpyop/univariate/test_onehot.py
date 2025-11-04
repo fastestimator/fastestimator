@@ -20,6 +20,7 @@ from fastestimator.op.numpyop.univariate import Onehot
 
 
 class TestOnehot(unittest.TestCase):
+
     def test_one_d(self):
         single_input = [[1], [2], [3], [3]]
         single_output = [np.array([0, 1, 0, 0]), np.array([0, 0, 1, 0]), np.array([0, 0, 0, 1]), np.array([0, 0, 0, 1])]

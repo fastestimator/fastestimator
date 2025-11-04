@@ -16,12 +16,17 @@ import math
 import unittest
 
 import fastestimator as fe
-from fastestimator.test.unittest_util import MultiLayerTorchModel, one_layer_tf_model, sample_system_object
+from fastestimator.test.unittest_util import (
+    MultiLayerTorchModel,
+    one_layer_tf_model,
+    sample_system_object,
+)
 from fastestimator.trace.adapt import LRScheduler
 from fastestimator.util.data import Data
 
 
 class TestLRScheduler(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.data = Data({})

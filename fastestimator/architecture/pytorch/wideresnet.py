@@ -28,6 +28,7 @@ class BasicBlock(nn.Module):
         stride: stride for convolution layer.
         dropout: Adds dropout if value is greater than 0.0.
     """
+
     def __init__(self, in_planes: int, out_planes: int, stride: int, dropout: float = 0.0) -> None:
         super(BasicBlock, self).__init__()
         self.bn1 = nn.BatchNorm2d(in_planes)
@@ -66,6 +67,7 @@ class NetworkBlock(nn.Module):
         stride: stride for convolution layer.
         dropout: Adds dropout if value is greater than 0.0.
     """
+
     def __init__(self,
                  nb_layers: int,
                  in_planes: int,
@@ -109,6 +111,7 @@ class WideResidualNetwork(nn.Module):
     Raises:
         AssertionError: If (depth - 4) is not divisible by 6.
     """
+
     def __init__(self, depth: int = 28, classes: int = 10, widen_factor: int = 10, dropout: float = 0.0) -> None:
         super(WideResidualNetwork, self).__init__()
         nChannels = [16, 16 * widen_factor, 32 * widen_factor, 64 * widen_factor]

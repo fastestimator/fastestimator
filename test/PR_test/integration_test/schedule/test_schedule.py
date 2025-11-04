@@ -14,10 +14,16 @@
 # ==============================================================================
 import unittest
 
-from fastestimator.schedule import EpochScheduler, RepeatScheduler, get_current_items, get_signature_epochs
+from fastestimator.schedule import (
+    EpochScheduler,
+    RepeatScheduler,
+    get_current_items,
+    get_signature_epochs,
+)
 
 
 class TestSchedule(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.scheduler = RepeatScheduler(['a', 'b', 'c', 'c'])

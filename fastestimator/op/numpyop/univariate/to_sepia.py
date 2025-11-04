@@ -36,6 +36,7 @@ class ToSepia(ImageOnlyAlbumentation):
     Image types:
         uint8, float32
     """
+
     def __init__(self,
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],

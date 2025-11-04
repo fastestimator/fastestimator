@@ -27,6 +27,7 @@ def inputs():
 
 
 class TestSiameseDirDataset(unittest.TestCase):
+
     def test_dataset(self):
         tmpdirname = tempfile.mkdtemp()
 

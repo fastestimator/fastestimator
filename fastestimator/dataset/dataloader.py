@@ -22,8 +22,11 @@ from torch import Tensor
 from torch.utils.data import DataLoader, Sampler, _DatasetKind
 from torch.utils.data._utils.collate import default_collate, default_convert
 from torch.utils.data._utils.fetch import _MapDatasetFetcher
-from torch.utils.data.dataloader import _BaseDataLoaderIter, _MultiProcessingDataLoaderIter, \
-    _SingleProcessDataLoaderIter
+from torch.utils.data.dataloader import (
+    _BaseDataLoaderIter,
+    _MultiProcessingDataLoaderIter,
+    _SingleProcessDataLoaderIter,
+)
 
 from fastestimator.dataset.extend_dataset import ExtendDataset
 from fastestimator.dataset.interleave_dataset import InterleaveDataset

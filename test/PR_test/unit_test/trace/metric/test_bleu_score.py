@@ -52,6 +52,7 @@ def get_formatted_list(data):
 
 
 class TestBleuScore(unittest.TestCase):
+
     @classmethod
     def setUpClass(self):
         self.bleu_score = BleuScore(true_key="target_real",

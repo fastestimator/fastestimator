@@ -36,6 +36,7 @@ class Tokenize(NumpyOp):
         tokenize_fn: Tokenization function object.
         to_lower_case: Whether to convert tokens to lowercase.
     """
+
     def __init__(self,
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],

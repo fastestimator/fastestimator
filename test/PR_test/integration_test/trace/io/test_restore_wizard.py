@@ -29,6 +29,7 @@ def get_model_name(system):
 
 
 class TestRestoreWizard(unittest.TestCase):
+
     def test_save(self):
         save_path = tempfile.mkdtemp()
         restore_wizard = RestoreWizard(directory=save_path)

@@ -12,14 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Iterable, Tuple, Union, Any, Callable
+from typing import Any, Callable, Iterable, Tuple, Union
 
 from albumentations.augmentations import HistogramMatching as HistogramMatchingAlb
 
-from fastestimator.util.traceability_util import traceable
-
 from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
-
+from fastestimator.util.traceability_util import traceable
 
 
 @traceable()
@@ -48,20 +46,23 @@ class HistogramMatching(ImageOnlyAlbumentation):
         ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
             ds_ids except for a particular one, you can pass an argument like "!ds1".
     """
-    def __init__(self,
-                 inputs: Union[str, Iterable[str]],
-                 outputs: Union[str, Iterable[str]],
-                 reference_images: Union[Any, Iterable[Any]],
-                 mode: Union[None, str, Iterable[str]] = None,
-                 ds_id: Union[None, str, Iterable[str]] = None,
-                 blend_ratio: Tuple[float, float] = (0.5,1.0),
-                 read_fn: Callable = lambda x: x, # for reading tensor to numpy array
-                 ):
-        super().__init__(HistogramMatchingAlb(reference_images=reference_images,
-                                blend_ratio=blend_ratio,
-                                read_fn=read_fn,
-                                always_apply=True),
-                         inputs=inputs,
-                         outputs=outputs,
-                         mode=mode,
-                         ds_id=ds_id)
+
+    def __init__(
+            self,
+            inputs: Union[str, Iterable[str]],
+            outputs: Union[str, Iterable[str]],
+            reference_images: Union[Any, Iterable[Any]],
+            mode: Union[None, str, Iterable[str]] = None,
+            ds_id: Union[None, str, Iterable[str]] = None,
+            blend_ratio: Tuple[float, float] = (0.5, 1.0),
+            read_fn: Callable = lambda x: x,  # for reading tensor to numpy array
+    ):
+        super().__init__(
+            HistogramMatchingAlb(reference_images=reference_images,
+                                 blend_ratio=blend_ratio,
+                                 read_fn=read_fn,
+                                 always_apply=True),
+            inputs=inputs,
+            outputs=outputs,
+            mode=mode,
+            ds_id=ds_id)

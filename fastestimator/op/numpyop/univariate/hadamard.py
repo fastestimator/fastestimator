@@ -40,6 +40,7 @@ class Hadamard(NumpyOp):
     Raises:
         ValueError: If an unequal number of `inputs` and `outputs` are provided, or if `code_length` is invalid.
     """
+
     def __init__(self,
                  inputs: Union[str, List[str]],
                  outputs: Union[str, List[str]],

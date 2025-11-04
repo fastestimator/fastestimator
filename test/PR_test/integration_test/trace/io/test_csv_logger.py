@@ -25,6 +25,7 @@ from fastestimator.util.data import Data
 
 
 class TestCSVLogger(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.csv_root = tempfile.mkdtemp()
@@ -37,10 +38,9 @@ class TestCSVLogger(unittest.TestCase):
         system.global_step = 1
         csvlogger.system = system
 
-        batch_data = Data(batch_data={"idx": ['a', 'b', 'c'],
-                                      "x": np.ones((3, 5, 5)),
-                                      "y": np.ones((3, 1)),
-                                      "ce": 12.5})
+        batch_data = Data(batch_data={
+            "idx": ['a', 'b', 'c'], "x": np.ones((3, 5, 5)), "y": np.ones((3, 1)), "ce": 12.5
+        })
         batch_data.write_per_instance_log(key="dice", value=[0.1, 0.2, 0.3])
 
         epoch_data = Data()
@@ -96,30 +96,20 @@ class TestCSVLogger(unittest.TestCase):
         with self.subTest('Check columns'):
             self.assertEqual(rows[0].keys(), {'instance_id', 'mode', 'step', 'epoch', 'ce', 'dice'})
 
-        instance_ids = {'': {'instance_id': '',
-                             'mode': 'train',
-                             'step': '1',
-                             'epoch': '1',
-                             'ce': '12.5',
-                             'dice': ''},
-                        'a': {'instance_id': 'a',
-                              'mode': 'train',
-                              'step': '1',
-                              'epoch': '1',
-                              'ce': '',
-                              'dice': '0.1'},
-                        'b': {'instance_id': 'b',
-                              'mode': 'train',
-                              'step': '1',
-                              'epoch': '1',
-                              'ce': '',
-                              'dice': '0.2'},
-                        'c': {'instance_id': 'c',
-                              'mode': 'train',
-                              'step': '1',
-                              'epoch': '1',
-                              'ce': '',
-                              'dice': '0.3'}}
+        instance_ids = {
+            '': {
+                'instance_id': '', 'mode': 'train', 'step': '1', 'epoch': '1', 'ce': '12.5', 'dice': ''
+            },
+            'a': {
+                'instance_id': 'a', 'mode': 'train', 'step': '1', 'epoch': '1', 'ce': '', 'dice': '0.1'
+            },
+            'b': {
+                'instance_id': 'b', 'mode': 'train', 'step': '1', 'epoch': '1', 'ce': '', 'dice': '0.2'
+            },
+            'c': {
+                'instance_id': 'c', 'mode': 'train', 'step': '1', 'epoch': '1', 'ce': '', 'dice': '0.3'
+            }
+        }
         with self.subTest('Check values'):
             for row in rows:
                 self.assertTrue('instance_id' in row)
@@ -145,34 +135,20 @@ class TestCSVLogger(unittest.TestCase):
         with self.subTest('Check columns'):
             self.assertEqual(rows[0].keys(), {'instance_id', 'mode', 'step', 'epoch', 'ce', 'y', 'dice'})
 
-        instance_ids = {'': {'instance_id': '',
-                             'mode': 'train',
-                             'step': '1',
-                             'epoch': '1',
-                             'ce': '12.5',
-                             'y': '',
-                             'dice': ''},
-                        'a': {'instance_id': 'a',
-                              'mode': 'train',
-                              'step': '1',
-                              'epoch': '1',
-                              'ce': '',
-                              'y': '[1.]',
-                              'dice': '0.1'},
-                        'b': {'instance_id': 'b',
-                              'mode': 'train',
-                              'step': '1',
-                              'epoch': '1',
-                              'ce': '',
-                              'y': '[1.]',
-                              'dice': '0.2'},
-                        'c': {'instance_id': 'c',
-                              'mode': 'train',
-                              'step': '1',
-                              'epoch': '1',
-                              'ce': '',
-                              'y': '[1.]',
-                              'dice': '0.3'}}
+        instance_ids = {
+            '': {
+                'instance_id': '', 'mode': 'train', 'step': '1', 'epoch': '1', 'ce': '12.5', 'y': '', 'dice': ''
+            },
+            'a': {
+                'instance_id': 'a', 'mode': 'train', 'step': '1', 'epoch': '1', 'ce': '', 'y': '[1.]', 'dice': '0.1'
+            },
+            'b': {
+                'instance_id': 'b', 'mode': 'train', 'step': '1', 'epoch': '1', 'ce': '', 'y': '[1.]', 'dice': '0.2'
+            },
+            'c': {
+                'instance_id': 'c', 'mode': 'train', 'step': '1', 'epoch': '1', 'ce': '', 'y': '[1.]', 'dice': '0.3'
+            }
+        }
         with self.subTest('Check values'):
             for row in rows:
                 self.assertTrue('instance_id' in row)

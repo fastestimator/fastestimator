@@ -3,7 +3,10 @@ import unittest
 
 import fastestimator as fe
 from fastestimator.op.numpyop import NumpyOp
-from fastestimator.test.unittest_util import sample_system_object, sample_system_object_torch
+from fastestimator.test.unittest_util import (
+    sample_system_object,
+    sample_system_object_torch,
+)
 
 
 class TestNumpyOp(NumpyOp):

@@ -18,12 +18,12 @@ from io import StringIO
 import numpy as np
 import tensorflow as tf
 import torch
+from fastestimator.architecture.tensorflow.lenet import LeNet as LeNetTf
 from tensorflow.python.autograph.impl.api import StagingError
 from torch.utils.data import DataLoader, Dataset
 
 import fastestimator as fe
 from fastestimator.architecture.pytorch.lenet import LeNet as LeNetTorch
-from fastestimator.architecture.tensorflow.lenet import LeNet as LeNetTf
 from fastestimator.dataset.data import mnist
 from fastestimator.network import TFNetwork
 from fastestimator.op.tensorop import TensorOp
@@ -34,6 +34,7 @@ from fastestimator.trace import Trace
 
 
 class TorchCustomDataset(Dataset):
+
     def __init__(self, data):
         super().__init__()
         self.data = data
@@ -60,6 +61,7 @@ class TestEstimatorInit(unittest.TestCase):
     """ This test has dependency on:
     * fe.summary.system.System
     """
+
     @classmethod
     def setUpClass(cls):
         train_data, eval_data = mnist.load_data()
@@ -102,6 +104,7 @@ class TestEstimatorPrepareTraces(unittest.TestCase):
     """This test has dependency on:
     * fe.schedule.schedule.get_current_item
     """
+
     @classmethod
     def setUpClass(cls):
         train_data, eval_data = mnist.load_data()
@@ -152,6 +155,7 @@ class TestEstimatorConfigureLoader(unittest.TestCase):
     * fe.util.util.to_type
     * fe.util.util.to_shape
     """
+
     def test_estimator_configure_loader_tf_data_loader_torch_model(self):
         loader = get_sample_tf_dataset()
         pipeline = fe.Pipeline(train_data=loader)
@@ -188,6 +192,7 @@ class TestEstimatorConfigureTensor(unittest.TestCase):
     """This test has dependency on:
     * fe.util.util.to_tensor
     """
+
     def test_estimator_configure_tensor_tf_dataset_torch_model(self):
         loader = get_sample_tf_dataset()
         pipeline = fe.Pipeline(train_data=loader)
@@ -228,6 +233,7 @@ class TestEstimatorConfigureTensor(unittest.TestCase):
 class TestEstimatorWarmup(unittest.TestCase):
     """This test has too many dependency to list down
     """
+
     def test_estimator_warmup_network_missing_key(self):
         loader = get_sample_tf_dataset()
         pipeline = fe.Pipeline(train_data=loader)  # "x", "y"
@@ -288,6 +294,7 @@ class TestEstimatorWarmup(unittest.TestCase):
 
 
 class ShoutNameOp(TensorOp):
+
     def __init__(self, name, iostream, inputs=None, outputs=None, mode=None):
         super().__init__(inputs, outputs, mode)
         self.name = name
@@ -298,6 +305,7 @@ class ShoutNameOp(TensorOp):
 
 
 class ShoutNameTrace(Trace):
+
     def __init__(self, name, iostream, inputs=None, outputs=None, mode=None):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.name = name
@@ -331,6 +339,7 @@ class TestEstimatorFit(unittest.TestCase):
     * fe.estimator.Estimator._prepare_trace
     * fe.summary.system.System.reset
     """
+
     def test_estimator_check_network_op_trace_invoke_sequence_tf_backend(self):
         epochs = 1
         batches = 10  # dataset has 100 sample, and batch_size is 10
@@ -438,6 +447,7 @@ class TestEstimatorTest(unittest.TestCase):
     * fe.estimator.Estimator._prepare_trace
     * fe.summary.system.System.reset_for_test
     """
+
     def test_estimator_check_network_op_trace_invoke_sequence_tf_backend(self):
         epochs = 1
         batches = 10  # dataset has 100 sample, and batch_size is 10

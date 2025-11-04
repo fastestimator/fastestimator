@@ -16,8 +16,8 @@ import os
 from typing import Dict, Optional
 
 from fastestimator.dataset.dataset import InMemoryDataset
-from fastestimator.util.traceability_util import traceable
 from fastestimator.util.base_util import list_files
+from fastestimator.util.traceability_util import traceable
 
 
 @traceable()

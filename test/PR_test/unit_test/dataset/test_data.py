@@ -16,7 +16,7 @@ import json
 import os
 import unittest
 import urllib.request
-from urllib.error import URLError, HTTPError, ContentTooShortError
+from urllib.error import ContentTooShortError, HTTPError, URLError
 
 
 def ping(host: str):
@@ -32,6 +32,7 @@ def ping(host: str):
 
 
 class TestData(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         urls_dict_path = os.path.abspath(os.path.join(__file__, "..", "resources", "dataset_urls.json"))

@@ -22,6 +22,7 @@ from fastestimator.test.unittest_util import is_equal
 
 
 class TestConcat(unittest.TestCase):
+
     def test_concat_np_input_axis_0(self):
         t = [np.array([[0, 1]]), np.array([[2, 3]]), np.array([[4, 5]])]
         obj1 = fe.backend.concat(t, axis=0)

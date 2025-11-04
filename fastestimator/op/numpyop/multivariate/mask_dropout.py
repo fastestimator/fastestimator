@@ -48,6 +48,7 @@ class MaskDropout(MultiVariateAlbumentation):
     Image types:
         uint8, float32
     """
+
     def __init__(self,
                  max_objects: Union[int, Tuple[int, int]] = 1,
                  image_fill_value: Union[int, float, str] = 0,

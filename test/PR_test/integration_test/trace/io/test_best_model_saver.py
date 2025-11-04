@@ -21,7 +21,11 @@ import torch
 
 import fastestimator as fe
 from fastestimator.op.tensorop.model import UpdateOp
-from fastestimator.test.unittest_util import MultiLayerTorchModel, is_equal, one_layer_tf_model
+from fastestimator.test.unittest_util import (
+    MultiLayerTorchModel,
+    is_equal,
+    one_layer_tf_model,
+)
 from fastestimator.trace.io import BestModelSaver
 from fastestimator.util.data import Data
 
@@ -34,6 +38,7 @@ def one_layer_model_without_weights():
 
 
 class MultiLayerTorchModelWithoutWeights(torch.nn.Module):
+
     def __init__(self) -> None:
         super().__init__()
         self.fc1 = torch.nn.Linear(4, 2, bias=False)
@@ -46,6 +51,7 @@ class MultiLayerTorchModelWithoutWeights(torch.nn.Module):
 
 
 class TestBestModelSaver(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.save_dir = tempfile.mkdtemp()
@@ -59,6 +65,7 @@ class TestBestModelSaver(unittest.TestCase):
         cls.torch_y = torch.tensor([[5], [7]], dtype=torch.float32)
 
     def test_tf_model(self):
+
         def update():
             with tf.GradientTape(persistent=True) as tape:
                 self.state['tape'] = tape

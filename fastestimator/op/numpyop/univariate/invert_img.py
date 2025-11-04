@@ -36,6 +36,7 @@ class InvertImg(ImageOnlyAlbumentation):
     Image types:
         int8
     """
+
     def __init__(self,
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],

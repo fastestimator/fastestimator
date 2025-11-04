@@ -39,6 +39,7 @@ class Onehot(NumpyOp):
         ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
             ds_ids except for a particular one, you can pass an argument like "!ds1".
     """
+
     def __init__(self,
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],

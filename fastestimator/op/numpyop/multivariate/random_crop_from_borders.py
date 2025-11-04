@@ -15,7 +15,8 @@
 from typing import Iterable, Optional, Union
 
 from albumentations import BboxParams, KeypointParams
-from albumentations.augmentations import RandomCropFromBorders as RandomCropFromBordersAlb
+from albumentations.augmentations import (
+    RandomCropFromBorders as RandomCropFromBordersAlb, )
 
 from fastestimator.op.numpyop.multivariate.multivariate import MultiVariateAlbumentation
 from fastestimator.util.traceability_util import traceable
@@ -51,6 +52,7 @@ class RandomCropFromBorders(MultiVariateAlbumentation):
     Image types:
         uint8, float32
     """
+
     def __init__(self,
                  crop_left=0.1,
                  crop_right=0.1,

@@ -22,6 +22,7 @@ from fastestimator.search.visualize import visualize_search
 
 
 class TestVisualize(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.save_path = tempfile.mkdtemp()
@@ -31,6 +32,7 @@ class TestVisualize(unittest.TestCase):
         shutil.rmtree(cls.save_path)
 
     def test_1np1nr_smoke(self):
+
         def search(search_idx, x1):
             return {'y1': 0}
 
@@ -41,6 +43,7 @@ class TestVisualize(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(self.save_path, f"{name}.html")))
 
     def test_1np2nr_smoke(self):
+
         def search(search_idx, x1):
             return {'y1': 0, 'y2': 1}
 
@@ -51,6 +54,7 @@ class TestVisualize(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(self.save_path, f"{name}.html")))
 
     def test_1np3nr_smoke(self):
+
         def search(search_idx, x1):
             return {'y1': 0, 'y2': 1, 'y3': 2}
 
@@ -61,6 +65,7 @@ class TestVisualize(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(self.save_path, f"{name}.html")))
 
     def test_2np1nr_smoke(self):
+
         def search(search_idx, x1, x2):
             return {'y1': 0}
 
@@ -71,6 +76,7 @@ class TestVisualize(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(self.save_path, f"{name}.html")))
 
     def test_2np2nr_smoke(self):
+
         def search(search_idx, x1, x2):
             return {'y1': 0, 'y2': 1}
 
@@ -81,6 +87,7 @@ class TestVisualize(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(self.save_path, f"{name}.html")))
 
     def test_2np3nr_smoke(self):
+
         def search(search_idx, x1, x2):
             return {'y1': 0, 'y2': 1, 'y3': 2}
 
@@ -91,6 +98,7 @@ class TestVisualize(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(self.save_path, f"{name}.html")))
 
     def test_3np1nr_smoke(self):
+
         def search(search_idx, x1, x2, x3):
             return {'y1': 0}
 
@@ -101,6 +109,7 @@ class TestVisualize(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(self.save_path, f"{name}.html")))
 
     def test_3np2nr_smoke(self):
+
         def search(search_idx, x1, x2, x3):
             return {'y1': 0, 'y2': 1}
 
@@ -111,6 +120,7 @@ class TestVisualize(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(self.save_path, f"{name}.html")))
 
     def test_3np3nr_smoke(self):
+
         def search(search_idx, x1, x2, x3):
             return {'y1': 0, 'y2': 1, 'y3': 2}
 
@@ -121,6 +131,7 @@ class TestVisualize(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(self.save_path, f"{name}.html")))
 
     def test_2cp1nr_smoke(self):
+
         def search(search_idx, x1, x2):
             return {'y1': 0}
 
@@ -131,6 +142,7 @@ class TestVisualize(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(self.save_path, f"{name}.html")))
 
     def test_2cp1cr_smoke(self):
+
         def search(search_idx, x1, x2):
             return {'y1': f"{x1}+{x2}"}
 

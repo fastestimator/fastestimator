@@ -22,6 +22,7 @@ from fastestimator.util import Data
 
 
 class TestCalibrationError(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.calibration_error = CalibrationError(true_key='y', pred_key='y_pred')

@@ -15,10 +15,10 @@
 import unittest
 
 import numpy as np
+from fastestimator.architecture.tensorflow import UNet as UNet_TF
 
 import fastestimator as fe
 from fastestimator.architecture.pytorch import UNet as UNet_Torch
-from fastestimator.architecture.tensorflow import UNet as UNet_TF
 from fastestimator.dataset.numpy_dataset import NumpyDataset
 from fastestimator.op.tensorop.loss import CrossEntropy
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
