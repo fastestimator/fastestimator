@@ -22,6 +22,7 @@ from fastestimator.util.traceability_util import traceable
 
 Tensor = TypeVar('Tensor', bound=torch.Tensor)
 
+
 @traceable()
 class L2Regularizaton(TensorOp):
     """Calculate L2 Regularization Loss.
@@ -35,6 +36,7 @@ class L2Regularizaton(TensorOp):
         model: A pytorch model
         beta: The multiplicative factor, to weight the l2 regularization loss with the input loss
     """
+
     def __init__(self,
                  inputs: str,
                  outputs: str,

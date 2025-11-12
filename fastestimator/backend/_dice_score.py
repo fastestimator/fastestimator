@@ -122,7 +122,7 @@ def dice_score(y_pred: Tensor,
     numerator = reduce(y_pred * y_true, axis=spacial_axes)
 
     if soft_dice:
-        denominator = reduce(y_pred ** 2, axis=spacial_axes) + reduce(y_true ** 2, axis=spacial_axes)
+        denominator = reduce(y_pred**2, axis=spacial_axes) + reduce(y_true**2, axis=spacial_axes)
     else:
         denominator = reduce(y_pred, axis=spacial_axes) + reduce(y_true, axis=spacial_axes)
 

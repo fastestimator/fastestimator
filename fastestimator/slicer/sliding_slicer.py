@@ -26,6 +26,7 @@ from fastestimator.util.base_util import to_list
 from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import get_num_gpus
 
+
 @traceable()
 class SlidingSlicer(Slicer):
     """A slicer which cuts inputs using a sliding window.
@@ -68,6 +69,7 @@ class SlidingSlicer(Slicer):
         ds_id: What dataset id(s) to invoke this Slicer in. To invoke regardless of ds_id, pass None. To invoke in all
             ds_ids except for a particular one, you can pass an argument like "!ds1".
     """
+
     def __init__(self,
                  window_size: Sequence[int],
                  strides: Union[int, Sequence[int]] = (),
@@ -162,7 +164,7 @@ class SlidingSlicer(Slicer):
                             stop = target_shape
                         elif self.pad_mode == 'nopad':
                             stop = target_shape
-                            start = max(target_shape-self.window_size[axis], 0)
+                            start = max(target_shape - self.window_size[axis], 0)
                         else:
                             # Padding the input
                             pass

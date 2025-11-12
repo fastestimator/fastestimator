@@ -18,14 +18,15 @@ import torch
 
 from fastestimator.backend._cast import cast
 from fastestimator.backend._clip_by_value import clip_by_value
-from fastestimator.backend._roll import roll
 from fastestimator.backend._get_image_dims import get_image_dims
 from fastestimator.backend._maximum import maximum
+from fastestimator.backend._roll import roll
 from fastestimator.backend._tensor_round import tensor_round
 from fastestimator.backend._tensor_sqrt import tensor_sqrt
 from fastestimator.op.tensorop.tensorop import TensorOp
 
 Tensor = TypeVar('Tensor', bound=torch.Tensor)
+
 
 class CutMixBatch(TensorOp):
     """This class performs cutmix augmentation on a batch of tensors.
@@ -49,6 +50,7 @@ class CutMixBatch(TensorOp):
     Raises:
         AssertionError: If the provided inputs are invalid.
     """
+
     def __init__(self,
                  inputs: Iterable[str],
                  outputs: Iterable[str],

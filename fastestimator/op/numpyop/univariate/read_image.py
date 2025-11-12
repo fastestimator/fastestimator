@@ -40,6 +40,7 @@ class ReadImage(NumpyOp):
     Raises:
         AssertionError: If `inputs` and `outputs` have mismatched lengths, or the `color_flag` is unacceptable.
     """
+
     def __init__(self,
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],

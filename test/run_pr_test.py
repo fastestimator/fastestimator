@@ -15,7 +15,6 @@
 import os
 import unittest
 
-
 loader = unittest.TestLoader()
 test_dir = os.path.join(__file__, "..", "PR_test")
 suite = loader.discover(test_dir)

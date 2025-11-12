@@ -21,6 +21,7 @@ from fastestimator.test.unittest_util import is_equal
 
 
 class TestToArray(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.input = [1, 2, 3]

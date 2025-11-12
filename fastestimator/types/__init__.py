@@ -12,8 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import TYPE_CHECKING, Any, Callable, Collection, Dict, List, Optional, Protocol, Sequence, Sized, TypeVar, \
-    Union, runtime_checkable
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Collection,
+    Dict,
+    List,
+    Optional,
+    Protocol,
+    Sequence,
+    Sized,
+    TypeVar,
+    Union,
+    runtime_checkable,
+)
+
 
 class FilteredData:
     """A placeholder to indicate that this data instance should not be used.
@@ -28,20 +42,24 @@ class FilteredData:
             repeated until all of the given epoch's data has been traversed (except for at most 1 batch of data which
             might not appear until after the re-shuffle has occurred).
     """
+
     def __init__(self, replacement: bool = True):
         self.replacement = replacement
 
     def __repr__(self):
         return "FilteredData"
 
+
 @runtime_checkable
 class MapDataset(Sized, Protocol):
+
     def __getitem__(self, index: int) -> Union[Dict[str, Any], List[Dict[str, Any]], FilteredData]:
         ...
 
     fe_batch: Optional[int]
     fe_reset_ds: Optional[Callable[[bool], None]]
     fe_batch_indices: Optional[Callable[[int], List[List[int]]]]
+
 
 CollectionT = TypeVar('CollectionT', bound=Collection)
 
@@ -71,7 +89,9 @@ else:
     # tensorflow during the Union definition, which would make the types unsuitable for fast-path code like the log
     # visualization CLI.
 
+
     class _MetaTensor(type):
+
         def __instancecheck__(self, __instance: Any) -> bool:
             import torch
             return isinstance(__instance, torch.Tensor)
@@ -84,6 +104,7 @@ else:
         ...
 
     class _MetaArray(type):
+
         def __instancecheck__(self, __instance: Any) -> bool:
             import numpy as np
             return isinstance(__instance, (np.ndarray, Tensor))
@@ -96,6 +117,7 @@ else:
         ...
 
     class _MetaDataSequence(type):
+
         def __instancecheck__(self, __instance: Any) -> bool:
             return isinstance(__instance, (Sequence, Array))
 
@@ -107,6 +129,7 @@ else:
         ...
 
     class _MetaModel(type):
+
         def __instancecheck__(self, __instance: Any) -> bool:
             import torch
             return isinstance(__instance, torch.nn.Module)

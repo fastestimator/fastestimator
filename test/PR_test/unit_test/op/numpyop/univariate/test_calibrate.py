@@ -24,6 +24,7 @@ from fastestimator.test.unittest_util import is_equal
 
 
 class TestCalibrate(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.single_input = [np.array([1, 2, 3, 5])]
@@ -32,19 +33,19 @@ class TestCalibrate(unittest.TestCase):
         cls.multi_output = [np.array([1, 1]), np.array([0, 0.5, 1])]
 
     def test_single_input(self):
-        op = Calibrate(inputs='x', outputs='x', calibration_fn=lambda x: x/2)
+        op = Calibrate(inputs='x', outputs='x', calibration_fn=lambda x: x / 2)
         data = op.forward(data=self.single_input, state={})
         self.assertTrue(is_equal(data, self.single_output))
 
     def test_multi_input(self):
-        op = Calibrate(inputs=['x', 'y'], outputs=['x', 'y'], calibration_fn=lambda x: x/2)
+        op = Calibrate(inputs=['x', 'y'], outputs=['x', 'y'], calibration_fn=lambda x: x / 2)
         data = op.forward(data=self.multi_input, state={})
         self.assertTrue(is_equal(data, self.multi_output))
 
     def test_single_input_fn_from_disk(self):
         tmpdirname = tempfile.mkdtemp()
         fn_path = os.path.join(tmpdirname, 'fn.pkl')
-        fn = lambda x: x/2
+        fn = lambda x: x / 2
         with open(fn_path, 'wb') as f:
             dill.dump(fn, f)
         op = Calibrate(inputs='x', outputs='x', calibration_fn=fn_path)

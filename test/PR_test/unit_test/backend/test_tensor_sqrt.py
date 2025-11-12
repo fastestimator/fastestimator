@@ -21,6 +21,7 @@ from fastestimator.backend import tensor_sqrt
 
 
 class TestTensorSqrt(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.test_np = np.array([[1, 4, 6], [4, 9, 16]])

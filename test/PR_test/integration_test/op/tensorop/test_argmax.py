@@ -20,6 +20,8 @@ from fastestimator.op.tensorop.argmax import Argmax
 from fastestimator.test.unittest_util import is_equal
 
 
+
+
 class TestArgmax(unittest.TestCase):
 
     @classmethod

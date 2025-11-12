@@ -21,6 +21,7 @@ from fastestimator.types import Array, DataSequence, Tensor
 
 
 class TestTypes(unittest.TestCase):
+
     def test_tensor(self):
         with self.subTest('Torch Tensor'):
             self.assertTrue(isinstance(torch.ones((1)), Tensor))

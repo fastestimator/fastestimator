@@ -22,6 +22,7 @@ from fastestimator.util.traceability_util import traceable
 Tensor = TypeVar('Tensor', bound=torch.Tensor)
 Model = TypeVar('Model', bound=torch.nn.Module)
 
+
 @traceable()
 class Sometimes(TensorOp):
     """Perform a NumpyOp with a given probability.
@@ -35,6 +36,7 @@ class Sometimes(TensorOp):
         tensor_op: The operator to be performed.
         prob: The probability of execution, which should be in the range: [0-1).
     """
+
     def __init__(self, tensor_op: TensorOp, prob: float = 0.5) -> None:
         # We're going to try to collect any missing output keys from the data dictionary so that they don't get
         # overridden when Sometimes chooses not to execute.

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Any, Dict, Union, Iterable
+from typing import Any, Dict, Iterable, Union
 
 import numpy as np
 from sklearn.metrics import confusion_matrix
@@ -47,6 +47,7 @@ class ConfusionMatrix(Trace):
     Raises:
         ValueError: One of ["y_pred", "y_true", "labels"] argument exists in `kwargs`.
     """
+
     def __init__(self,
                  true_key: str,
                  pred_key: str,

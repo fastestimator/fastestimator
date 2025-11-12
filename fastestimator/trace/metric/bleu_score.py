@@ -18,7 +18,12 @@ from fractions import Fraction
 from typing import Iterable, List, Tuple, Union
 
 import numpy as np
-from nltk.translate.bleu_score import SmoothingFunction, brevity_penalty, modified_precision, sentence_bleu
+from nltk.translate.bleu_score import (
+    SmoothingFunction,
+    brevity_penalty,
+    modified_precision,
+    sentence_bleu,
+)
 
 from fastestimator.trace.meta._per_ds import per_ds
 from fastestimator.trace.trace import Trace
@@ -89,6 +94,7 @@ class BleuScore(Trace):
             contains a "|" character.
 
     """
+
     def __init__(self,
                  true_key: str,
                  pred_key: str,

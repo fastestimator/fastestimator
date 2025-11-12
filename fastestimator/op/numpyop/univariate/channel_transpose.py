@@ -34,6 +34,7 @@ class ChannelTranspose(NumpyOp):
             ds_ids except for a particular one, you can pass an argument like "!ds1".
         axes: The permutation order.
     """
+
     def __init__(self,
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],

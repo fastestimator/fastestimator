@@ -23,6 +23,7 @@ from fastestimator.util.traceability_util import traceable
 
 Tensor = TypeVar('Tensor', bound=torch.Tensor)
 
+
 @traceable()
 class Hinge(LossOp):
     """Calculate the hinge loss between two tensors.
@@ -37,6 +38,7 @@ class Hinge(LossOp):
             ds_ids except for a particular one, you can pass an argument like "!ds1".
         average_loss: Whether to average the element-wise loss after the Loss Op.
     """
+
     def __init__(self,
                  inputs: Union[Tuple[str, str], List[str]],
                  outputs: str,

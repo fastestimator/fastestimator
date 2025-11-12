@@ -17,7 +17,6 @@ from typing import Any, Dict
 
 import cv2
 import numpy as np
-
 import torch
 from PIL import Image
 from plotly.graph_objects import Figure
@@ -28,6 +27,7 @@ from fastestimator.op.tensorop.model import ModelOp
 from fastestimator.summary import System
 from fastestimator.trace import Trace
 from fastestimator.util.data import Data
+
 
 def is_equal(obj1: Any, obj2: Any, assert_type: bool = True, assert_dtype: bool = False) -> bool:
     """Check whether input objects are equal. The object type can be nested iterable (list, tuple, set, dict) and
@@ -73,7 +73,6 @@ def is_equal(obj1: Any, obj2: Any, assert_type: bool = True, assert_dtype: bool 
             return False
         return np.array_equal(obj1, obj2)
 
-
     elif isinstance(obj1, torch.Tensor):
         if assert_dtype and obj1.dtype != obj2.dtype:
             return False
@@ -81,7 +80,6 @@ def is_equal(obj1: Any, obj2: Any, assert_type: bool = True, assert_dtype: bool 
 
     else:
         return obj1 == obj2
-
 
 
 class OneLayerTorchModel(torch.nn.Module):
@@ -98,6 +96,7 @@ class OneLayerTorchModel(torch.nn.Module):
     ```
 
     """
+
     def __init__(self) -> None:
         super().__init__()
         self.fc1 = torch.nn.Linear(3, 1, bias=False)
@@ -107,7 +106,9 @@ class OneLayerTorchModel(torch.nn.Module):
         x = self.fc1(x)
         return x
 
+
 class MultiLayerTorchModel(torch.nn.Module):
+
     def __init__(self) -> None:
         super().__init__()
         self.fc1 = torch.nn.Linear(4, 2, bias=False)
@@ -120,7 +121,9 @@ class MultiLayerTorchModel(torch.nn.Module):
         x = self.fc2(x)
         return x
 
+
 class MockBetaDistribution:
+
     def __init__(self, framework='tf'):
         self.framework = framework
 
@@ -130,7 +133,9 @@ class MockBetaDistribution:
         else:
             raise ValueError("Unrecognized framework {}".format(self.framework))
 
+
 class MockUniformDistribution:
+
     def __init__(self, framework='tf'):
         self.framework = framework
 
@@ -156,6 +161,7 @@ def sample_system_object_torch():
     system = System(network=network, pipeline=pipeline, traces=[], total_epochs=10, mode='train')
     return system
 
+
 def check_img_similar(img1: np.ndarray, img2: np.ndarray, ptol: int = 3, ntol: float = 0.01) -> bool:
     """Check whether img1 and img2 array are similar based on pixel to pixel comparision
     Args:
@@ -176,6 +182,7 @@ def check_img_similar(img1: np.ndarray, img2: np.ndarray, ptol: int = 3, ntol: f
             return False
     return False
 
+
 def img_to_rgb_array(path: str) -> np.ndarray:
     """Read png file to numpy array (RGB)
 
@@ -186,6 +193,7 @@ def img_to_rgb_array(path: str) -> np.ndarray:
         Image numpy array
     """
     return np.asarray(Image.open(path).convert('RGB'))
+
 
 def fig_to_rgb_array(fig: Figure) -> np.ndarray:
     """Convert image in plt.Figure to numpy array
@@ -201,6 +209,7 @@ def fig_to_rgb_array(fig: Figure) -> np.ndarray:
     decoded = cv2.cvtColor(decoded, cv2.COLOR_BGR2RGB)
     return decoded
 
+
 class TraceRun:
     """Class to simulate the trace calling protocol.
 
@@ -211,6 +220,7 @@ class TraceRun:
         batch: Batch data from pipepline.
         prediction: Batch data from network.
     """
+
     def __init__(self, trace: Trace, batch: Dict[str, Any], prediction: Dict[str, Any]):
         self.trace = trace
         self.batch = batch

@@ -12,11 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from operator import lt, gt
+from operator import gt, lt
 from typing import Optional, Union
 
 import numpy as np
-
 import torch
 
 from fastestimator.backend._get_lr import get_lr
@@ -25,6 +24,7 @@ from fastestimator.summary.system import System
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
 from fastestimator.util.traceability_util import traceable
+
 
 @traceable()
 class ReduceLROnPlateau(Trace):

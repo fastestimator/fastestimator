@@ -30,6 +30,7 @@ from fastestimator.util.data import Data
 
 
 class TestTerminateOnNaN(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.data_np = Data({'loss': np.NaN})

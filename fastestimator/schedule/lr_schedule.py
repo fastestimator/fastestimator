@@ -20,11 +20,11 @@ from typing import List, Tuple, Union
 
 import cv2
 import numpy as np
-
 import wget
 
 from fastestimator.backend._zscore import zscore
 from fastestimator.util.traceability_util import traceable
+
 
 def cosine_decay(time: int,
                  cycle_length: int,
@@ -76,6 +76,7 @@ def cosine_decay(time: int,
         lr = (init_lr - min_lr) / 2 * math.cos(time_in_cycle * math.pi) + (init_lr + min_lr) / 2
     return lr
 
+
 @traceable()
 class ARC:
     """A run-of-the-mill learning rate scheduler.
@@ -83,6 +84,7 @@ class ARC:
     Args:
         frequency: invoke frequency in terms of number of epochs.
     """
+
     def __init__(self, frequency: int = 3) -> None:
         self.frequency = frequency
         assert isinstance(self.frequency, int) and self.frequency > 0

@@ -23,7 +23,13 @@ from natsort import humansorted
 from fastestimator.backend._get_lr import get_lr
 from fastestimator.summary.summary import ValWithError
 from fastestimator.summary.system import System
-from fastestimator.util.base_util import check_ds_id, check_io_names, parse_modes, to_list, to_set
+from fastestimator.util.base_util import (
+    check_ds_id,
+    check_io_names,
+    parse_modes,
+    to_list,
+    to_set,
+)
 from fastestimator.util.data import Data, DSData
 from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import to_number
@@ -290,6 +296,7 @@ class Logger(Trace):
 
     Please don't add this trace into an estimator manually. FastEstimator will add it automatically.
     """
+
     def __init__(self) -> None:
         super().__init__(inputs="*")
         self.eval_steps = defaultdict(lambda: 0)
@@ -309,8 +316,7 @@ class Logger(Trace):
             step = self.eval_steps[self.system.ds_id]
             if step in self.system.eval_log_steps[0]:
                 ds_str = f" ({self.system.ds_id})" if self.system.ds_id else ''
-                self._print_message(f"Eval Progress{ds_str}: {step}/{self.system.eval_log_steps[1]}; ",
-                                    data)
+                self._print_message(f"Eval Progress{ds_str}: {step}/{self.system.eval_log_steps[1]}; ", data)
 
     def on_epoch_end(self, data: Data) -> None:
         if self.system.mode == "train":

@@ -36,6 +36,7 @@ class Minmax(NumpyOp):
         new_min: The desired minimum value after the minmax operation.
         new_max: The desired maximum value after the minmax operation.
     """
+
     def __init__(self,
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],

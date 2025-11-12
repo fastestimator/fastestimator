@@ -20,6 +20,7 @@ import fastestimator as fe
 
 
 class TestHadamardCode(unittest.TestCase):
+
     def test_single_input(self):
         batch_size = 27
         n_features = 123

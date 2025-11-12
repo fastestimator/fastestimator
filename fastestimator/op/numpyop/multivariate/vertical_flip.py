@@ -15,7 +15,8 @@
 from typing import Iterable, Optional, Union
 
 from albumentations import BboxParams, KeypointParams
-from albumentations.augmentations.geometric.transforms import VerticalFlip as VerticalFlipAlb
+from albumentations.augmentations.geometric.transforms import (
+    VerticalFlip as VerticalFlipAlb, )
 
 from fastestimator.op.numpyop.multivariate.multivariate import MultiVariateAlbumentation
 from fastestimator.util.traceability_util import traceable
@@ -47,6 +48,7 @@ class VerticalFlip(MultiVariateAlbumentation):
     Image types:
         uint8, float32
     """
+
     def __init__(self,
                  mode: Union[None, str, Iterable[str]] = None,
                  ds_id: Union[None, str, Iterable[str]] = None,

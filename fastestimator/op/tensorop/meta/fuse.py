@@ -18,11 +18,12 @@ import torch
 
 from fastestimator.network import BaseNetwork
 from fastestimator.op.tensorop.tensorop import TensorOp
-from fastestimator.util.traceability_util import traceable
 from fastestimator.util.base_util import to_list
+from fastestimator.util.traceability_util import traceable
 
 Tensor = TypeVar('Tensor', bound=torch.Tensor)
 Model = TypeVar('Model', bound=torch.nn.Module)
+
 
 @traceable()
 class Fuse(TensorOp):
@@ -35,6 +36,7 @@ class Fuse(TensorOp):
     Raises:
         ValueError: If `ops` are invalid.
     """
+
     def __init__(self, ops: Union[TensorOp, List[TensorOp]]) -> None:
         ops = to_list(ops)
         if len(ops) < 1:

@@ -21,6 +21,7 @@ from fastestimator.slicer import MeanUnslicer
 
 
 class TestMeanUnslicer(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.minibatches = [np.array([0.3, 0.6, 0.9]), np.array([1.0, 1.0, 1.0]), np.array([2.0, 2.0, 2.0])]

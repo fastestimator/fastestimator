@@ -53,6 +53,7 @@ class MeanAveragePrecision(Trace):
     Returns:
         Mean Average Precision.
     """
+
     def __init__(self,
                  num_classes: int,
                  true_key='bbox',
@@ -215,8 +216,11 @@ class MeanAveragePrecision(Trace):
         # end of reading det and gt
 
         # compute iou matrix, matrix index is (img_id, cat_id), each element in matrix has shape (num_det, num_gt)
-        self.ious = {(img_id, cat_id): self.compute_iou(self.det[img_id, cat_id], self.gt[img_id, cat_id])
-                     for img_id in self.batch_image_ids for cat_id in self.categories}
+        self.ious = {
+            (img_id, cat_id): self.compute_iou(self.det[img_id, cat_id], self.gt[img_id, cat_id])
+            for img_id in self.batch_image_ids
+            for cat_id in self.categories
+        }
 
         for cat_id in self.categories:
             for img_id in self.batch_image_ids:

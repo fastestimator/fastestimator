@@ -30,12 +30,27 @@ import dot2tex as d2t
 import jsonpickle
 import numpy as np
 import pydot
-
 import torch
 from cpuinfo import get_cpu_info
 from natsort import humansorted
-from pylatex import Command, Document, Figure, Hyperref, Itemize, Label, LongTable, Marker, MultiColumn, NoEscape, \
-    Package, Section, Subsection, Subsubsection, Tabularx, escape_latex
+from pylatex import (
+    Command,
+    Document,
+    Figure,
+    Hyperref,
+    Itemize,
+    Label,
+    LongTable,
+    Marker,
+    MultiColumn,
+    NoEscape,
+    Package,
+    Section,
+    Subsection,
+    Subsubsection,
+    Tabularx,
+    escape_latex,
+)
 from pylatex.base_classes import Arguments
 from pylatex.section import Paragraph
 from pylatex.utils import bold
@@ -58,21 +73,46 @@ from fastestimator.op.tensorop.meta.repeat import Repeat as RepeatT
 from fastestimator.op.tensorop.meta.sometimes import Sometimes as SometimesT
 from fastestimator.op.tensorop.model import ModelOp
 from fastestimator.pipeline import Pipeline
-from fastestimator.schedule.schedule import Scheduler, get_current_items, get_signature_epochs
+from fastestimator.schedule.schedule import (
+    Scheduler,
+    get_current_items,
+    get_signature_epochs,
+)
 from fastestimator.slicer.slicer import Slicer
 from fastestimator.summary.logs.log_plot import visualize_logs
 from fastestimator.trace.adapt.lr_scheduler import LRScheduler
 from fastestimator.trace.io.restore_wizard import RestoreWizard
 from fastestimator.trace.trace import Trace, sort_traces
-from fastestimator.util.base_util import FEID, DefaultKeyDict, LogSplicer, NonContext, prettify_metric_name, to_list, \
-    warn
+from fastestimator.util.base_util import (
+    FEID,
+    DefaultKeyDict,
+    LogSplicer,
+    NonContext,
+    prettify_metric_name,
+    to_list,
+    warn,
+)
 from fastestimator.util.data import Data
-from fastestimator.util.latex_util import AdjustBox, Center, ContainerList, HrefFEID, Verbatim
+from fastestimator.util.latex_util import (
+    AdjustBox,
+    Center,
+    ContainerList,
+    HrefFEID,
+    Verbatim,
+)
 from fastestimator.util.traceability_util import FeSummaryTable, SummaryTable, traceable
-from fastestimator.util.util import Suppressor, cpu_count, get_gpu_info, get_model_parameters, get_num_gpus, \
-    get_optimizer_name
+from fastestimator.util.util import (
+    Suppressor,
+    cpu_count,
+    get_gpu_info,
+    get_model_parameters,
+    get_num_gpus,
+    get_optimizer_name,
+)
+
 
 class DataOp(Op):
+
     def __init__(self,
                  inputs: Union[None, str, Iterable[str]] = None,
                  outputs: Union[None, str, Iterable[str]] = None,
@@ -80,9 +120,12 @@ class DataOp(Op):
                  ds_id: Union[None, str, Iterable[str]] = None) -> None:
         super().__init__(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id)
 
+
 class _UnslicerWrapper():
+
     def __init__(self, slicer: Slicer) -> None:
         self.slicer = slicer
+
 
 @traceable()
 class Traceability(Trace):
@@ -97,6 +140,7 @@ class Traceability(Trace):
     Raises:
         OSError: If graphviz is not installed.
     """
+
     def __init__(self, save_path: str, extra_objects: Any = None):
         # Verify that graphviz is available on this machine
         try:

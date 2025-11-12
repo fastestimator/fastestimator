@@ -15,7 +15,6 @@
 from typing import Any, Dict, Iterable, List, Sequence, TypeVar, Union
 
 import numpy as np
-
 import torch
 
 from fastestimator.backend._permute import permute
@@ -23,6 +22,7 @@ from fastestimator.op.tensorop.tensorop import TensorOp
 from fastestimator.util.traceability_util import traceable
 
 Tensor = TypeVar('Tensor', torch.Tensor, np.ndarray)
+
 
 @traceable()
 class Permute(TensorOp):
@@ -38,6 +38,7 @@ class Permute(TensorOp):
         ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
             ds_ids except for a particular one, you can pass an argument like "!ds1".
     """
+
     def __init__(self,
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],

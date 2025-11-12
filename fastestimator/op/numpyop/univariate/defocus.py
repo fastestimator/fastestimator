@@ -14,13 +14,10 @@
 # ==============================================================================
 from typing import Iterable, Tuple, Union
 
-
 from albumentations.augmentations.blur.transforms import Defocus as DefocusAlb
 
-from fastestimator.util.traceability_util import traceable
-
 from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
-
+from fastestimator.util.traceability_util import traceable
 
 
 @traceable()
@@ -39,17 +36,15 @@ class Defocus(ImageOnlyAlbumentation):
         ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
             ds_ids except for a particular one, you can pass an argument like "!ds1".
     """
+
     def __init__(self,
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
                  ds_id: Union[None, str, Iterable[str]] = None,
-                 radius: Union[int, Tuple[int, int]] = (3,10),
-                 alias_blur: Union[float, Tuple[float, float]] = (0.1,0.5)
-                 ):
-        super().__init__(DefocusAlb(radius=radius,
-                                     alias_blur=alias_blur,
-                                     always_apply=True),
+                 radius: Union[int, Tuple[int, int]] = (3, 10),
+                 alias_blur: Union[float, Tuple[float, float]] = (0.1, 0.5)):
+        super().__init__(DefocusAlb(radius=radius, alias_blur=alias_blur, always_apply=True),
                          inputs=inputs,
                          outputs=outputs,
                          mode=mode,

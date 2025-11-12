@@ -22,6 +22,7 @@ from fastestimator.op.numpyop.univariate import Binarize, Minmax, Normalize
 
 
 class TestOneOf(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.single_input = [np.random.randint(16, size=(28, 28, 3))]

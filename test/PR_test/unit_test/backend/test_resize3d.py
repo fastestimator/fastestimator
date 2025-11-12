@@ -16,10 +16,11 @@ import unittest
 
 import numpy as np
 
-from fastestimator.backend import to_tensor, resize_3d
+from fastestimator.backend import resize_3d, to_tensor
 
 
 class TestResize3D(unittest.TestCase):
+
     @classmethod
     def setUpClass(self):
         self.pytorch_array = to_tensor(np.arange(0.0, 8.0, 1.0, dtype=np.float32).reshape((1, 1, 2, 2, 2)), 'torch')

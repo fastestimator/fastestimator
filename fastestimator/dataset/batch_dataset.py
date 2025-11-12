@@ -59,6 +59,7 @@ class BatchDataset(FEDataset):
             `probability`, otherwise a list of ints of len(`datasets`) is required.
         probability: Probability to draw from each dataset. Only allowed if `num_samples` is an integer.
     """
+
     def __init__(self,
                  datasets: Union[FEDataset, Iterable[FEDataset]],
                  num_samples: Union[int, Iterable[int]],
@@ -282,8 +283,8 @@ class BatchDataset(FEDataset):
             num_samples = [index.count(i) for i in range(len(self.datasets))]
         else:
             num_samples = self.num_samples
-        indices = [[index_map[batch_idx * num_sample + idx] for idx in range(num_sample)] for num_sample,
-                   index_map in zip(num_samples, self.index_maps)]
+        indices = [[index_map[batch_idx * num_sample + idx] for idx in range(num_sample)]
+                   for num_sample, index_map in zip(num_samples, self.index_maps)]
         return indices
 
     def fe_reset_ds(self, shuffle: bool = True, *, seed: Optional[int] = None) -> None:

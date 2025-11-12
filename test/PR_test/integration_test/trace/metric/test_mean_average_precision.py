@@ -22,6 +22,7 @@ from fastestimator.util import Data
 
 
 class TestMeanAveragePrecision(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         x = np.random.rand(1, 5, 5)

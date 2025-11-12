@@ -24,6 +24,7 @@ from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
 from fastestimator.util.traceability_util import traceable
 
+
 @traceable()
 class ModelSaver(Trace):
     """Save model weights based on epoch frequency during training.
@@ -42,6 +43,7 @@ class ModelSaver(Trace):
     Raises:
         ValueError: If `max_to_keep` is negative, or if save_architecture is used with a PyTorch model.
     """
+
     def __init__(self,
                  model: torch.nn.Module,
                  save_dir: str,

@@ -18,6 +18,7 @@ import fastestimator as fe
 
 
 class TestOpNames(unittest.TestCase):
+
     def test_forbidden_names_semi(self):
         with self.assertRaises(AssertionError):
             fe.op.Op(inputs="x:")

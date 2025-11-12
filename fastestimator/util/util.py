@@ -38,7 +38,6 @@ from typing import (
 )
 
 import numpy as np
-
 import torch
 import torch.backends.mps
 from cpuinfo import get_cpu_info
@@ -65,9 +64,7 @@ STRING_TO_TORCH_DTYPE = {
     'bool': torch.bool
 }
 
-STRING_TO_TF_DTYPE = {
-    None: None
-}
+STRING_TO_TF_DTYPE = {None: None}
 
 TENSOR_TO_NP_DTYPE = {
     # Abstract types like 'float' and 'long' are intentionally not included here since they are never actually a
@@ -95,6 +92,7 @@ TENSOR_TO_NP_DTYPE = {
 
 Tensor = TypeVar('Tensor', bound=torch.Tensor)
 T = TypeVar('T')
+
 
 class Suppressor(object):
     """A class which can be used to silence output of function calls.
@@ -199,15 +197,18 @@ class Suppressor(object):
         except FileNotFoundError:
             pass
 
+
 def get_optimizer_name(model: torch.nn.Module) -> str:
     try:
         return type(model.optimizer).__name__
     except AttributeError:
         return model.optimizer
 
+
 def count_params(weights: List[torch.Tensor]) -> int:
     shapes = [v.shape for v in weights]
     return int(sum(math.prod(p) for p in shapes))
+
 
 def get_model_parameters(model: torch.nn.Module) -> Dict[str, int]:
     if isinstance(model, torch.nn.Module):
@@ -217,9 +218,11 @@ def get_model_parameters(model: torch.nn.Module) -> Dict[str, int]:
         raise ValueError("Model not recognized.")
     return {'total_params': total_params, 'trainable_params': trainable_params}
 
+
 def _custom_tf_print(*args, **kwargs):
     kwargs['output_stream'] = Suppressor.tf_print_name_f
     print(*args, **kwargs)
+
 
 def is_valid_file(file_path: str) -> bool:
     """Validate whether file is valid or not.
@@ -538,6 +541,7 @@ def get_batch_size(data: Dict[str, Any]) -> int:
     batch_size = set(data[key].shape[0] for key in data if hasattr(data[key], "shape") and list(data[key].shape))
     assert len(batch_size) == 1, "invalid batch size: {}".format(batch_size)
     return batch_size.pop()
+
 
 def to_number(data: Union[torch.Tensor, np.ndarray, int, float, str]) -> np.ndarray:
     """Convert an input value into a Numpy ndarray.

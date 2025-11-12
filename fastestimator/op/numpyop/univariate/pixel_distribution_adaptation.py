@@ -14,7 +14,8 @@
 # ==============================================================================
 from typing import Any, Callable, Iterable, Tuple, Union
 
-from albumentations.augmentations import PixelDistributionAdaptation as PixelDistributionAdaptationAlb
+from albumentations.augmentations import (
+    PixelDistributionAdaptation as PixelDistributionAdaptationAlb, )
 
 from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
 from fastestimator.util.traceability_util import traceable
@@ -45,23 +46,24 @@ class PixelDistributionAdaptation(ImageOnlyAlbumentation):
         ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
             ds_ids except for a particular one, you can pass an argument like "!ds1".
     """
-    def __init__(self,
-                 inputs: Union[str, Iterable[str]],
-                 outputs: Union[str, Iterable[str]],
-                 reference_images: Union[Any, Iterable[Any]],
-                 mode: Union[None, str, Iterable[str]] = None,
-                 ds_id: Union[None, str, Iterable[str]] = None,
-                 blend_ratio: Tuple[float, float] = (0.25,1.0),
-                 read_fn: Callable = lambda x: x, # for reading tensor to numpy array
-                 transform_type: str = 'pca'
-                 ):
-        super().__init__(PixelDistributionAdaptationAlb(reference_images=reference_images,
-                                blend_ratio=blend_ratio,
-                                read_fn=read_fn,
-                                transform_type=transform_type,
-                                always_apply=True),
-                         inputs=inputs,
-                         outputs=outputs,
-                         mode=mode,
-                         ds_id=ds_id)
 
+    def __init__(
+            self,
+            inputs: Union[str, Iterable[str]],
+            outputs: Union[str, Iterable[str]],
+            reference_images: Union[Any, Iterable[Any]],
+            mode: Union[None, str, Iterable[str]] = None,
+            ds_id: Union[None, str, Iterable[str]] = None,
+            blend_ratio: Tuple[float, float] = (0.25, 1.0),
+            read_fn: Callable = lambda x: x,  # for reading tensor to numpy array
+            transform_type: str = 'pca'):
+        super().__init__(
+            PixelDistributionAdaptationAlb(reference_images=reference_images,
+                                           blend_ratio=blend_ratio,
+                                           read_fn=read_fn,
+                                           transform_type=transform_type,
+                                           always_apply=True),
+            inputs=inputs,
+            outputs=outputs,
+            mode=mode,
+            ds_id=ds_id)

@@ -20,6 +20,7 @@ from fastestimator.op.numpyop.multivariate import Transpose
 
 
 class TestTranspose(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.single_input = [np.random.rand(28, 28, 3)]

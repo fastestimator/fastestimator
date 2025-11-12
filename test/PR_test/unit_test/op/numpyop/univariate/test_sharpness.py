@@ -20,6 +20,7 @@ from fastestimator.op.numpyop.univariate import Sharpness
 
 
 class TestSharpness(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.single_input = [np.random.randint(0, 256, size=(28, 28, 3)).astype(np.uint8)]

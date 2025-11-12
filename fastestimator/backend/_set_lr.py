@@ -42,4 +42,3 @@ def set_lr(model: torch.nn.Module, lr: float, weight_decay: Optional[float] = No
                 param_group['weight_decay'] = weight_decay
     else:
         raise ValueError("Unrecognized model instance {}".format(type(model)))
-

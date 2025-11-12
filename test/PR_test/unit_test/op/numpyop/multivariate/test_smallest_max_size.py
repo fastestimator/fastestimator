@@ -20,6 +20,7 @@ from fastestimator.op.numpyop.multivariate import SmallestMaxSize
 
 
 class TestSmallesMaxSize(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.max_size = 512

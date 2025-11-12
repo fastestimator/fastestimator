@@ -16,7 +16,6 @@ from typing import Any, Dict, Iterable, Optional, TypeVar, Union
 
 import cv2
 import numpy as np
-
 import torch
 
 from fastestimator.backend._argmax import argmax
@@ -31,6 +30,7 @@ from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import to_number
 
 Tensor = TypeVar('Tensor', torch.Tensor, np.ndarray)
+
 
 @traceable()
 class GradCAM(Trace):
@@ -57,6 +57,7 @@ class GradCAM(Trace):
         ds_id: What dataset id(s) to execute this Trace in. To execute regardless of ds_id, pass None. To execute in all
             ds_ids except for a particular one, you can pass an argument like "!ds1".
     """
+
     def __init__(self,
                  images: str,
                  grads: str,

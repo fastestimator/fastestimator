@@ -21,6 +21,7 @@ from fastestimator.test.unittest_util import is_equal
 
 
 class TestReshape(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.single_input = [np.array([1, 2, 3, 4])]

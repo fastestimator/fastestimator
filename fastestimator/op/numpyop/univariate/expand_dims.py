@@ -34,6 +34,7 @@ class ExpandDims(NumpyOp):
             ds_ids except for a particular one, you can pass an argument like "!ds1".
         axis: The axis to expand.
     """
+
     def __init__(self,
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],

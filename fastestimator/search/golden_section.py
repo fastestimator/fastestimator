@@ -51,6 +51,7 @@ class GoldenSection(Search):
     Raises:
         AssertionError: If `eval_fn`, `x_min`, `x_max`, or `max_iter` are invalid.
     """
+
     def __init__(self,
                  eval_fn: Callable[[int, Union[int, float]], float],
                  x_min: Union[int, float],

@@ -15,7 +15,7 @@
 import re
 import statistics
 from collections import defaultdict
-from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
 if TYPE_CHECKING:
     from fastestimator.util.traceability_util import FeSummaryTable
@@ -124,6 +124,7 @@ class Summary:
         system_config: A description of the initialization parameters defining the estimator associated with this
             experiment.
     """
+
     def __init__(self, name: Optional[str], system_config: Optional[List['FeSummaryTable']] = None) -> None:
         self.name = name
         self.system_config = system_config
@@ -196,7 +197,9 @@ def average_summaries(name: str, summaries: List[Summary]) -> Summary:
     keys = {key for summary in summaries for key_pairs in summary.history.values() for key in key_pairs.keys()}
     steps = {
         step
-        for summary in summaries for key_pairs in summary.history.values() for val_pair in key_pairs.values()
+        for summary in summaries
+        for key_pairs in summary.history.values()
+        for val_pair in key_pairs.values()
         for step in val_pair.keys()
     }
     # Average everything

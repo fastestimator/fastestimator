@@ -40,6 +40,7 @@ def _lacks_graphviz():
 class SampleTrace(Trace):
     """ custom trace that gets average of all samples
     """
+
     def on_begin(self, data):
         self.buffer = []
 
@@ -51,6 +52,7 @@ class SampleTrace(Trace):
 
 
 class TestTestReport(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         dataset = NumpyDataset({

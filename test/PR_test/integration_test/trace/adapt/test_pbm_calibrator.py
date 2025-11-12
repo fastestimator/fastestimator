@@ -19,13 +19,13 @@ import unittest
 import dill
 import numpy as np
 
-from fastestimator.test.unittest_util import is_equal
-from fastestimator.test.unittest_util import sample_system_object
+from fastestimator.test.unittest_util import is_equal, sample_system_object
 from fastestimator.trace.adapt import PBMCalibrator
 from fastestimator.util.data import Data
 
 
 class TestPBMCalibrator(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         save_dir = tempfile.mkdtemp()

@@ -51,6 +51,7 @@ class LongestMaxSize(MultiVariateAlbumentation):
     Image types:
         uint8, float32
     """
+
     def __init__(self,
                  max_size: int = 1024,
                  interpolation: int = cv2.INTER_LINEAR,

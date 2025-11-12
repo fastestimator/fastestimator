@@ -20,10 +20,23 @@ import time
 from copy import deepcopy
 from operator import mul
 from threading import Lock
-from typing import Any, Dict, Iterable, List, Literal, Optional, Set, Tuple, Type, TypeVar, Union, cast, overload
+from typing import (
+    Any,
+    Dict,
+    Iterable,
+    List,
+    Literal,
+    Optional,
+    Set,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+    cast,
+    overload,
+)
 
 import numpy as np
-
 from torch.utils.data import DataLoader, Dataset
 from typing_extensions import Self
 
@@ -36,13 +49,19 @@ from fastestimator.op.numpyop.meta.one_of import OneOf
 from fastestimator.op.numpyop.meta.repeat import Repeat
 from fastestimator.op.numpyop.meta.sometimes import Sometimes
 from fastestimator.op.numpyop.numpyop import Batch, NumpyOp, forward_numpyop
-from fastestimator.schedule.schedule import EpochScheduler, RepeatScheduler, Scheduler, get_current_items
+from fastestimator.schedule.schedule import (
+    EpochScheduler,
+    RepeatScheduler,
+    Scheduler,
+    get_current_items,
+)
 from fastestimator.types import FilteredData
 from fastestimator.util.base_util import filter_nones, to_list, to_set, warn
 from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import cpu_count, get_num_devices
 
 DataSource = TypeVar('DataSource', Dataset, DataLoader)
+
 
 @traceable(blacklist=('ctx_loader', 'ctx_lock'))
 class Pipeline:
@@ -706,8 +725,7 @@ class Pipeline:
                           ctx_ops,
                           self.ctx_mode,
                           self.ctx_output_keys | self.ctx_batch_input_keys if self.ctx_output_keys else None,
-                          deep_remainder=False) for ds,
-                ctx_ops in zip(self.ctx_dataset.datasets, self.ctx_ops)
+                          deep_remainder=False) for ds, ctx_ops in zip(self.ctx_dataset.datasets, self.ctx_ops)
             ]
             self.ctx_dataset.op_datasets = op_datasets
             # when batch_size is None, then it indicates each sample is a batch

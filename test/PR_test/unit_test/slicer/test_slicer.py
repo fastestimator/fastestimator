@@ -18,11 +18,16 @@ from typing import List, Tuple
 import torch
 
 from fastestimator.slicer import Slicer
-from fastestimator.slicer.slicer import forward_slicers, reverse_slicers, sanity_assert_slicers
+from fastestimator.slicer.slicer import (
+    forward_slicers,
+    reverse_slicers,
+    sanity_assert_slicers,
+)
 from fastestimator.types import Array
 
 
 class MockSlicer(Slicer):
+
     def _slice_batch(self, batch: Array) -> List[Array]:
         return [batch]
 
@@ -31,6 +36,7 @@ class MockSlicer(Slicer):
 
 
 class MockSlicer2(Slicer):
+
     def _slice_batch(self, batch: Array) -> List[Array]:
         return [batch, batch]
 
@@ -39,16 +45,19 @@ class MockSlicer2(Slicer):
 
 
 class MockSlicerSliceOnly(Slicer):
+
     def _slice_batch(self, batch: Array) -> List[Array]:
         return [batch]
 
 
 class MockSlicerUnSliceOnly(Slicer):
+
     def _unslice_batch(self, slices: Tuple[Array, ...], key: str) -> Array:
         return slices[0]
 
 
 class TestSlicer(unittest.TestCase):
+
     def test_raise_from_init(self):
         with self.subTest("No inputs"):
             self.assertRaises(ValueError, lambda: MockSlicer(slice=()))
@@ -59,6 +68,7 @@ class TestSlicer(unittest.TestCase):
 
 
 class TestSanityAssert(unittest.TestCase):
+
     def test_sanity(self):
         with self.subTest("Mix slice keys"):
             slicers = [MockSlicer(slice=("x", "y")), MockSlicer(slice="z"), MockSlicer(slice=("y", "b"))]
@@ -73,25 +83,39 @@ class TestSanityAssert(unittest.TestCase):
 
 
 class TestForwardSlicers(unittest.TestCase):
+
     def test_forward(self):
         with self.subTest("Single Slice"):
             slicers = [MockSlicer(slice="x"), MockSlicer(slice=("y", "z"))]
-            batch = {"x": torch.ones((3, 5, 5, 7)), "y": torch.ones((3, 10)), "z": torch.ones((3, 1)), "w": torch.ones((3, 2))}
+            batch = {
+                "x": torch.ones((3, 5, 5, 7)),
+                "y": torch.ones((3, 10)),
+                "z": torch.ones((3, 1)),
+                "w": torch.ones((3, 2))
+            }
             minibatch = forward_slicers(slicers=slicers, data=batch)
             self.assertEqual(len(minibatch), 1)
             self.assertDictEqual(minibatch[0], batch)
         with self.subTest("Multi Slice"):
             slicers = [MockSlicer2(slice="x"), MockSlicer2(slice=("y", "z"))]
-            batch = {"x": torch.ones((3, 5, 5, 7)), "y": torch.ones((3, 10)), "z": torch.ones((3, 1)), "w": torch.ones((3, 2))}
+            batch = {
+                "x": torch.ones((3, 5, 5, 7)),
+                "y": torch.ones((3, 10)),
+                "z": torch.ones((3, 1)),
+                "w": torch.ones((3, 2))
+            }
             minibatch = forward_slicers(slicers=slicers, data=batch)
             self.assertEqual(len(minibatch), 2)
             self.assertDictEqual(minibatch[0], batch)
 
 
 class TestReverseSlicers(unittest.TestCase):
+
     def test_reverse(self):
         slicers = [MockSlicer(slice="x"), MockSlicer(slice=("y", "z"))]
-        batch = {"x": torch.ones((3, 5, 5, 7)), "y": torch.ones((3, 10)), "z": torch.ones((3, 1)), "w": torch.ones((3, 2))}
+        batch = {
+            "x": torch.ones((3, 5, 5, 7)), "y": torch.ones((3, 10)), "z": torch.ones((3, 1)), "w": torch.ones((3, 2))
+        }
         minibatch = forward_slicers(slicers=slicers, data=batch)
         for elem in minibatch:
             elem.pop("z")  # simulate z being un-wanted later

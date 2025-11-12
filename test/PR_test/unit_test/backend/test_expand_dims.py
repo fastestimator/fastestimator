@@ -22,6 +22,7 @@ from fastestimator.test.unittest_util import is_equal
 
 
 class TestExpandDims(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.np_input = np.array([2, 7, 5])

@@ -26,6 +26,7 @@ from fastestimator.util.traceability_util import traceable
 
 Tensor = TypeVar('Tensor', bound=torch.Tensor)
 
+
 @traceable()
 class FGSM(TensorOp):
     """Create an adversarial sample from input data using the Fast Gradient Sign Method.
@@ -45,6 +46,7 @@ class FGSM(TensorOp):
         ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
             ds_ids except for a particular one, you can pass an argument like "!ds1".
     """
+
     def __init__(self,
                  data: str,
                  loss: str,

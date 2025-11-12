@@ -40,6 +40,7 @@ class Normalize(ImageOnlyAlbumentation):
     Image types:
         uint8, float32
     """
+
     def __init__(self,
                  inputs: Union[str, Sequence[str]],
                  outputs: Union[str, Sequence[str]],

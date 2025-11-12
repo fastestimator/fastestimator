@@ -18,6 +18,7 @@ from fastestimator.util.cli_util import parse_cli_to_dictionary
 
 
 class TestCliUtil(unittest.TestCase):
+
     def test_parse_cli_to_dictionary(self):
         a = parse_cli_to_dictionary(["--epochs", "5", "--test", "this", "--lr", "0.74"])
         self.assertEqual(a, {'epochs': 5, 'test': 'this', 'lr': 0.74})

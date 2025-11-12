@@ -34,21 +34,25 @@ from fastestimator.test.unittest_util import is_equal
 
 
 class SampleNumpyOp(NumpyOp):
+
     def forward(self, data, state):
         return data
 
 
 class SampleTensorOp(TensorOp):
+
     def forward(self, data, state):
         return data
 
 
 class NumpyOpAdd1(NumpyOp):
+
     def forward(self, data, state):
         return data + 1
 
 
 class ListData(Dataset):
+
     def __init__(self, ds, key1="x", key2="y"):
         self.ds = ds
         self.key1 = key1
@@ -62,6 +66,7 @@ class ListData(Dataset):
 
 
 class TorchCustomDataset(Dataset):
+
     def __init__(self, data):
         super().__init__()
         self.data = data
@@ -98,6 +103,7 @@ class TestPipelineInit(unittest.TestCase):
     * fe.schedule.schedule.get_current_items
     * fe.schedule.schedule.EpochScheduler
     """
+
     def setUp(self):
         self.sample_tf_dataset = get_sample_tf_dataset()
         self.sample_torch_dataset = get_sample_torch_dataset()
@@ -323,6 +329,7 @@ class TestPipelineGetModes(unittest.TestCase):
     * fe.pipeline.Pipeline.get_modes
     * fe.schedule.schedule.EpochScheduler
     """
+
     def setUp(self):
         self.sample_torch_dataset = get_sample_torch_dataset()
 
@@ -365,6 +372,7 @@ class TestPipelineGetEpochsWithData(unittest.TestCase):
     * fe.pipeline.Pipeline.get_epochs_with_data
     * fe.schedule.schedule.EpochScheduler
     """
+
     def setUp(self):
         self.sample_torch_dataset = get_sample_torch_dataset()
 
@@ -390,6 +398,7 @@ class TestPipelineBenchmark(unittest.TestCase):
     """ This test has dependency on:
     * fe.pipeline.Pipeline.get_loader
     """
+
     def setUp(self):
         self.sample_tf_dataset = get_sample_tf_dataset()
         self.sample_torch_dataset = get_sample_torch_dataset()
@@ -431,6 +440,7 @@ class TestPipelineTransform(unittest.TestCase):
     * fe.schedule.schedule.get_current_items
     * fe.op.numpy.numpy.forward_numpy
     """
+
     def setUp(self):
         self.sample_data = {"x": np.array([1, 2, 3], dtype=np.float32)}
         self.sample_dataset = get_sample_torch_dataset()
@@ -493,6 +503,7 @@ class TestPipelineTransform(unittest.TestCase):
 
 
 class TestPipelineGetResults(unittest.TestCase):
+
     def setUp(self):
         self.sample_tf_dataset = get_sample_tf_dataset()
         self.sample_torch_dataset = get_sample_torch_dataset()
@@ -658,6 +669,7 @@ class TestPipelineGetLoader(unittest.TestCase):
     * fe.dataset.op_dataset.OpDataset
     * fe.pipeline.Pipeline._pad_batch_collate
     """
+
     def setUp(self):
         self.sample_tf_dataset = get_sample_tf_dataset()
         self.sample_torch_dataset = get_sample_torch_dataset()
@@ -791,6 +803,7 @@ class TestPipelineGetLoader(unittest.TestCase):
 
 
 class TestPipelineNames(unittest.TestCase):
+
     def test_forbidden_names_none(self):
         data = NumpyDataset({"x": np.array([[0, 255], [255, 0]])})
         train_ds = {None: data}
@@ -829,6 +842,7 @@ class TestPipelineNames(unittest.TestCase):
 
 
 class TestPipelineFilter(unittest.TestCase):
+
     def test_unbatched_no_drop_multi_filter(self):
         data = NumpyDataset({"idx": np.array([i for i in range(10)])})
         for n_process in [0, 7]:

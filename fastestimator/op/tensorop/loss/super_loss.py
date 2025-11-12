@@ -28,6 +28,7 @@ from fastestimator.util.util import to_number
 
 Tensor = TypeVar('Tensor', bound=torch.Tensor)
 
+
 class SuperLoss(LossOp):
     """Loss class to compute a 'super loss' (automatic curriculum learning) based on a regular loss.
 
@@ -49,6 +50,7 @@ class SuperLoss(LossOp):
         ValueError: If the provided `loss` has multiple outputs or the `regularization` / `threshold` parameters are
             invalid.
     """
+
     def __init__(self,
                  loss: LossOp,
                  threshold: Union[float, str] = 'exp',
@@ -145,6 +147,7 @@ class SuperLoss(LossOp):
                     _assign(self.initialized[mode], ones_like(self.initialized[mode]))
         return self.tau[mode]
 
+
 def _read_variable(variable: Tensor) -> Tensor:
     """Read a variable.
 
@@ -160,6 +163,7 @@ def _read_variable(variable: Tensor) -> Tensor:
     if isinstance(variable, torch.Tensor):
         return variable
     return variable.read_value()
+
 
 def _assign(variable: Tensor, value: Tensor) -> None:
     """In place assignment of `value` to a `variable`.

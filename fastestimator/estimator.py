@@ -19,9 +19,7 @@ import random
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Union, overload
 
 import numpy as np
-
 import torch
-
 from torch.utils.data import DataLoader
 
 import fastestimator as fe
@@ -30,26 +28,39 @@ from fastestimator.backend._to_tensor import to_tensor
 from fastestimator.backend._to_type import to_type
 from fastestimator.network import BaseNetwork, TFNetwork, TorchNetwork
 from fastestimator.pipeline import Pipeline
-from fastestimator.schedule.schedule import Scheduler, get_current_items, get_signature_epochs
+from fastestimator.schedule.schedule import (
+    Scheduler,
+    get_current_items,
+    get_signature_epochs,
+)
 from fastestimator.summary.history import HistoryRecorder
 from fastestimator.summary.system import Summary, System
 from fastestimator.trace.io.best_model_saver import BestModelSaver
 from fastestimator.trace.io.model_saver import ModelSaver
 from fastestimator.trace.io.restore_wizard import RestoreWizard
 from fastestimator.trace.io.traceability import Traceability
-from fastestimator.trace.trace import EvalEssential, Logger, PerDSTrace, TestEssential, Trace, TrainEssential, \
-    sort_traces
+from fastestimator.trace.trace import (
+    EvalEssential,
+    Logger,
+    PerDSTrace,
+    TestEssential,
+    Trace,
+    TrainEssential,
+    sort_traces,
+)
 from fastestimator.types import FilteredData
 from fastestimator.util.base_util import NonContext, filter_nones, to_list, to_set, warn
 from fastestimator.util.data import Data
 from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import Suppressor, draw
 
+
 def _verify_dependency_versions() -> None:
     """Print warning messages if the user is using unexpected versions of PyTorch.
     """
     if torch.__version__ not in ('2.3.1', '2.3.1+cpu', '2.3.1+cu121'):
         warn(f"Expected PyTorch version 2.3.1 but found {torch.__version__}. The framework may not work as expected.")
+
 
 @traceable()
 class Estimator:
@@ -59,7 +70,7 @@ class Estimator:
     (estimator.fit) or test (estimator.test) models. It wraps `Pipeline`, `Network`, `Trace` objects together and
     defines the whole optimization process.
 
-    
+
 
     Args:
         pipeline: An fe.Pipeline object that defines the data processing workflow.
@@ -553,11 +564,13 @@ class Estimator:
         if self.system.stop_training:
             raise EarlyStop
 
+
 class EarlyStop(Exception):
     """An exception raised when the system.stop_training flag is flipped by a Trace in order to abort the training.
 
     This class is intentionally not @traceable.
     """
+
 
 def enable_deterministic(seed: int) -> None:
     """Invoke to set random seed for deterministic training.
@@ -575,6 +588,7 @@ def enable_deterministic(seed: int) -> None:
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
+
 
 def record_history(path: Union[bool, str]) -> None:
     """Change the default location for history tracking.

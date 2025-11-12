@@ -24,11 +24,15 @@ from fastestimator.op.numpyop import NumpyOp
 from fastestimator.op.tensorop import TensorOp
 from fastestimator.op.tensorop.model import ModelOp
 from fastestimator.schedule import RepeatScheduler
-from fastestimator.test.unittest_util import sample_system_object, sample_system_object_torch
+from fastestimator.test.unittest_util import (
+    sample_system_object,
+    sample_system_object_torch,
+)
 from fastestimator.trace import Trace
 
 
 class TestNonTraceableDataset(TorchDS):
+
     def __init__(self, data, var):
         super().__init__()
         self.data = data
@@ -42,31 +46,37 @@ class TestNonTraceableDataset(TorchDS):
 
 
 class TestDataset(NumpyDataset):
+
     def __init__(self, data, var):
         super().__init__(data)
         self.var = var
 
 
 class TestNumpyOp(NumpyOp):
+
     def __init__(self, inputs, outputs, mode, var):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.var = var
 
 
 class TestTensorOp(TensorOp):
+
     def __init__(self, inputs, outputs, mode, var):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.var = var
 
 
 class TestTrace(Trace):
+
     def __init__(self, var1):
         super().__init__()
         self.var1 = var1
 
 
 class TestRepeatScheduler(unittest.TestCase):
+
     def test_save_and_load_state_with_ds_scheduler_torch(self):
+
         def instantiate_system():
             system = sample_system_object_torch()
             x_train = np.ones((2, 3, 28, 28))
@@ -101,6 +111,7 @@ class TestRepeatScheduler(unittest.TestCase):
         self.assertEqual(loaded_var, new_var)
 
     def test_save_and_load_state_with_top_scheduler_torch(self):
+
         def instantiate_system():
             system = sample_system_object_torch()
             model = fe.build(model_fn=fe.architecture.pytorch.LeNet, optimizer_fn='adam', model_name='torch')
@@ -131,6 +142,7 @@ class TestRepeatScheduler(unittest.TestCase):
         self.assertEqual(loaded_var, new_var)
 
     def test_save_and_load_state_with_nop_scheduler_torch(self):
+
         def instantiate_system():
             system = sample_system_object_torch()
             system.pipeline.ops = [
@@ -158,8 +170,8 @@ class TestRepeatScheduler(unittest.TestCase):
 
         self.assertEqual(loaded_var, new_var)
 
-
     def test_save_and_load_state_with_trace_scheduler_torch(self):
+
         def instantiate_system():
             system = sample_system_object_torch()
             system.traces.append(RepeatScheduler([TestTrace(var1=1), TestTrace(var1=1)]))
@@ -183,6 +195,7 @@ class TestRepeatScheduler(unittest.TestCase):
         self.assertEqual(loaded_var, new_var)
 
     def test_save_and_load_state_with_non_traceable_entries(self):
+
         def instantiate_system():
             system = sample_system_object()
             x_train = np.ones((2, 28, 28, 3))
@@ -223,6 +236,7 @@ class TestRepeatScheduler(unittest.TestCase):
             self.assertEqual(loaded_var, 7)
 
     def test_save_and_load_state_with_hybrid_entries(self):
+
         def instantiate_system():
             system = sample_system_object()
             x_train = np.ones((2, 28, 28, 3))

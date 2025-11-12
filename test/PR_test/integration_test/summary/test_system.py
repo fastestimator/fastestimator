@@ -25,8 +25,13 @@ import fastestimator as fe
 from fastestimator.op.tensorop import TensorOp
 from fastestimator.op.tensorop.model import ModelOp
 from fastestimator.summary import Summary
-from fastestimator.test.unittest_util import OneLayerTorchModel, is_equal, one_layer_tf_model, sample_system_object, \
-    sample_system_object_torch
+from fastestimator.test.unittest_util import (
+    OneLayerTorchModel,
+    is_equal,
+    one_layer_tf_model,
+    sample_system_object,
+    sample_system_object_torch,
+)
 from fastestimator.trace.trace import Trace
 
 
@@ -38,12 +43,14 @@ def get_model_names(system):
 
 
 class TestTensorOp(TensorOp):
+
     def __init__(self, inputs, outputs, mode, var1):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.var1 = var1
 
 
 class TestTrace(Trace):
+
     def __init__(self, var1):
         super().__init__()
         self.var1 = var1
@@ -58,6 +65,7 @@ def test_model(submodel):
 
 
 class TestModel(torch.nn.Module):
+
     def __init__(self, submodel):
         super().__init__()
         self.submodel = submodel
@@ -69,6 +77,7 @@ class TestModel(torch.nn.Module):
 
 
 class TestSystem(unittest.TestCase):
+
     def test_save_and_load_state_torch(self):
         """ `save_state` and `load_state` of an entire system are highly dependent on the implementation of __setstate__
         and __getstate__ of ops, traces, datasets ... etc. The save_state and load_state function should be tested in
@@ -200,6 +209,7 @@ class TestSystem(unittest.TestCase):
             self.assertEqual(7, system.network.ops[0].fe_test_var_1.numpy())
 
     def test_shared_variable_over_model_tf(self):
+
         def instantiate_system():
             system = sample_system_object()
             submodel = one_layer_tf_model()
@@ -244,6 +254,7 @@ class TestSystem(unittest.TestCase):
             self.assertTrue(is_equal(new_weight, system.network.ops[0].model.layers[1].get_weights()))
 
     def test_shared_variable_over_model_torch(self):
+
         def instantiate_system():
             system = sample_system_object_torch()
             submodel = OneLayerTorchModel()
@@ -294,6 +305,7 @@ class TestSystem(unittest.TestCase):
             self.assertTrue(is_equal(new_weight, model_0.submodel.fc1.weight.data))
 
     def test_shared_tf_variable_among_top_trace(self):
+
         def instantiate_system():
             system = sample_system_object()
             model = fe.build(model_fn=fe.architecture.tensorflow.LeNet, optimizer_fn='adam', model_name='tf')
@@ -336,6 +348,7 @@ class TestSystem(unittest.TestCase):
             self.assertEqual(var1_new_val, system.network.ops[0].var1.numpy())
 
     def test_shared_torch_variable_among_top_trace(self):
+
         def instantiate_system():
             system = sample_system_object_torch()
             model = fe.build(model_fn=fe.architecture.pytorch.LeNet, optimizer_fn='adam', model_name='torch')
@@ -378,6 +391,7 @@ class TestSystem(unittest.TestCase):
             self.assertEqual(var1_new_val, system.network.ops[0].var1.numpy())
 
     def test_save_and_load_custom_graphs(self):
+
         def instantiate_system():
             system = sample_system_object()
             return system

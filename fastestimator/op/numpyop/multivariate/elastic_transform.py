@@ -54,6 +54,7 @@ class ElasticTransform(MultiVariateAlbumentation):
     Image types:
         uint8, float32
     """
+
     def __init__(self,
                  alpha: float = 34.0,
                  sigma: float = 4.0,

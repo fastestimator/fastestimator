@@ -55,6 +55,7 @@ class BatchDisplay(Trace):
         ds_id: What dataset id(s) to execute this Trace in. To execute regardless of ds_id, pass None. To execute in all
             ds_ids except for a particular one, you can pass an argument like "!ds1".
     """
+
     def __init__(self,
                  image: Optional[str] = None,
                  text: Optional[str] = None,

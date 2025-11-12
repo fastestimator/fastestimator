@@ -23,6 +23,7 @@ from fastestimator.util import Data
 
 
 class TestLabelTracker(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         # Epoch 1 Data
@@ -41,13 +42,27 @@ class TestLabelTracker(unittest.TestCase):
         batch6_labels = torch.Tensor([1, 1, 1, 1, 2, 2, 2, 2, 2, 2])
 
         cls.training_data = [[
-            Data({'acc': batch1_metrics, 'y': batch1_labels}),
-            Data({'acc': batch2_metrics, 'y': batch2_labels}),
-            Data({'acc': batch3_metrics, 'y': batch3_labels})
-        ], [Data({'acc': batch4_metrics, 'y': batch4_labels}),
-            Data({'acc': batch5_metrics, 'y': batch5_labels}),
-            Data({'acc': batch6_metrics, 'y': batch6_labels})
-            ]]
+            Data({
+                'acc': batch1_metrics, 'y': batch1_labels
+            }),
+            Data({
+                'acc': batch2_metrics, 'y': batch2_labels
+            }),
+            Data({
+                'acc': batch3_metrics, 'y': batch3_labels
+            })
+        ],
+                             [
+                                 Data({
+                                     'acc': batch4_metrics, 'y': batch4_labels
+                                 }),
+                                 Data({
+                                     'acc': batch5_metrics, 'y': batch5_labels
+                                 }),
+                                 Data({
+                                     'acc': batch6_metrics, 'y': batch6_labels
+                                 })
+                             ]]
 
         cls.epoch_1_means = {0: 0.49, 1: 0.42, 2: 0.59}
         cls.epoch_2_means = {0: 0.54, 1: 0.66, 2: 0.45}
@@ -98,7 +113,9 @@ class TestLabelTracker(unittest.TestCase):
         labeltracker = LabelTracker(label='y',
                                     metric='acc',
                                     bounds=None,
-                                    label_mapping={'good': 0, 'bad': 1},
+                                    label_mapping={
+                                        'good': 0, 'bad': 1
+                                    },
                                     outputs='out')
         system = sample_system_object()
         labeltracker.system = system
@@ -117,14 +134,10 @@ class TestLabelTracker(unittest.TestCase):
             self.assertEqual(2, len(response))
         with self.subTest('Check correct mean values (epoch 1)'):
             target = {'good': self.epoch_1_means[0], 'bad': self.epoch_1_means[1]}
-            self.assertDictEqual(target,
-                                 {elem.name: round(elem.history['train']['acc'][3], 6)
-                                  for elem in response})
+            self.assertDictEqual(target, {elem.name: round(elem.history['train']['acc'][3], 6) for elem in response})
         with self.subTest('Check correct mean values (epoch 2)'):
             target = {'good': self.epoch_2_means[0], 'bad': self.epoch_2_means[1]}
-            self.assertDictEqual(target,
-                                 {elem.name: round(elem.history['train']['acc'][6], 6)
-                                  for elem in response})
+            self.assertDictEqual(target, {elem.name: round(elem.history['train']['acc'][6], 6) for elem in response})
 
     def test_multiple_bounds(self):
         labeltracker = LabelTracker(label='y', metric='acc', bounds=['std', 'range'], outputs='out')
@@ -152,6 +165,7 @@ class TestLabelTracker(unittest.TestCase):
                 self.assertIn('acc ($min, \\mu, max$)', elem.history['train'])
 
     def test_save_and_load_state(self):
+
         def instantiate_system():
             tracker = LabelTracker(label='y', metric='acc', bounds=[None, 'range'], outputs='out')
             system = sample_system_object()

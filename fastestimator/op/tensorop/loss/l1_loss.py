@@ -25,6 +25,7 @@ from fastestimator.util.traceability_util import traceable
 
 Tensor = TypeVar('Tensor', bound=torch.Tensor)
 
+
 @traceable()
 class L1_Loss(LossOp):
     """Calculate the L1 loss between two tensors.
@@ -48,6 +49,7 @@ class L1_Loss(LossOp):
         loss_type: What type of L1 loss. Can either be 'L1' (L1 Loss), 'Smooth' (Smooth L1 Loss) or 'Huber' (Huber loss). Default:'L1'
         beta: A threshold at which to change between L1 and L2 loss. Needs to be a positive number. Default:1.0 . dtype: float16 or float32.
     """
+
     def __init__(self,
                  inputs: Union[Tuple[str, str], List[str]],
                  outputs: str,

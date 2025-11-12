@@ -20,6 +20,7 @@ from fastestimator.op.numpyop.multivariate import MaskDropout
 
 
 class TestMaskDropout(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.input_image_and_mask = [np.random.rand(28, 28, 3), np.random.rand(28, 28, 3)]

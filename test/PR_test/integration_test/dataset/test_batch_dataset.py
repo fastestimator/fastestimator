@@ -5,17 +5,23 @@ import numpy as np
 
 import fastestimator as fe
 from fastestimator.dataset import NumpyDataset
-from fastestimator.test.unittest_util import sample_system_object, sample_system_object_torch
+from fastestimator.test.unittest_util import (
+    sample_system_object,
+    sample_system_object_torch,
+)
 
 
 class TestDataset(NumpyDataset):
+
     def __init__(self, data, var):
         super().__init__(data)
         self.var = var
 
 
 class TestBatchDataset(unittest.TestCase):
+
     def test_save_and_load_state_with_batch_dataset_tf(self):
+
         def instantiate_system():
             system = sample_system_object()
             x_train = np.ones((2, 28, 28, 3))
@@ -43,6 +49,7 @@ class TestBatchDataset(unittest.TestCase):
         self.assertEqual(loaded_var, new_var)
 
     def test_save_and_load_state_with_batch_dataset_torch(self):
+
         def instantiate_system():
             system = sample_system_object_torch()
             x_train = np.ones((2, 3, 28, 28))

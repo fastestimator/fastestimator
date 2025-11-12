@@ -22,6 +22,7 @@ from fastestimator.test.unittest_util import is_equal
 
 
 class TestMatmul(unittest.TestCase):
+
     def test_np(self):
         a = np.array([[0, 1, 2], [3, 4, 5]])
         b = np.array([[1], [2], [3]])

@@ -20,7 +20,12 @@ import tensorflow as tf
 import torch
 
 import fastestimator as fe
-from fastestimator.test.unittest_util import MultiLayerTorchModel, is_equal, one_layer_tf_model, sample_system_object
+from fastestimator.test.unittest_util import (
+    MultiLayerTorchModel,
+    is_equal,
+    one_layer_tf_model,
+    sample_system_object,
+)
 from fastestimator.trace.io import ModelSaver
 from fastestimator.util.data import Data
 
@@ -33,6 +38,7 @@ def one_layer_model_without_weights():
 
 
 class MultiLayerTorchModelWithoutWeights(torch.nn.Module):
+
     def __init__(self) -> None:
         super().__init__()
         self.fc1 = torch.nn.Linear(4, 2, bias=False)
@@ -45,6 +51,7 @@ class MultiLayerTorchModelWithoutWeights(torch.nn.Module):
 
 
 class TestModelSaver(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.save_dir = tempfile.mkdtemp()

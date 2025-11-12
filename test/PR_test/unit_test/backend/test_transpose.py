@@ -22,6 +22,7 @@ from fastestimator.test.unittest_util import is_equal
 
 
 class TestTranspose(unittest.TestCase):
+
     def test_np(self):
         n = np.array([[0, 1, 2], [3, 4, 5], [6, 7, 8]])
         b = fe.backend.transpose(n)

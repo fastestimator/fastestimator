@@ -22,4 +22,3 @@ __getattr__, __dir__, __all__ = lazy.attach(__name__,
 
 if TYPE_CHECKING:
     from fastestimator.layers import pytorch
-

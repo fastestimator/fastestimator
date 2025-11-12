@@ -21,6 +21,7 @@ from fastestimator.slicer import AxisSlicer
 
 
 class TestAxisSlicer(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.batch = np.array([i for i in range(36)]).reshape((2, 3, 2, 3))

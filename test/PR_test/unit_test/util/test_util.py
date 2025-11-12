@@ -28,6 +28,7 @@ from fastestimator.test.unittest_util import is_equal
 
 
 class TestParseStringToPython(unittest.TestCase):
+
     def test_parse_string_to_python_positive_int(self):
         x = fastestimator.util.cli_util.parse_string_to_python("5")
         self.assertEqual(x, 5)
@@ -54,6 +55,7 @@ class TestParseStringToPython(unittest.TestCase):
 
 
 class TestToList(unittest.TestCase):
+
     def test_to_list_input_none(self):
         x = fe.util.to_list(None)
         self.assertEqual(x, [])
@@ -84,6 +86,7 @@ class TestToList(unittest.TestCase):
 
 
 class TestToSet(unittest.TestCase):
+
     def test_to_set_input_none(self):
         x = fe.util.to_set(None)
         self.assertEqual(x, set())
@@ -109,6 +112,7 @@ class TestToSet(unittest.TestCase):
 
 
 class TestFilterNones(unittest.TestCase):
+
     def test_with_list(self):
         x = fe.util.filter_nones([1, None, "A", None, 0.9])
         self.assertTrue(isinstance(x, list))
@@ -131,6 +135,7 @@ class TestFilterNones(unittest.TestCase):
 
 
 class TestParamToRange(unittest.TestCase):
+
     def test_param_to_range_int(self):
         x = fe.util.param_to_range(3)
         self.assertEqual(x, (-3, 3))
@@ -157,6 +162,7 @@ class TestParamToRange(unittest.TestCase):
 
 
 class TestNonContext(unittest.TestCase):
+
     def test_non_context_syntax_work(self):
         a = 5
         with fe.util.NonContext():
@@ -165,6 +171,7 @@ class TestNonContext(unittest.TestCase):
 
 
 class TestSuppressor(unittest.TestCase):
+
     def test_suppressor(self):
         with patch('sys.stdout', new=StringIO()) as fake_stdout:
             with fe.util.Suppressor():
@@ -174,6 +181,7 @@ class TestSuppressor(unittest.TestCase):
 
 
 class TestTimer(unittest.TestCase):
+
     def test_timer_as_context_manager(self):
         with patch('sys.stdout', new=StringIO()) as fake_stdout:
             with patch('tensorflow.print', new=print):
@@ -184,6 +192,7 @@ class TestTimer(unittest.TestCase):
         self.assertTrue(abs(exec_time - 1) < 0.1)
 
     def test_timer_as_decorator(self):
+
         @fe.util.Timer("T2")
         def func():
             time.sleep(1)
@@ -203,6 +212,7 @@ class TestTimer(unittest.TestCase):
 
 
 class TestDraw(unittest.TestCase):
+
     def test_draw_stdout(self):
         with patch('sys.stdout', new=StringIO()) as fake_stdout:
             fe.util.draw()
@@ -220,6 +230,7 @@ class TestDraw(unittest.TestCase):
 
 
 class TestPrettifyMetricName(unittest.TestCase):
+
     def test_prettify_metric_name(self):
         x = fe.util.prettify_metric_name("myUgly_loss")
         self.assertEqual(x, "My Ugly Loss")
@@ -234,6 +245,7 @@ class TestPrettifyMetricName(unittest.TestCase):
 
 
 class TestStripSuffix(unittest.TestCase):
+
     def test_strip_suffix_match(self):
         x = fe.util.strip_suffix("astring.json", ".json")
         self.assertEqual(x, "astring")
@@ -244,6 +256,7 @@ class TestStripSuffix(unittest.TestCase):
 
 
 class TestStripPrefix(unittest.TestCase):
+
     def test_strip_prefix_match(self):
         x = fe.util.strip_prefix("astring.json", "ast")  # "ring.json"
         self.assertEqual(x, "ring.json")
@@ -254,6 +267,7 @@ class TestStripPrefix(unittest.TestCase):
 
 
 class TestGetType(unittest.TestCase):
+
     def test_get_type_np(self):
         x = fe.util.get_type(np.ones((10, 10), dtype='int32'))
         self.assertEqual(x, 'int32')
@@ -291,6 +305,7 @@ class TestGetType(unittest.TestCase):
 
 
 class TestGetShape(unittest.TestCase):
+
     def test_get_shape_np_dimension_match(self):
         x = fe.util.get_shape(np.ones((12, 22, 11)))
         self.assertEqual(x, [12, 22, 11])
@@ -313,6 +328,7 @@ class TestGetShape(unittest.TestCase):
 
 
 class TestParseModes(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.modes = {"train", "eval", "test", "infer"}
@@ -360,6 +376,7 @@ class TestParseModes(unittest.TestCase):
 
 
 class TestPadBatch(unittest.TestCase):
+
     def test_pad_batch_pad_one_entry(self):
         data = [{"x": np.ones((2, 2)), "y": 8}, {"x": np.ones((3, 1)), "y": 4}]
         fe.util.pad_batch(data, pad_value=0)
@@ -394,6 +411,7 @@ class TestPadBatch(unittest.TestCase):
 
 
 class TestPadData(unittest.TestCase):
+
     def test_pad_data_target_shape_all_dimension_larger(self):
         x = np.ones((1, 2))
         x = fe.util.pad_data(x, target_shape=(3, 3), pad_value=-2)
@@ -422,6 +440,7 @@ class TestPadData(unittest.TestCase):
 
 
 class TestIsNumber(unittest.TestCase):
+
     def test_is_number_pos_float(self):
         x = fe.util.is_number("13.7")
         self.assertTrue(x)
@@ -452,6 +471,7 @@ class TestIsNumber(unittest.TestCase):
 
 
 class TestDefaultKeyDict(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.test_dict = fe.util.DefaultKeyDict(default=lambda x: x + x, a=4, b=6)
@@ -472,6 +492,7 @@ class TestDefaultKeyDict(unittest.TestCase):
 
 
 class TestGetNumDevices(unittest.TestCase):
+
     def test_get_num_devices(self):
         x = fe.util.get_num_devices()
         local_device_protos = device_lib.list_local_devices()
@@ -481,6 +502,7 @@ class TestGetNumDevices(unittest.TestCase):
 
 
 class TestGetBatchSize(unittest.TestCase):
+
     def test_get_batch_size_np(self):
         data = {"a": np.ones([3, 4, 5])}
         batch_size = fe.util.get_batch_size(data)
@@ -513,6 +535,7 @@ class TestGetBatchSize(unittest.TestCase):
 
 
 class TestToNumber(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.n = np.array([1, 2, 3])

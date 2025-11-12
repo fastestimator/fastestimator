@@ -15,7 +15,6 @@
 from typing import Any, Dict, List, Optional, Set, TypeVar, Union
 
 import numpy as np
-
 import torch
 
 from fastestimator.backend._cast import cast
@@ -25,6 +24,7 @@ from fastestimator.util.traceability_util import traceable
 Tensor = TypeVar('Tensor', bound=torch.Tensor)
 Model = TypeVar('Model', bound=torch.nn.Module)
 
+
 @traceable()
 class OneOf(TensorOp):
     """Perform one of several possible TensorOps.
@@ -33,6 +33,7 @@ class OneOf(TensorOp):
         *tensor_ops: Ops to choose between with a specified (or uniform) probability.
         probs: List of probabilities, must sum to 1. When None, the probabilities will be equally distributed.
     """
+
     def __init__(self, *tensor_ops: TensorOp, probs: Optional[List[float]] = None) -> None:
         inputs = tensor_ops[0].inputs
         outputs = tensor_ops[0].outputs

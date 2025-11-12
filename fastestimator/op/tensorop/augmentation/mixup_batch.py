@@ -24,6 +24,7 @@ from fastestimator.op.tensorop.tensorop import TensorOp
 
 Tensor = TypeVar('Tensor', bound=torch.Tensor)
 
+
 class MixUpBatch(TensorOp):
     """MixUp augmentation for tensors.
 
@@ -42,6 +43,7 @@ class MixUpBatch(TensorOp):
     Raises:
         AssertionError: If input arguments are invalid.
     """
+
     def __init__(self,
                  inputs: Iterable[str],
                  outputs: Iterable[str],

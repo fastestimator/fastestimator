@@ -14,10 +14,11 @@
 # ==============================================================================
 import unittest
 
-from fastestimator.summary import average_summaries, Summary, ValWithError
+from fastestimator.summary import Summary, ValWithError, average_summaries
 
 
 class TestSummary(unittest.TestCase):
+
     def test_merge(self):
         summary1 = Summary(name='test1')
         summary1.history['train']['acc'] = {50: 0.9}
@@ -32,6 +33,7 @@ class TestSummary(unittest.TestCase):
 
 
 class TestAverageSummaries(unittest.TestCase):
+
     def test_empty_summaries(self):
         result = average_summaries(name="ex1", summaries=[])
         with self.subTest("Should return a summary instance"):

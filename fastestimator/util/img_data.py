@@ -31,7 +31,9 @@ if TYPE_CHECKING:
                           Tuple[Union[int, float], Union[int, float], Union[int, float], Union[int, float]],
                           Tuple[Union[int, float], Union[int, float], Union[int, float], Union[int, float], str])
 
+
 class Display(ABC):
+
     @abstractmethod
     def prepare(self, **kwargs) -> FigureFE:
         raise NotImplementedError()
@@ -50,6 +52,7 @@ class Display(ABC):
         """
         fig = self.prepare()
         fig.show(save_path=save_path, verbose=verbose, scale=scale, interactive=interactive)
+
 
 class ImageDisplay(Display):
     """An object to combine various image components for visualization
@@ -75,6 +78,7 @@ class ImageDisplay(Display):
     Raises:
         AssertionError: If the provided arguments violate expected type/shape constraints.
     """
+
     def __init__(self,
                  image: Union[None, 'Tensor'] = None,
                  text: Union[None, str, 'Tensor'] = None,
@@ -300,16 +304,18 @@ class ImageDisplay(Display):
                                     # Only reserve a color once we know for sure that we're active to avoid a batch
                                     # situation where no legend is displayed
                                     color, show = fig._get_color(clazz='mask', label=label, n_colors=len(self.masks))
-                                    line = Scatter(x=[start, col_idx],
-                                                   y=[row_idx, row_idx],
-                                                   mode='lines',
-                                                   line={'width': 1,
-                                                         'color': color},
-                                                   name=label,
-                                                   legendgroup=f"mask_{label}",
-                                                   legendrank=0,  # Sort mask labels higher than bbox and keypoint
-                                                   showlegend=show,
-                                                   text=label)
+                                    line = Scatter(
+                                        x=[start, col_idx],
+                                        y=[row_idx, row_idx],
+                                        mode='lines',
+                                        line={
+                                            'width': 1, 'color': color
+                                        },
+                                        name=label,
+                                        legendgroup=f"mask_{label}",
+                                        legendrank=0,  # Sort mask labels higher than bbox and keypoint
+                                        showlegend=show,
+                                        text=label)
                                     active = False
                                     fig.add_trace(line, row=row, col=col, exclude_empty_subplots=False)
                         if active:
@@ -318,8 +324,9 @@ class ImageDisplay(Display):
                             line = Scatter(x=[start, len(mask_row) - 1],
                                            y=[row_idx, row_idx],
                                            mode='lines',
-                                           line={'width': 1,
-                                                 'color': color},
+                                           line={
+                                               'width': 1, 'color': color
+                                           },
                                            name=label,
                                            legendgroup=f"mask_{label}",
                                            legendrank=0,
@@ -352,12 +359,15 @@ class ImageDisplay(Display):
                 # Don't draw empty boxes, or invalid box
                 if width <= 0 or height <= 0:
                     continue
-                kwargs = {'x': [x0, x0, x0+width, x0+width, x0],
-                          'y': [y0, y0+height, y0+height, y0, y0],
-                          'mode': 'lines',
-                          'line': {'color': color, 'width': 3},
-                          'showlegend': False,
-                          }
+                kwargs = {
+                    'x': [x0, x0, x0 + width, x0 + width, x0],
+                    'y': [y0, y0 + height, y0 + height, y0, y0],
+                    'mode': 'lines',
+                    'line': {
+                        'color': color, 'width': 3
+                    },
+                    'showlegend': False,
+                }
                 if label:
                     kwargs['name'] = label
                     kwargs['legendrank'] = 1
@@ -365,40 +375,41 @@ class ImageDisplay(Display):
                     kwargs['showlegend'] = show
                     # Add label text onto image
                     font_size = max(8, min(14, int(width // len(label or ' '))))
-                    fig.add_trace(Scatter(x=[x0],
-                                          y=[y0-1],  # A slight offset to help text not run in to bbox
-                                          mode='text',
-                                          text='<span style="text-shadow: -1px 1px 0 #FFFFFF, '
-                                               '1px 1px 0px #FFFFFF, 1px -1px 0px #FFFFFF, -1px -1px 0px #FFFFFF;">'
-                                               f'{label}</span>',
-                                          textposition="top right",
-                                          legendgroup=f'bb_{label}',
-                                          hoverinfo='skip',
-                                          textfont={'size': font_size,
-                                                    'color': color,
-                                                    'family': 'monospace'},
-                                          showlegend=False,
-                                          legendrank=1),
-                                  row=row,
-                                  col=col,
-                                  exclude_empty_subplots=False)
-                fig.add_trace(Scatter(**kwargs),
-                              row=row,
-                              col=col,
-                              exclude_empty_subplots=False)
+                    fig.add_trace(
+                        Scatter(
+                            x=[x0],
+                            y=[y0 - 1],  # A slight offset to help text not run in to bbox
+                            mode='text',
+                            text='<span style="text-shadow: -1px 1px 0 #FFFFFF, '
+                            '1px 1px 0px #FFFFFF, 1px -1px 0px #FFFFFF, -1px -1px 0px #FFFFFF;">'
+                            f'{label}</span>',
+                            textposition="top right",
+                            legendgroup=f'bb_{label}',
+                            hoverinfo='skip',
+                            textfont={
+                                'size': font_size, 'color': color, 'family': 'monospace'
+                            },
+                            showlegend=False,
+                            legendrank=1),
+                        row=row,
+                        col=col,
+                        exclude_empty_subplots=False)
+                fig.add_trace(Scatter(**kwargs), row=row, col=col, exclude_empty_subplots=False)
 
         for keypoint, label in zip(self.keypoints, self.keypoint_labels):
             x, y = keypoint
             if (x is None) or (x < 0) or (y is None) or (y < 0):
                 # Skip negative or None key-points
                 continue
-            kwargs = {'x': [x],
-                      'y': [y],
-                      'mode': 'markers',
-                      'showlegend': False,
-                      'marker': {'color': 'red',
-                                 'size': 10,
-                                 'symbol': 'circle'}}
+            kwargs = {
+                'x': [x],
+                'y': [y],
+                'mode': 'markers',
+                'showlegend': False,
+                'marker': {
+                    'color': 'red', 'size': 10, 'symbol': 'circle'
+                }
+            }
             if label:
                 kwargs['name'] = label
                 kwargs['legendgroup'] = f"keypoint_{label}"
@@ -425,6 +436,7 @@ class ImageDisplay(Display):
                 col=col)
 
         return fig
+
 
 class BatchDisplay(Display):
     """An object to combine various batched image components for visualization
@@ -453,6 +465,7 @@ class BatchDisplay(Display):
     Raises:
         AssertionError: If the provided arguments violate expected type/shape constraints.
     """
+
     def __init__(self,
                  image: Union[None, 'Tensor', Sequence['Tensor']] = None,
                  text: Union[None, Sequence[str], 'Tensor', Sequence['Tensor']] = None,
@@ -514,7 +527,9 @@ class BatchDisplay(Display):
 
         return fig
 
+
 class GridDisplay(Display):
+
     def __init__(self, columns: Sequence[Union[BatchDisplay, ImageDisplay]]):
         self.batch_size = None
         for col in columns:

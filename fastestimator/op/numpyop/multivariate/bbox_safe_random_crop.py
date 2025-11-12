@@ -48,6 +48,7 @@ class BBoxSafeRandomCrop(MultiVariateAlbumentation):
     Image types:
         uint8, float32
     """
+
     def __init__(self,
                  erosion_rate: float = 0.0,
                  mode: Union[None, str, Iterable[str]] = None,

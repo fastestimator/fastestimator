@@ -37,6 +37,7 @@ class ToFloat(ImageOnlyAlbumentation):
     Image types:
         Any
     """
+
     def __init__(self,
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],

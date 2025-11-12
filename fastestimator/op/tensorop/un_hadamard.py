@@ -16,7 +16,6 @@ import math
 from typing import Any, Dict, Iterable, List, Optional, TypeVar, Union
 
 import numpy as np
-
 import torch
 from scipy.linalg import hadamard
 
@@ -28,6 +27,7 @@ from fastestimator.op.tensorop.tensorop import TensorOp
 from fastestimator.util.traceability_util import traceable
 
 Tensor = TypeVar('Tensor', bound=torch.Tensor)
+
 
 @traceable()
 class UnHadamard(TensorOp):
@@ -44,6 +44,7 @@ class UnHadamard(TensorOp):
         ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
             ds_ids except for a particular one, you can pass an argument like "!ds1".
     """
+
     def __init__(self,
                  inputs: Union[str, List[str]],
                  outputs: Union[str, List[str]],

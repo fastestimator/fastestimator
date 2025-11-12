@@ -29,6 +29,7 @@ class GeneratorDataset(FEDataset):
             function will actually be invoked more times than the number specified here due to backend validation
             routines.
     """
+
     def __init__(self, generator: Generator[Dict[str, Any], int, None], samples_per_epoch: int) -> None:
         self.generator = generator
         self.samples_per_epoch = samples_per_epoch

@@ -21,6 +21,7 @@ from fastestimator.trace.metric import Recall
 
 
 class TestRecall(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.p_key = "recall"

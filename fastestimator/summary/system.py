@@ -17,10 +17,20 @@ import datetime
 import json
 import os
 import uuid
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Sequence, Tuple, TypeVar, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    TypeVar,
+    Union,
+)
 
 import dill as pickle  # Need to use dill since tf.Variable is a weakref object on multi-gpu machines
-
 import torch
 
 from fastestimator.backend._load_model import load_model
@@ -258,8 +268,7 @@ class System:
                     key: value.__getstate__()
                     for key, value in ds.items() if hasattr(value, '__getstate__')
                 }
-                for mode,
-                ds in self.pipeline.data.items()
+                for mode, ds in self.pipeline.data.items()
             }
         }
         with open(os.path.join(save_dir, 'objects.pkl'), 'wb') as file:

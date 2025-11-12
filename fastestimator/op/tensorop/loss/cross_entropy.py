@@ -18,11 +18,13 @@ import torch
 
 from fastestimator.backend._binary_crossentropy import binary_crossentropy
 from fastestimator.backend._categorical_crossentropy import categorical_crossentropy
-from fastestimator.backend._sparse_categorical_crossentropy import sparse_categorical_crossentropy
+from fastestimator.backend._sparse_categorical_crossentropy import (
+    sparse_categorical_crossentropy, )
 from fastestimator.op.tensorop.loss.loss import LossOp
 from fastestimator.util.traceability_util import traceable
 
 Tensor = TypeVar('Tensor', bound=torch.Tensor)
+
 
 @traceable()
 class CrossEntropy(LossOp):
@@ -48,6 +50,7 @@ class CrossEntropy(LossOp):
     Raises:
         AssertionError: If `class_weights` or it's keys and values are of unacceptable data types.
     """
+
     def __init__(self,
                  inputs: Union[Tuple[str, str], List[str]],
                  outputs: str,

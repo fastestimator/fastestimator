@@ -17,7 +17,6 @@ from typing import Any, Callable, Dict, Iterable, List, TypeVar, Union
 
 import dill
 import numpy as np
-
 import torch
 
 from fastestimator.op.numpyop.numpyop import NumpyOp
@@ -25,6 +24,7 @@ from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import to_number
 
 Tensor = TypeVar('Tensor', torch.Tensor, np.ndarray)
+
 
 @traceable()
 class Calibrate(NumpyOp):
@@ -45,6 +45,7 @@ class Calibrate(NumpyOp):
             If a path is provided, it will be lazy-loaded and so the saved file does not need to exist already when
             training begins.
     """
+
     def __init__(self,
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],

@@ -22,6 +22,7 @@ from fastestimator.util.traceability_util import traceable
 
 Tensor = TypeVar('Tensor', bound=torch.Tensor)
 
+
 @traceable()
 class Watch(TensorOp):
     """Watch one or more tensors for later gradient computation.
@@ -34,6 +35,7 @@ class Watch(TensorOp):
         ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
             ds_ids except for a particular one, you can pass an argument like "!ds1".
     """
+
     def __init__(self,
                  inputs: Union[None, str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,

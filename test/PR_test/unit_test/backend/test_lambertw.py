@@ -22,6 +22,7 @@ import fastestimator as fe
 
 
 class TestLambertW(unittest.TestCase):
+
     def test_lambertw_np_input(self):
         n = np.array([-1.0 / math.e, -0.34, -0.32, -0.2, 0, 0.12, 0.15, math.e, 5, math.exp(1 + math.e), 100])
         obj1 = fe.backend.lambertw(n)

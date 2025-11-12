@@ -29,6 +29,7 @@ class OneOf(NumpyOp):
         *numpy_ops: Ops to choose between with a specified (or uniform) probability.
         probs: List of probabilities, must sum to 1. When None, the probabilities will be equally distributed.
     """
+
     def __init__(self, *numpy_ops: NumpyOp, probs: Optional[List[float]] = None) -> None:
         inputs = numpy_ops[0].inputs
         outputs = numpy_ops[0].outputs
@@ -86,7 +87,6 @@ class OneOf(NumpyOp):
         """
         return np.random.choice(self.ops, p=self.probs).forward(data, state)
 
-    def forward_batch(self,
-                      data: Union[np.ndarray, List[np.ndarray]],
+    def forward_batch(self, data: Union[np.ndarray, List[np.ndarray]],
                       state: Dict[str, Any]) -> Union[np.ndarray, List[np.ndarray]]:
         return np.random.choice(self.ops, p=self.probs).forward_batch(data, state)

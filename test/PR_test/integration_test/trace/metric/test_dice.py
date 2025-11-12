@@ -22,15 +22,16 @@ from fastestimator.util import Data
 
 
 class TestDice(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
-        cls.x = np.array([[[[0, 1, 1], [1, 0, 1], [1, 0, 1]],
-                           [[0, 0, 1], [1, 1, 1], [1, 0, 1]],
-                           [[0, 1, 1], [1, 0, 1], [1, 0, 1]]]], dtype=np.float32)
+        cls.x = np.array(
+            [[[[0, 1, 1], [1, 0, 1], [1, 0, 1]], [[0, 0, 1], [1, 1, 1], [1, 0, 1]], [[0, 1, 1], [1, 0, 1], [1, 0, 1]]]],
+            dtype=np.float32)
 
-        cls.x_pred = np.array([[[[0, 1, 0], [1, 0, 0], [1, 0, 1]],
-                                [[1, 0, 1], [1, 0, 1], [0, 1, 0]],
-                                [[0, 0, 1], [1, 0, 1], [1, 0, 1]]]], dtype=np.float32)
+        cls.x_pred = np.array(
+            [[[[0, 1, 0], [1, 0, 0], [1, 0, 1]], [[1, 0, 1], [1, 0, 1], [0, 1, 0]], [[0, 0, 1], [1, 0, 1], [1, 0, 1]]]],
+            dtype=np.float32)
         cls.dice_output = 0.67777777
         cls.dice = Dice(true_key='x', pred_key='x_pred')
         cls.dice.system = sample_system_object()

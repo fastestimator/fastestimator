@@ -16,7 +16,8 @@ from typing import Iterable, Optional, Sequence, Union
 
 import cv2
 from albumentations import BboxParams, KeypointParams
-from albumentations.augmentations.geometric.transforms import PadIfNeeded as PadIfNeededAlb
+from albumentations.augmentations.geometric.transforms import (
+    PadIfNeeded as PadIfNeededAlb, )
 
 from fastestimator.op.numpyop.multivariate.multivariate import MultiVariateAlbumentation
 from fastestimator.util.traceability_util import traceable
@@ -54,6 +55,7 @@ class PadIfNeeded(MultiVariateAlbumentation):
     Image types:
         uint8, float32
     """
+
     def __init__(self,
                  min_height: int = 1024,
                  min_width: int = 1024,

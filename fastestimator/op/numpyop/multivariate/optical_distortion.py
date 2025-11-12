@@ -49,6 +49,7 @@ class OpticalDistortion(MultiVariateAlbumentation):
     Image types:
         uint8, float32
     """
+
     def __init__(self,
                  distort_limit: Union[float, Tuple[float, float]] = 0.05,
                  shift_limit: Union[float, Tuple[float, float]] = 0.05,

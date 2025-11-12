@@ -21,6 +21,7 @@ from fastestimator.trace.metric import Accuracy
 
 
 class TestAccuracy(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.acc_key = "acc"

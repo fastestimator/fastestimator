@@ -15,9 +15,14 @@
 import os
 import unittest
 from typing import Tuple
+
 import torch
 
-from fastestimator.test.unittest_util import check_img_similar, fig_to_rgb_array, img_to_rgb_array
+from fastestimator.test.unittest_util import (
+    check_img_similar,
+    fig_to_rgb_array,
+    img_to_rgb_array,
+)
 from fastestimator.util import BatchDisplay, GridDisplay
 
 
@@ -36,8 +41,8 @@ class TestImageData(unittest.TestCase):
         cls.label_shape = (4, )
         cls.x_test = 0.5 * torch.ones((4, 150, 150, 3))
         cls.y_test = torch.ones(cls.label_shape)
-        cls.img_data = GridDisplay([BatchDisplay(text=cls.y_test, title="y"),
-                                    BatchDisplay(image=cls.x_test, title="x")])
+        cls.img_data = GridDisplay(
+            [BatchDisplay(text=cls.y_test, title="y"), BatchDisplay(image=cls.x_test, title="x")])
 
     def test_img_data_batch_size(self):
         self.assertEqual(self.img_data.batch_size, 4)

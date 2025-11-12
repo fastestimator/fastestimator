@@ -20,11 +20,17 @@ import tempfile
 import unittest
 from contextlib import closing
 
-from fastestimator.summary.history import HistoryReader, HistoryRecorder, connect, update_settings
+from fastestimator.summary.history import (
+    HistoryReader,
+    HistoryRecorder,
+    connect,
+    update_settings,
+)
 from fastestimator.test.unittest_util import sample_system_object
 
 
 class TestHistoryRecorder(unittest.TestCase):
+
     def setUp(self):
         self.db_dir = tempfile.mkdtemp()
         self.db_path = os.path.join(self.db_dir, 'tmp.db')
@@ -213,6 +219,7 @@ class TestHistoryRecorder(unittest.TestCase):
 
 
 class TestHistoryReader(unittest.TestCase):
+
     def setUp(self):
         self.db_dir = tempfile.mkdtemp()
         self.db_path = os.path.join(self.db_dir, 'tmp.db')

@@ -20,6 +20,7 @@ from fastestimator.util.data import Data
 
 
 class TestTestEssential(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.data = Data({'loss': 10})

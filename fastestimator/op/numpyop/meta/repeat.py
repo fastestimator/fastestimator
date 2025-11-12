@@ -37,6 +37,7 @@ class Repeat(NumpyOp):
     Raises:
         ValueError: If `repeat`, `op`, or max_iter are invalid.
     """
+
     def __init__(self, op: NumpyOp, repeat: Union[int, Callable[..., bool]] = 1,
                  max_iter: Optional[int] = None) -> None:
         if isinstance(op, Batch):

@@ -20,8 +20,25 @@ import os
 import re
 import string
 import sys
-from typing import Any, Callable, Collection, Dict, Iterable, KeysView, List, Literal, Mapping, Optional, Set, TextIO, \
-    Tuple, Type, TypeVar, Union, overload
+from typing import (
+    Any,
+    Callable,
+    Collection,
+    Dict,
+    Iterable,
+    KeysView,
+    List,
+    Literal,
+    Mapping,
+    Optional,
+    Set,
+    TextIO,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+    overload,
+)
 
 # DO NOT IMPORT FE, TF, Torch, Numpy, Seaborn, OR Matplotlib IN THIS FILE
 from plotly.graph_objs import Figure
@@ -272,6 +289,7 @@ class NonContext(object):
     print(a)  # 42
     ```
     """
+
     def __enter__(self) -> None:
         pass
 
@@ -547,6 +565,7 @@ class DefaultKeyDict(Dict[KT, VT]):
         default: A function which takes a key and returns a default value based on the key.
         **kwargs: Initial key/value pairs for the dictionary.
     """
+
     def __init__(self, default: Callable[[Any], Any], **kwargs) -> None:
         super().__init__(**kwargs)
         self.factory = default
@@ -759,6 +778,7 @@ def get_colors(n_colors: int, as_numbers: bool = False,
 
 
 class FigureFE(Figure):
+
     @classmethod
     def from_figure(cls, fig: Figure) -> 'FigureFE':
         new_fig = FigureFE()

@@ -33,6 +33,7 @@ class LossOp(TensorOp):
             ds_ids except for a particular one, you can pass an argument like "!ds1".
         average_loss: Whether to average the element-wise loss after the Loss Op.
     """
+
     def __init__(self,
                  inputs: Union[None, str, Iterable[str]] = None,
                  outputs: Union[None, str, Iterable[str]] = None,

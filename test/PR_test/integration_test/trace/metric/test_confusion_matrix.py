@@ -22,6 +22,7 @@ from fastestimator.trace.metric import ConfusionMatrix
 
 
 class TestConfusionMatrix(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.cm_key = "confusion_matrix"

@@ -22,6 +22,7 @@ from fastestimator.test.unittest_util import is_equal
 
 
 class TestPermute(unittest.TestCase):
+
     def test_permute_np(self):
         n = np.array([[[0, 1], [2, 3]], [[4, 5], [6, 7]], [[8, 9], [10, 11]]])
         with self.subTest("permutation case 1"):

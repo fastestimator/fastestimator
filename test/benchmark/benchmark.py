@@ -30,6 +30,7 @@ from fastestimator.util.util import get_num_devices
 
 
 class MemoryMeasure(Trace):
+
     def on_batch_end(self, data):
         if self.system.log_steps and self.system.global_step and (self.system.global_step % self.system.log_steps == 0
                                                                   or self.system.global_step == 1):
@@ -40,6 +41,7 @@ class MemoryMeasure(Trace):
 class ApphubModule:
     """The apphub module.Apphub specific functionality.
     """
+
     def __init__(self, module_name):
         self.module_name = module_name
         self.module = self.load_module()
@@ -100,6 +102,7 @@ class ApphubModule:
 class FindApphubModule:
     """ Find all the apphub located available for installed fastestimator.
     """
+
     def __init__(self) -> None:
         self.available_framework = ['tf', 'torch']
         self.folder_name = Path(__file__).parent.parent.parent.joinpath('apphub').as_posix()
@@ -151,9 +154,8 @@ class FindApphubModule:
 
         available_apphubs = list(
             set([
-                Path(root).as_posix() for root,
-                _,
-                files in os.walk(self.folder_name) for file_name in files if self.is_valid_framework_ext(file_name)
+                Path(root).as_posix() for root, _, files in os.walk(self.folder_name) for file_name in files
+                if self.is_valid_framework_ext(file_name)
             ]))
 
         valid_apphubs = [
