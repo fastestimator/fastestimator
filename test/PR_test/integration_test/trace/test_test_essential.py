@@ -14,26 +14,25 @@
 # ==============================================================================
 import unittest
 
-from fastestimator.test.unittest_util import sample_system_object
+from fastestimator.test.unittest_util import sample_system_object_torch
 from fastestimator.trace import TestEssential
 from fastestimator.util.data import Data
 
 
 class TestTestEssential(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         cls.data = Data({'loss': 10})
 
     def test_on_epoch_begin(self):
         test_essential = TestEssential(monitor_names={'loss'})
-        test_essential.system = sample_system_object()
+        test_essential.system = sample_system_object_torch()
         test_essential.on_epoch_begin(data=self.data)
         self.assertEqual(len(test_essential.test_results), 0)
 
     def test_on_batch_end_test_results_not_none(self):
         test_essential = TestEssential(monitor_names={'loss'})
-        test_essential.system = sample_system_object()
+        test_essential.system = sample_system_object_torch()
         test_essential.test_results['loss'][''].append(95)
         test_essential.on_batch_end(data=self.data)
         self.assertEqual(test_essential.test_results['loss'][''], [95, 10])
@@ -41,14 +40,14 @@ class TestTestEssential(unittest.TestCase):
     def test_on_batch_end_test_results_none(self):
         data = Data({'loss': 5})
         test_essential = TestEssential(monitor_names={'loss'})
-        test_essential.system = sample_system_object()
+        test_essential.system = sample_system_object_torch()
         test_essential.on_batch_end(data=data)
         self.assertEqual(test_essential.test_results['loss'][''], [5])
 
     def test_on_epoch_end(self):
         data = Data({})
         test_essential = TestEssential(monitor_names={'loss'})
-        test_essential.system = sample_system_object()
+        test_essential.system = sample_system_object_torch()
         test_essential.test_results['loss'][''].extend([10, 20])
         test_essential.on_epoch_end(data=data)
         self.assertEqual(data['loss'], 15.0)

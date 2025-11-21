@@ -56,16 +56,12 @@ def get_gradient(target: torch.Tensor,
                                         allow_unused=True)
 
         if isinstance(sources, torch.Tensor):
-            #  The behavior table of tf and torch backend
+            #  The behavior table of torch backend
             #  ---------------------------------------------------------------
             #        | case 1                     | case 2                    |
             #  ---------------------------------------------------------------|
-            #  tf    | target: tf.Tensor          | target: tf.Tensor         |
-            #        | sources: tf.Tensor         | sources: [tf.Tensor]      |
-            #        | gradients: tf.Tensor       | gradients: [tf.Tensor]    |
-            # ----------------------------------------------------------------|
-            #  torch | target: torch.Tensor       | target: tf.Tensor         |
-            #        | sources: torch.Tensor      | sources: [tf.Tensor]      |
+            #  torch | target: torch.Tensor       | target: torch.Tensor      |
+            #        | sources: torch.Tensor      | sources: [torch.Tensor]   |
             #        | gradients: (torch.Tensor,) | gradients: (torch.Tensor,)|
             # ----------------------------------------------------------------
             # In order to make the torch behavior become the same as tf in case 1, need to unwrap the gradients when
@@ -73,5 +69,5 @@ def get_gradient(target: torch.Tensor,
 
             gradients = gradients[0]
     else:
-        raise ValueError("Unrecognized tensor type {}".format(type(target)))
+        raise ValueError('Unrecognized tensor type {}'.format(type(target)))
     return gradients

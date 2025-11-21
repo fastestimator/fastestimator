@@ -22,7 +22,6 @@ from fastestimator.test.unittest_util import is_equal
 
 
 class TestLambdaOp(unittest.TestCase):
-
     def test_single_input(self):
         op = LambdaOp(fn=np.sum)
         data = op.forward(data=[[1, 2, 3]], state={})
@@ -35,6 +34,6 @@ class TestLambdaOp(unittest.TestCase):
 
     def test_batch_forward(self):
         op = LambdaOp(fn=np.sum)
-        data = torch.tensor([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
+        data = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
         result = op.forward_batch(data=[data], state={})
         self.assertEqual(result, 45)

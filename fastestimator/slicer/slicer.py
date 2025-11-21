@@ -15,13 +15,7 @@
 from typing import Dict, Iterable, List, MutableMapping, Sequence, Set, Tuple, Union
 
 from fastestimator.types import Tensor
-from fastestimator.util.base_util import (
-    check_ds_id,
-    check_io_names,
-    parse_modes,
-    to_list,
-    to_set,
-)
+from fastestimator.util.base_util import check_ds_id, check_io_names, parse_modes, to_list, to_set
 from fastestimator.util.traceability_util import traceable
 
 
@@ -64,13 +58,13 @@ class Slicer():
         self.ds_id = check_ds_id(to_set(ds_id))
         self.minibatch_size = 0
         if not self.slice_inputs and not self.unslice_inputs:
-            raise ValueError("At least one of slice_inputs or unslice_inputs should be provided")
+            raise ValueError('At least one of slice_inputs or unslice_inputs should be provided')
         if self.slice_inputs and type(self)._slice_batch == Slicer._slice_batch:
             raise NotImplementedError(
-                f"Slice inputs were provided, but {type(self).__name__} does not implement _slice_batch")
+                f'Slice inputs were provided, but {type(self).__name__} does not implement _slice_batch')
         if self.unslice_inputs and type(self)._unslice_batch == Slicer._unslice_batch:
             raise NotImplementedError(
-                f"Unslice inputs were provided, but {type(self).__name__} does not implement _unslice_batch")
+                f'Unslice inputs were provided, but {type(self).__name__} does not implement _unslice_batch')
 
     def slice_batches(self, batches: Tuple[Tensor, ...]) -> List[Tuple[Tensor, ...]]:
         """A method to convert one or more data tensors into slices.
@@ -85,7 +79,7 @@ class Slicer():
         self.minibatch_size = len(slices[0])
         for sl in slices[1:]:
             assert len(sl) == self.minibatch_size, \
-                f"Slicer produced inconsistent number of slices over inputs: {self.slice_inputs}"
+                f'Slicer produced inconsistent number of slices over inputs: {self.slice_inputs}'
         return [minibatch for minibatch in zip(*slices)]
 
     def _slice_batch(self, batch: Tensor) -> List[Tensor]:
@@ -136,14 +130,14 @@ def sanity_assert_slicers(slicers: List[Slicer]) -> None:
         more_u_inputs = set(slicer.unslice_inputs)
         if slice_inputs & more_s_inputs:
             raise ValueError(
-                f"Multiple Slicers tried to slice the same keys simultaneously: {slice_inputs & more_s_inputs}")
+                f'Multiple Slicers tried to slice the same keys simultaneously: {slice_inputs & more_s_inputs}')
         if unslice_inputs & more_u_inputs:
             raise ValueError(
-                f"Multiple Slicers tried to un-slice the same keys simultaneously: {unslice_inputs & more_u_inputs}")
+                f'Multiple Slicers tried to un-slice the same keys simultaneously: {unslice_inputs & more_u_inputs}')
         slice_inputs |= more_s_inputs
         unslice_inputs |= more_u_inputs
     if unslice_inputs and not slice_inputs:
-        raise ValueError("Cannot unslice keys if no slicing is performed.")
+        raise ValueError('Cannot unslice keys if no slicing is performed.')
 
 
 def forward_slicers(slicers: List[Slicer], data: MutableMapping[str, Tensor]) -> List[Dict[str, Tensor]]:
@@ -168,17 +162,13 @@ def forward_slicers(slicers: List[Slicer], data: MutableMapping[str, Tensor]) ->
         if not slicer.slice_inputs:
             continue
         input_data = tuple([data[key] for key in slicer.slice_inputs])
-        if input_data and isinstance(input_data[0], DistributedValues):
-            strategy = tf.distribute.get_strategy()
-            sliced_data = strategy.extended.call_for_each_replica(fn=slicer.slice_batches, args=(input_data, ))
-        else:
-            sliced_data = slicer.slice_batches(input_data)
+        sliced_data = slicer.slice_batches(input_data)
         if not slices:
             slices = [{key: value for key, value in zip(slicer.slice_inputs, element)} for element in sliced_data]
         else:
             if len(sliced_data) != len(slices):
                 raise ValueError(
-                    f"Multiple Slicers produced an inconsistent number of slices: {len(slices)} vs {len(sliced_data)}")
+                    f'Multiple Slicers produced an inconsistent number of slices: {len(slices)} vs {len(sliced_data)}')
             for minibatch, new_entry in zip(slices, [{key: value for key, value in zip(slicer.slice_inputs, element)}
                                                      for element in sliced_data]):
                 minibatch.update(new_entry)
@@ -220,11 +210,6 @@ def reverse_slicers(slicers: List[Slicer], data: List[MutableMapping[str, Tensor
     leftover_data = {}
     for key in data[0].keys() - processed_keys:
         original_sample = original_data.get(key, data[0][key])
-        if isinstance(original_sample, DistributedValues):
-            if original_sample.values[0].shape.rank == 0:
-                original_sample = tf.reduce_mean(tuple(d for d in original_sample.values if not tf.math.is_nan(d)))
-            else:
-                original_sample = tf.concat(original_sample.values, axis=0)
         leftover_data[key] = original_sample
     batch.update(leftover_data)
     return batch

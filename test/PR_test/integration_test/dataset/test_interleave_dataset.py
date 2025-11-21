@@ -17,14 +17,8 @@ import unittest
 from typing import TYPE_CHECKING
 
 import numpy as np
-import tensorflow as tf
-
-from fastestimator.util.data import Data
-
-if TYPE_CHECKING:
-    from tensorflow.python.keras import Sequential, layers
-else:
-    from tensorflow.keras import Sequential, layers
+import torch
+from torch import nn
 
 import fastestimator as fe
 from fastestimator.dataset.interleave_dataset import InterleaveDataset
@@ -32,33 +26,45 @@ from fastestimator.dataset.numpy_dataset import NumpyDataset
 from fastestimator.op.numpyop import Batch, NumpyOp
 from fastestimator.op.tensorop.model.model import ModelOp
 from fastestimator.op.tensorop.tensorop import LambdaOp
-from fastestimator.test.unittest_util import (
-    sample_system_object,
-    sample_system_object_torch,
-)
+from fastestimator.test.unittest_util import sample_system_object_torch
 from fastestimator.trace.trace import Trace
 from fastestimator.util import get_num_gpus
+from fastestimator.util.data import Data
+
+
+class SimpleNN(nn.Module):
+    def __init__(self):
+        super(SimpleNN, self).__init__()
+        # Use Conv2d to handle variable sized images
+        self.conv1 = nn.Conv2d(1, 1, kernel_size=3, padding=1)
+        self.adaptive_pool = nn.AdaptiveAvgPool2d((1, 1))
+        self.relu = nn.ReLU()
+
+    def forward(self, x):
+        # Convert input to float32 to match model weights
+        x = x.float()
+        out = self.conv1(x)
+        out = self.adaptive_pool(out)
+        out = torch.flatten(out, 1)
+        out = self.relu(out)
+        return out
 
 
 class Plus(NumpyOp):
-
     def forward(self, data, state):
         return data + 0.5
 
 
 class TestDataset(NumpyDataset):
-
     def __init__(self, data, var):
         super().__init__(data)
         self.var = var
 
 
 class TestInterleaveDatasetRestoreWizard(unittest.TestCase):
-
     def test_save_and_load_state_with_batch_dataset_tf(self):
-
         def instantiate_system():
-            system = sample_system_object()
+            system = sample_system_object_torch()
             x_train = np.ones((2, 28, 28, 3))
             y_train = np.ones((2, ))
             ds = TestDataset(data={'x': x_train, 'y': y_train}, var=1)
@@ -70,7 +76,7 @@ class TestInterleaveDatasetRestoreWizard(unittest.TestCase):
 
         # make some change
         new_var = 2
-        system.pipeline.data["train"][''].datasets[0].var = new_var
+        system.pipeline.data['train'][''].datasets[0].var = new_var
 
         # save the state
         save_path = tempfile.mkdtemp()
@@ -79,12 +85,11 @@ class TestInterleaveDatasetRestoreWizard(unittest.TestCase):
         # reinstantiate system and load the state
         system = instantiate_system()
         system.load_state(save_path)
-        loaded_var = system.pipeline.data["train"][''].datasets[0].var
+        loaded_var = system.pipeline.data['train'][''].datasets[0].var
 
         self.assertEqual(loaded_var, new_var)
 
     def test_save_and_load_state_with_batch_dataset_torch(self):
-
         def instantiate_system():
             system = sample_system_object_torch()
             x_train = np.ones((2, 3, 28, 28))
@@ -98,7 +103,7 @@ class TestInterleaveDatasetRestoreWizard(unittest.TestCase):
 
         # make some change
         new_var = 2
-        system.pipeline.data["train"][''].datasets[0].var = new_var
+        system.pipeline.data['train'][''].datasets[0].var = new_var
 
         # save the state
         save_path = tempfile.mkdtemp()
@@ -107,23 +112,22 @@ class TestInterleaveDatasetRestoreWizard(unittest.TestCase):
         # re-instantiate system and load the state
         system = instantiate_system()
         system.load_state(save_path)
-        loaded_var = system.pipeline.data["train"][''].datasets[0].var
+        loaded_var = system.pipeline.data['train'][''].datasets[0].var
 
         self.assertEqual(loaded_var, new_var)
 
 
 class TestInterleaveDataset(unittest.TestCase):
-
     @classmethod
     def setUpClass(self):
-        self.data1 = {"x": [x for x in range(1, 11)], "ds_id": [0 for _ in range(10)]}
-        self.data2 = {"x": [x * 10 for x in range(1, 21)], "ds_id": [1 for _ in range(20)]}
+        self.data1 = {'x': [x for x in range(1, 11)], 'ds_id': [0 for _ in range(10)]}
+        self.data2 = {'x': [x * 10 for x in range(1, 21)], 'ds_id': [1 for _ in range(20)]}
 
     def test_interleave_in_pipeline_default_pattern(self):
         ds1, ds2 = NumpyDataset(self.data1), NumpyDataset(self.data2)
         dataset = InterleaveDataset(datasets=[ds1, ds2])
         pipeline = fe.Pipeline(train_data=dataset, batch_size=2)
-        with pipeline(mode="train", shuffle=True) as loader:
+        with pipeline(mode='train', shuffle=True) as loader:
             batches = [batch for batch in loader]
         self.assertAlmostEqual(batches[0]['ds_id'].numpy().sum(), 0)
         self.assertAlmostEqual(batches[1]['ds_id'].numpy().sum(), 2)
@@ -134,7 +138,7 @@ class TestInterleaveDataset(unittest.TestCase):
         ds1, ds2 = NumpyDataset(self.data1), NumpyDataset(self.data2)
         dataset = InterleaveDataset(datasets=[ds1, ds2], pattern=[0, 0, 1])
         pipeline = fe.Pipeline(train_data=dataset, batch_size=2)
-        with pipeline(mode="train", shuffle=True) as loader:
+        with pipeline(mode='train', shuffle=True) as loader:
             batches = [batch for batch in loader]
         self.assertAlmostEqual(batches[0]['ds_id'].numpy().sum(), 0)
         self.assertAlmostEqual(batches[1]['ds_id'].numpy().sum(), 0)
@@ -143,9 +147,9 @@ class TestInterleaveDataset(unittest.TestCase):
 
     def test_interleave_in_pipeline_ds_tags(self):
         ds1, ds2 = NumpyDataset(self.data1), NumpyDataset(self.data2)
-        dataset = InterleaveDataset(datasets={"ds1": ds1, "ds2": ds2})
-        pipeline = fe.Pipeline(train_data=dataset, batch_size=2, ops=[Plus(inputs="x", outputs="x", ds_id="ds1")])
-        results = pipeline.get_results(mode="train", num_steps=4)
+        dataset = InterleaveDataset(datasets={'ds1': ds1, 'ds2': ds2})
+        pipeline = fe.Pipeline(train_data=dataset, batch_size=2, ops=[Plus(inputs='x', outputs='x', ds_id='ds1')])
+        results = pipeline.get_results(mode='train', num_steps=4)
         self.assertAlmostEqual(results[0]['x'].numpy()[0] % 1, 0.5)
         self.assertAlmostEqual(results[1]['x'].numpy()[0] % 1, 0)
         self.assertAlmostEqual(results[2]['x'].numpy()[0] % 1, 0.5)
@@ -153,12 +157,12 @@ class TestInterleaveDataset(unittest.TestCase):
 
     def test_interleave_in_pipeline_ds_tags_with_multids_id(self):
         ds1, ds2 = NumpyDataset(self.data1), NumpyDataset(self.data2)
-        dataset = InterleaveDataset(datasets={"ds1": ds1, "ds2": ds2})
+        dataset = InterleaveDataset(datasets={'ds1': ds1, 'ds2': ds2})
         pipeline = fe.Pipeline(
-            train_data={"source1": dataset},
+            train_data={'source1': dataset},
             batch_size=2,
-            ops=[Plus(inputs="x", outputs="x", ds_id="ds1"), Plus(inputs="x", outputs="x", ds_id="source1")])
-        results = pipeline.get_results(mode="train", num_steps=4, ds_id="source1")
+            ops=[Plus(inputs='x', outputs='x', ds_id='ds1'), Plus(inputs='x', outputs='x', ds_id='source1')])
+        results = pipeline.get_results(mode='train', num_steps=4, ds_id='source1')
         self.assertAlmostEqual(results[0]['x'].numpy()[0] % 1, 0)
         self.assertAlmostEqual(results[1]['x'].numpy()[0] % 1, 0.5)
         self.assertAlmostEqual(results[2]['x'].numpy()[0] % 1, 0)
@@ -166,9 +170,9 @@ class TestInterleaveDataset(unittest.TestCase):
 
     def test_interleave_in_pipeline_with_different_batch_size_hybrid(self):
         ds1, ds2 = NumpyDataset(self.data1), NumpyDataset(self.data2)
-        dataset = InterleaveDataset(datasets={"ds1": ds1, "ds2": ds2})
-        pipeline = fe.Pipeline(train_data=dataset, batch_size=2, ops=[Batch(batch_size=1, ds_id="ds2")])
-        results = pipeline.get_results(mode="train", num_steps=4)
+        dataset = InterleaveDataset(datasets={'ds1': ds1, 'ds2': ds2})
+        pipeline = fe.Pipeline(train_data=dataset, batch_size=2, ops=[Batch(batch_size=1, ds_id='ds2')])
+        results = pipeline.get_results(mode='train', num_steps=4)
         self.assertAlmostEqual(len(results[0]['x'].numpy()), 2)
         self.assertAlmostEqual(len(results[1]['x'].numpy()), 1)
         self.assertAlmostEqual(len(results[2]['x'].numpy()), 2)
@@ -176,46 +180,39 @@ class TestInterleaveDataset(unittest.TestCase):
 
     def test_interleave_in_pipeline_with_different_batch_size_op(self):
         ds1, ds2 = NumpyDataset(self.data1), NumpyDataset(self.data2)
-        dataset = InterleaveDataset(datasets={"ds1": ds1, "ds2": ds2})
+        dataset = InterleaveDataset(datasets={'ds1': ds1, 'ds2': ds2})
         pipeline = fe.Pipeline(train_data=dataset,
-                               ops=[Batch(batch_size=2, ds_id="ds1"), Batch(batch_size=1, ds_id="ds2")])
-        results = pipeline.get_results(mode="train", num_steps=4)
+                               ops=[Batch(batch_size=2, ds_id='ds1'), Batch(batch_size=1, ds_id='ds2')])
+        results = pipeline.get_results(mode='train', num_steps=4)
         self.assertAlmostEqual(len(results[0]['x'].numpy()), 2)
         self.assertAlmostEqual(len(results[1]['x'].numpy()), 1)
         self.assertAlmostEqual(len(results[2]['x'].numpy()), 2)
         self.assertAlmostEqual(len(results[3]['x'].numpy()), 1)
 
     def test_interleave_dataset_with_different_shapes(self):
-
-        def mymodel(input_shape):
-            model = Sequential()
-            model.add(layers.Conv2D(1, (3, 3), activation='relu', input_shape=input_shape))
-            return model
-
         class Collector(Trace):
-
             def __init__(self) -> None:
-                super().__init__(inputs="x")
+                super().__init__(inputs='x')
                 self.shapes = []
 
             def on_batch_end(self, data: Data) -> None:
-                self.shapes.append(tf.shape(data['x']))
+                self.shapes.append(data['x'].shape)
 
             def on_epoch_end(self, data: Data) -> None:
-                data.write_with_log(key="batch_shapes", value=self.shapes)
+                data.write_with_log(key='batch_shapes', value=self.shapes)
 
-        ds1 = NumpyDataset({"x": np.ones((20, 32, 32, 1), dtype=np.float32)})
-        ds2 = NumpyDataset({"x": np.ones((20, 28, 28, 1), dtype=np.float32)})
+        ds1 = NumpyDataset({'x': np.ones((20, 1, 32, 32), dtype=np.float32)})
+        ds2 = NumpyDataset({'x': np.ones((20, 1, 28, 28), dtype=np.float32)})
 
         dataset = InterleaveDataset(datasets=[ds1, ds2])
         pipeline = fe.Pipeline(train_data=dataset, batch_size=2)
-        model = fe.build(model_fn=lambda: mymodel(input_shape=(None, None, 1)), optimizer_fn="adam")
-        network = fe.Network(ops=[ModelOp(inputs="x", outputs="y_pred", model=model)])
+        model = fe.build(model_fn=lambda: SimpleNN(), optimizer_fn='adam')
+        network = fe.Network(ops=[ModelOp(inputs='x', outputs='y_pred', model=model)])
         estimator = fe.Estimator(pipeline=pipeline, network=network, epochs=1, traces=Collector())
-        summary = estimator.fit("test")
+        summary = estimator.fit('test')
         self.assertEqual(summary.history['train']['epoch'][20], 1)
-        target_32 = [2, 32, 32, 1]
-        target_28 = [2, 28, 28, 1]
+        target_32 = [2, 1, 32, 32]
+        target_28 = [2, 1, 28, 28]
         self.assertEqual(list(summary.history['train']['batch_shapes'][20][0]), target_32)
         self.assertEqual(list(summary.history['train']['batch_shapes'][20][1]), target_28)
         self.assertEqual(list(summary.history['train']['batch_shapes'][20][2]), target_32)
@@ -223,20 +220,15 @@ class TestInterleaveDataset(unittest.TestCase):
 
     def test_interleave_dataset_with_different_dtypes(self):
 
-        def mymodel(input_shape):
-            model = Sequential()
-            model.add(layers.Conv2D(1, (3, 3), activation='relu', input_shape=input_shape))
-            return model
-
-        ds1 = NumpyDataset({"x": np.ones((20, 32, 32, 1), dtype=np.float32)})
-        ds2 = NumpyDataset({"x": np.ones((20, 28, 28, 1), dtype=np.float16)})
+        ds1 = NumpyDataset({'x': np.ones((20, 1, 32, 32), dtype=np.float32)})
+        ds2 = NumpyDataset({'x': np.ones((20, 1, 28, 28), dtype=np.float16)})
 
         dataset = InterleaveDataset(datasets=[ds1, ds2])
         pipeline = fe.Pipeline(train_data=dataset, batch_size=2)
-        model = fe.build(model_fn=lambda: mymodel(input_shape=(None, None, 1)), optimizer_fn="adam")
+        model = fe.build(model_fn=lambda: SimpleNN(), optimizer_fn='adam')
         network = fe.Network(ops=[
-            ModelOp(inputs="x", outputs="y_pred", model=model),
+            ModelOp(inputs='x', outputs='y_pred', model=model),
         ])
         estimator = fe.Estimator(pipeline=pipeline, network=network, epochs=1)
-        summary = estimator.fit("test")
+        summary = estimator.fit('test')
         self.assertEqual(summary.history['train']['epoch'][20], 1)

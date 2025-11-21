@@ -16,6 +16,7 @@ import inspect
 import math
 import os
 import random
+from itertools import islice
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Union, overload
 
 import numpy as np
@@ -26,28 +27,17 @@ import fastestimator as fe
 from fastestimator.backend._to_shape import to_shape
 from fastestimator.backend._to_tensor import to_tensor
 from fastestimator.backend._to_type import to_type
-from fastestimator.network import BaseNetwork, TFNetwork, TorchNetwork
+from fastestimator.network import BaseNetwork, TorchNetwork
 from fastestimator.pipeline import Pipeline
-from fastestimator.schedule.schedule import (
-    Scheduler,
-    get_current_items,
-    get_signature_epochs,
-)
+from fastestimator.schedule.schedule import Scheduler, get_current_items, get_signature_epochs
 from fastestimator.summary.history import HistoryRecorder
 from fastestimator.summary.system import Summary, System
 from fastestimator.trace.io.best_model_saver import BestModelSaver
 from fastestimator.trace.io.model_saver import ModelSaver
 from fastestimator.trace.io.restore_wizard import RestoreWizard
 from fastestimator.trace.io.traceability import Traceability
-from fastestimator.trace.trace import (
-    EvalEssential,
-    Logger,
-    PerDSTrace,
-    TestEssential,
-    Trace,
-    TrainEssential,
-    sort_traces,
-)
+from fastestimator.trace.trace import EvalEssential, Logger, PerDSTrace, TestEssential, Trace, TrainEssential, \
+    sort_traces
 from fastestimator.types import FilteredData
 from fastestimator.util.base_util import NonContext, filter_nones, to_list, to_set, warn
 from fastestimator.util.data import Data
@@ -59,7 +49,7 @@ def _verify_dependency_versions() -> None:
     """Print warning messages if the user is using unexpected versions of PyTorch.
     """
     if torch.__version__ not in ('2.3.1', '2.3.1+cpu', '2.3.1+cu121'):
-        warn(f"Expected PyTorch version 2.3.1 but found {torch.__version__}. The framework may not work as expected.")
+        warn(f'Expected PyTorch version 2.3.1 but found {torch.__version__}. The framework may not work as expected.')
 
 
 @traceable()
@@ -104,7 +94,7 @@ class Estimator:
         self.traces_in_use = []
         self.filepath = os.path.realpath(inspect.stack()[2].filename)  # Record this for history tracking
         assert log_steps is None or log_steps >= 0, \
-            "log_steps must be None or positive (or 0 to disable only train logging)"
+            'log_steps must be None or positive (or 0 to disable only train logging)'
         self.monitor_names = filter_nones(to_set(monitor_names)) | network.get_loss_keys()
         self.system = System(network=network,
                              pipeline=pipeline,
@@ -154,10 +144,10 @@ class Estimator:
         _verify_dependency_versions()
         draw()
         self.system.reset(summary, self.fe_summary())
-        self._prepare_traces(run_modes={"train", "eval"})
+        self._prepare_traces(run_modes={'train', 'eval'})
         if warmup:
             self._warmup(eager=eager)
-        self._start(run_modes={"train", "eval"}, eager=eager)
+        self._start(run_modes={'train', 'eval'}, eager=eager)
         return self.system.summary or None
 
     def _prepare_traces(self, run_modes: Set[str]) -> None:
@@ -178,17 +168,17 @@ class Estimator:
             trace_outputs.update(trace.get_outputs(ds_ids=[]))
             extra_monitor_keys.update(trace.fe_monitor_names - trace_outputs)
         # Add the essential traces
-        if "train" in run_modes:
+        if 'train' in run_modes:
             self.traces_in_use.insert(0, TrainEssential(monitor_names=self.monitor_names.union(extra_monitor_keys)))
             no_save_warning = True
             for trace in get_current_items(self.traces_in_use, run_modes=run_modes):
                 if isinstance(trace, (ModelSaver, BestModelSaver)):
                     no_save_warning = False
             if no_save_warning:
-                warn("No ModelSaver Trace detected. Models will not be saved.")
-        if "eval" in run_modes and "eval" in self.pipeline.get_modes():
+                warn('No ModelSaver Trace detected. Models will not be saved.')
+        if 'eval' in run_modes and 'eval' in self.pipeline.get_modes():
             self.traces_in_use.insert(1, EvalEssential(monitor_names=self.monitor_names.union(extra_monitor_keys)))
-        if "test" in run_modes and "test" in self.pipeline.get_modes():
+        if 'test' in run_modes and 'test' in self.pipeline.get_modes():
             self.traces_in_use.insert(0, TestEssential(monitor_names=self.monitor_names.union(extra_monitor_keys)))
         # insert system instance to trace
         for trace in get_current_items(self.traces_in_use, run_modes=run_modes):
@@ -217,8 +207,8 @@ class Estimator:
         """
         _verify_dependency_versions()
         self.system.reset_for_test(summary)
-        self._prepare_traces(run_modes={"test"})
-        self._start(run_modes={"test"}, eager=eager)
+        self._prepare_traces(run_modes={'test'})
+        self._start(run_modes={'test'}, eager=eager)
         return self.system.summary or None
 
     def _warmup(self, eager: bool = True) -> None:
@@ -230,11 +220,11 @@ class Estimator:
         Args:
             eager: Whether to run the training in eager mode. PyTorch runs in eager mode by default.
         """
-        all_traces = get_current_items(self.traces_in_use, run_modes={"train", "eval"})
+        all_traces = get_current_items(self.traces_in_use, run_modes={'train', 'eval'})
         sort_traces(all_traces, ds_ids=[])  # This ensures that the traces can sort properly for on_begin and on_end
         monitor_names = self.monitor_names
         unmet_monitor_names = set(monitor_names)
-        for mode in self.pipeline.get_modes() - {"test"}:
+        for mode in self.pipeline.get_modes() - {'test'}:
             scheduled_items = self.pipeline.get_scheduled_items(mode) + self.network.get_scheduled_items(
                 mode) + self.get_scheduled_items(mode)
             signature_epochs = get_signature_epochs(scheduled_items, self.system.total_epochs, mode=mode)
@@ -245,7 +235,7 @@ class Estimator:
                 ds_ids = self.pipeline.get_ds_ids(epoch, mode)
                 for ds_id in ds_ids:
                     trace_input_keys = set()
-                    trace_output_keys = {"*"}
+                    trace_output_keys = {'*'}
                     traces = get_current_items(self.traces_in_use, run_modes=mode, epoch=epoch, ds_id=ds_id)
                     for idx, trace in enumerate(traces):
                         if idx == 0:
@@ -277,27 +267,22 @@ class Estimator:
                                 output_keys=(trace_input_keys - network_output_keys)
                                 | network_input_keys | monitor_names) as loader:
                             loader = self._configure_loader(loader)
-                            if isinstance(loader, tf.data.Dataset):
-                                batch = list(loader.take(1))[0]
-                            else:
-                                with Suppressor(allow_pyprint=True, show_if_exception=True):
-                                    # TF multi-gpu print-spams here in version 2.11
-                                    batch = next(iter(loader))
+                            batch = next(iter(loader))
                             batch = self._configure_tensor(loader, batch)
                         assert isinstance(batch, dict), \
-                            f"please make sure data output format is dictionary (got {type(batch)})"
+                            f'please make sure data output format is dictionary (got {type(batch)})'
                         pipeline_output_keys = to_set(batch.keys())
 
                         unmet_monitor_names = unmet_monitor_names - (pipeline_output_keys | network_output_keys)
                         unmet_requirements = trace_input_keys - (pipeline_output_keys | network_output_keys
                                                                  | trace_output_keys)
                         assert not unmet_requirements, \
-                            "found missing key(s) during epoch {} mode {} ds_id {}: {}".format(epoch, mode, ds_id,
+                            'found missing key(s) during epoch {} mode {} ds_id {}: {}'.format(epoch, mode, ds_id,
                                                                                             unmet_requirements)
                         sort_traces(traces, ds_ids=ds_ids, available_outputs=pipeline_output_keys | network_output_keys)
                         trace_input_keys.update(traces[0].inputs)
                         self.network.run_step(batch)
-        assert not unmet_monitor_names, "found missing key(s): {}".format(unmet_monitor_names)
+        assert not unmet_monitor_names, 'found missing key(s): {}'.format(unmet_monitor_names)
 
     def get_scheduled_items(self, mode: str) -> List[Any]:
         """Get a list of items considered for scheduling.
@@ -325,17 +310,17 @@ class Estimator:
                 self.system, self.filepath, db_path=fe.fe_history_path):
             try:
                 self._run_traces_on_begin(traces=all_traces)
-                if "train" in run_modes or "eval" in run_modes:
+                if 'train' in run_modes or 'eval' in run_modes:
                     # If the training is re-starting from a restore wizard, it should re-run the last eval epoch
-                    if self.system.epoch_idx > 0 and "eval" in self.pipeline.get_modes(epoch=self.system.epoch_idx):
-                        self.system.mode = "eval"
+                    if self.system.epoch_idx > 0 and 'eval' in self.pipeline.get_modes(epoch=self.system.epoch_idx):
+                        self.system.mode = 'eval'
                         self._run_epoch(eager=eager)
                     for self.system.epoch_idx in range(self.system.epoch_idx + 1, self.system.total_epochs + 1):
-                        if "train" in self.pipeline.get_modes(epoch=self.system.epoch_idx):
-                            self.system.mode = "train"
+                        if 'train' in self.pipeline.get_modes(epoch=self.system.epoch_idx):
+                            self.system.mode = 'train'
                             self._run_epoch(eager=eager)
-                        if "eval" in self.pipeline.get_modes(epoch=self.system.epoch_idx):
-                            self.system.mode = "eval"
+                        if 'eval' in self.pipeline.get_modes(epoch=self.system.epoch_idx):
+                            self.system.mode = 'eval'
                             self._run_epoch(eager=eager)
                 else:
                     self._run_epoch(eager=eager)
@@ -405,7 +390,7 @@ class Estimator:
                     self._run_traces_on_ds_begin(traces=per_ds_traces)
                     while True:
                         try:
-                            if self.system.mode == "train":
+                            if self.system.mode == 'train':
                                 self.system.update_global_step()
                             self.system.update_batch_idx()
                             batch = self._configure_tensor(loader, batch)
@@ -414,9 +399,9 @@ class Estimator:
                             self._run_traces_on_batch_end(batch, traces=ds_traces)
                             if isinstance(loader,
                                           DataLoader) and ((self.system.batch_idx == self.system.train_steps_per_epoch
-                                                            and self.system.mode == "train") or
+                                                            and self.system.mode == 'train') or
                                                            (self.system.batch_idx == self.system.eval_steps_per_epoch
-                                                            and self.system.mode == "eval")):
+                                                            and self.system.mode == 'eval')):
                                 raise StopIteration
                             batch = next(iterator)
                         except StopIteration:

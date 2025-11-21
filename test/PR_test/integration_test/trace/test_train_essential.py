@@ -16,19 +16,18 @@ import math
 import time
 import unittest
 
-from fastestimator.test.unittest_util import sample_system_object
+from fastestimator.test.unittest_util import sample_system_object_torch
 from fastestimator.trace import TrainEssential
 from fastestimator.util.data import Data
 from fastestimator.util.util import get_num_gpus
 
 
 class TestTrainEssential(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         cls.data = Data({'loss': 10})
         cls.train_essential = TrainEssential(monitor_names='loss')
-        cls.train_essential.system = sample_system_object()
+        cls.train_essential.system = sample_system_object_torch()
         cls.train_essential.system.log_steps = 5
         cls.train_essential.system.global_step = 10
         cls.train_essential.epoch_start = time.perf_counter() - 500

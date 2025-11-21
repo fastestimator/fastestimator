@@ -40,8 +40,8 @@ from fastestimator.util.img_data import Display
 from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import get_num_gpus, to_number
 
-Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
+Model = TypeVar('Model', bound=torch.nn.Module)
+Tensor = TypeVar('Tensor', bound=torch.Tensor)
 
 
 class _BaseWriter:
@@ -195,7 +195,6 @@ class _TorchWriter(_BaseWriter):
 
     This class is intentionally not @traceable.
     """
-
     def write_epoch_models(self, mode: str, epoch: int) -> None:
         for model in self.network.ctx_models:
             inputs = model.fe_input_spec.get_dummy_input()
@@ -204,14 +203,14 @@ class _TorchWriter(_BaseWriter):
     def write_weights(self, mode: str, models: Iterable[Model], step: int, visualize: bool) -> None:
         for model in models:
             for name, params in model.named_parameters():
-                name = name.replace(".", "/")
-                name = "{}_{}".format(model.model_name, name)
+                name = name.replace('.', '/')
+                name = '{}_{}'.format(model.model_name, name)
                 weight = params.data
                 self.summary_writers[mode].add_histogram(tag=name, values=weight, global_step=step)
                 if visualize:
                     weight = self._weight_to_image(weight=weight)
                     if weight is not None:
-                        self.summary_writers[mode].add_images(tag=name + "/image",
+                        self.summary_writers[mode].add_images(tag=name + '/image',
                                                               img_tensor=weight,
                                                               global_step=step,
                                                               dataformats='NHWC')
@@ -260,7 +259,7 @@ class TensorBoard(Trace):
                  write_embeddings: Union[None, str, List[str]] = None,
                  embedding_labels: Union[None, str, List[str]] = None,
                  embedding_images: Union[None, str, List[str]] = None) -> None:
-        super().__init__(inputs=["*"] + to_list(write_images) + to_list(write_embeddings) + to_list(embedding_labels) +
+        super().__init__(inputs=['*'] + to_list(write_images) + to_list(write_embeddings) + to_list(embedding_labels) +
                          to_list(embedding_images))
         self.root_log_dir = log_dir
         self.update_freq = parse_freq(update_freq)
@@ -280,16 +279,16 @@ class TensorBoard(Trace):
         embedding_labels = to_list(embedding_labels)
         if embedding_labels:
             assert len(embedding_labels) == len(write_embeddings), \
-                f"Expected {len(write_embeddings)} embedding_labels keys, but recieved {len(embedding_labels)}. Use \
-                None to pad out the list if you have labels for only a subset of all embeddings."
+                f'Expected {len(write_embeddings)} embedding_labels keys, but recieved {len(embedding_labels)}. Use \
+                None to pad out the list if you have labels for only a subset of all embeddings.'
 
         else:
             embedding_labels = [None for _ in range(len(write_embeddings))]
         embedding_images = to_list(embedding_images)
         if embedding_images:
             assert len(embedding_images) == len(write_embeddings), \
-                f"Expected {len(write_embeddings)} embedding_images keys, but recieved {len(embedding_images)}. Use \
-                None to pad out the list if you have labels for only a subset of all embeddings."
+                f'Expected {len(write_embeddings)} embedding_images keys, but recieved {len(embedding_images)}. Use \
+                None to pad out the list if you have labels for only a subset of all embeddings.'
 
         else:
             embedding_images = [None for _ in range(len(write_embeddings))]
@@ -300,7 +299,7 @@ class TensorBoard(Trace):
         self.collected_embeddings = defaultdict(list)
 
     def on_begin(self, data: Data) -> None:
-        print("FastEstimator-Tensorboard: writing logs to {}".format(
+        print('FastEstimator-Tensorboard: writing logs to {}'.format(
             os.path.abspath(os.path.join(self.root_log_dir, self.system.experiment_time))))
         self.writer = _TorchWriter(self.root_log_dir, self.system.experiment_time, self.system.network)
         if self.write_graph and self.system.global_step == 1:

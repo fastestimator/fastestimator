@@ -21,12 +21,11 @@ import torch
 import fastestimator as fe
 from fastestimator.op.tensorop.loss import CrossEntropy, Hinge, SuperLoss
 from fastestimator.op.tensorop.model import ModelOp
-from fastestimator.test.unittest_util import sample_system_object
+from fastestimator.test.unittest_util import sample_system_object_torch
 from fastestimator.util.util import get_device
 
 
 class TestSuperLoss(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         device = get_device()
@@ -41,27 +40,26 @@ class TestSuperLoss(unittest.TestCase):
 
     def test_torch_superloss_binary_ce(self):
         sl = SuperLoss(CrossEntropy(inputs=['y_pred', 'y'], outputs='ce'))
-        sl.build(framework="torch", device="cuda:0" if torch.cuda.is_available() else "cpu")
+        sl.build(framework='torch', device='cuda:0' if torch.cuda.is_available() else 'cpu')
         output = sl.forward(data=[self.torch_pred_binary, self.torch_true_binary], state=self.state)
-        self.assertTrue(np.allclose(output.detach().to("cpu").numpy(), -0.0026238672))
+        self.assertTrue(np.allclose(output.detach().to('cpu').numpy(), -0.0026238672))
 
     def test_torch_superloss_hinge(self):
         true = torch.tensor([[-1, 1, 1, -1], [1, 1, 1, 1], [-1, -1, 1, -1],
-                             [1, -1, -1, -1]]).to("cuda:0" if torch.cuda.is_available() else "cpu")
+                             [1, -1, -1, -1]]).to('cuda:0' if torch.cuda.is_available() else 'cpu')
         pred = torch.tensor([[0.1, 0.9, 0.05, 0.05], [0.1, -0.2, 0.0, -0.7], [0.0, 0.15, 0.8, 0.05],
-                             [1.0, -1.0, -1.0, -1.0]]).to("cuda:0" if torch.cuda.is_available() else "cpu")
+                             [1.0, -1.0, -1.0, -1.0]]).to('cuda:0' if torch.cuda.is_available() else 'cpu')
         sl = SuperLoss(Hinge(inputs=('x1', 'x2'), outputs='x'))
-        sl.build('torch', "cuda:0" if torch.cuda.is_available() else "cpu")
+        sl.build('torch', 'cuda:0' if torch.cuda.is_available() else 'cpu')
         output = sl.forward(data=[pred, true], state=self.state)
-        self.assertTrue(np.allclose(output.to("cpu").numpy(), -0.072016776))
+        self.assertTrue(np.allclose(output.to('cpu').numpy(), -0.072016776))
 
     def test_save_and_load_state_torch(self):
-
         def instantiate_system():
-            system = sample_system_object()
+            system = sample_system_object_torch()
             model = fe.build(model_fn=fe.architecture.pytorch.LeNet, optimizer_fn='adam', model_name='tf')
             system.network = fe.Network(ops=[
-                ModelOp(model=model, inputs="x_out", outputs="y_pred"),
+                ModelOp(model=model, inputs='x_out', outputs='y_pred'),
                 SuperLoss(CrossEntropy(inputs=['y_pred', 'y'], outputs='ce'))
             ])
             return system
@@ -79,9 +77,9 @@ class TestSuperLoss(unittest.TestCase):
         system.load_state(save_path)
 
         loaded_op = system.network.ops[1]
-        with self.subTest("Initialization Flags"):
-            self.assertEqual(loaded_op.initialized['train'].to("cpu").numpy(), True)
-            self.assertEqual(loaded_op.initialized['eval'].to("cpu").numpy(), False)
-        with self.subTest("Mean Values"):
-            self.assertTrue(np.allclose(loaded_op.tau['train'].to("cpu").numpy(), 0.22839302))
-            self.assertTrue(np.allclose(loaded_op.tau['eval'].to("cpu").numpy(), 0.0))
+        with self.subTest('Initialization Flags'):
+            self.assertEqual(loaded_op.initialized['train'].to('cpu').numpy(), True)
+            self.assertEqual(loaded_op.initialized['eval'].to('cpu').numpy(), False)
+        with self.subTest('Mean Values'):
+            self.assertTrue(np.allclose(loaded_op.tau['train'].to('cpu').numpy(), 0.22839302))
+            self.assertTrue(np.allclose(loaded_op.tau['eval'].to('cpu').numpy(), 0.0))

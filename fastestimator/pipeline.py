@@ -20,21 +20,7 @@ import time
 from copy import deepcopy
 from operator import mul
 from threading import Lock
-from typing import (
-    Any,
-    Dict,
-    Iterable,
-    List,
-    Literal,
-    Optional,
-    Set,
-    Tuple,
-    Type,
-    TypeVar,
-    Union,
-    cast,
-    overload,
-)
+from typing import Any, Dict, Iterable, List, Literal, Optional, Set, Tuple, Type, TypeVar, Union, cast, overload
 
 import numpy as np
 from torch.utils.data import DataLoader, Dataset
@@ -49,12 +35,7 @@ from fastestimator.op.numpyop.meta.one_of import OneOf
 from fastestimator.op.numpyop.meta.repeat import Repeat
 from fastestimator.op.numpyop.meta.sometimes import Sometimes
 from fastestimator.op.numpyop.numpyop import Batch, NumpyOp, forward_numpyop
-from fastestimator.schedule.schedule import (
-    EpochScheduler,
-    RepeatScheduler,
-    Scheduler,
-    get_current_items,
-)
+from fastestimator.schedule.schedule import EpochScheduler, RepeatScheduler, Scheduler, get_current_items
 from fastestimator.types import FilteredData
 from fastestimator.util.base_util import filter_nones, to_list, to_set, warn
 from fastestimator.util.traceability_util import traceable
@@ -102,7 +83,7 @@ class Pipeline:
                  batch_size: Union[None, int, Scheduler[int]] = None,
                  ops: Union[None, NumpyOp, Scheduler[NumpyOp], List[Union[None, NumpyOp, Scheduler[NumpyOp]]]] = None,
                  num_process: Optional[int] = None):
-        data = {x: y for (x, y) in zip(["train", "eval", "test"], [train_data, eval_data, test_data]) if y}
+        data = {x: y for (x, y) in zip(['train', 'eval', 'test'], [train_data, eval_data, test_data]) if y}
         self.data = self._register_ds_ids(data)
         self.batch_size = batch_size
         self.ops = filter_nones(to_list(ops))
@@ -138,19 +119,19 @@ class Pipeline:
         Args:
             data: A dictionary with mode as key, dataset as value.
         """
-        forbidden_ds_id_chars = {":", "!", ";", "|"}
+        forbidden_ds_id_chars = {':', '!', ';', '|'}
         for mode, dataset in data.items():
             if isinstance(dataset, dict):
                 for ds_name in dataset:
                     assert isinstance(ds_name, str) and len(ds_name) > 0, \
-                        f"dataset id must be a string, found {ds_name}"
+                        f'dataset id must be a string, found {ds_name}'
                     assert not any(char in ds_name for char in forbidden_ds_id_chars), \
                         "dataset id should not contain forbidden characters like ':', ';', '!', '|', " + \
-                        f"found {ds_name} in pipeline"
+                        f'found {ds_name} in pipeline'
                 data[mode] = filter_nones(dataset)
             else:
                 # Empty string is special, matches against ops which require '!ds1' but not 'ds1'
-                data[mode] = {"": dataset}
+                data[mode] = {'': dataset}
         return cast(Dict[str, Dict[str, Union[DataSource, Scheduler[DataSource]]]], data)
 
     def _verify_inputs(self, **kwargs) -> None:
@@ -167,9 +148,9 @@ class Pipeline:
         for dataset in get_current_items(set(d for ds in self.data.values() for d in ds.values())):
             fe_dataset = self._verify_dataset(dataset, **kwargs) or fe_dataset
         if self.data and not fe_dataset:  # If the user provided no datasets at all, still let them use ops for infer
-            assert kwargs['batch_size'] is None, "Pipeline only supports batch_size with built-in (FE) datasets"
-            assert kwargs['ops'] is None, "Pipeline only supports ops with built-in (FE) datasets"
-            assert kwargs['num_process'] is None, "Pipeline only support num_process with built-in (FE) datasets"
+            assert kwargs['batch_size'] is None, 'Pipeline only supports batch_size with built-in (FE) datasets'
+            assert kwargs['ops'] is None, 'Pipeline only supports ops with built-in (FE) datasets'
+            assert kwargs['num_process'] is None, 'Pipeline only support num_process with built-in (FE) datasets'
         # Make sure that the user provides at most 1 Batch Op for a given epoch/mode/ds_id
         batch_ops = []
         schedule_epochs = {1}
@@ -206,7 +187,7 @@ class Pipeline:
                     # We have to do an instance check again since the user could technically use a scheduler that has a
                     # Batch Op at one point, but some other Op (or None) at a different point
                     ops = [op for op in ops if isinstance(op, Batch)]
-                    assert len(ops) < 2, "You may provide at most 1 batch op for a given epoch/mode/ds_id combination"
+                    assert len(ops) < 2, 'You may provide at most 1 batch op for a given epoch/mode/ds_id combination'
 
     def _verify_dataset(self, dataset: DataSource, **kwargs) -> bool:
         """A helper function to ensure that all of a dataset's arguments are correct.
@@ -225,22 +206,23 @@ class Pipeline:
         if isinstance(dataset, Dataset):
             # batch_size check
             for batch_size in get_current_items(to_list(self.batch_size)):
-                assert isinstance(batch_size, int), f"unsupported batch_size format: {type(batch_size)}"
+                assert isinstance(batch_size, int), f'unsupported batch_size format: {type(batch_size)}'
             # ops check
             for op in get_current_items(self.ops):
-                assert isinstance(op, NumpyOp), "unsupported op format, must provide NumpyOp in Pipeline"
+                assert isinstance(op, NumpyOp), 'unsupported op format, must provide NumpyOp in Pipeline'
             # num_process check
-            assert isinstance(self.num_process, int), "number of processes must be an integer"
+            assert isinstance(self.num_process, int), 'number of processes must be an integer'
             return True
+        elif isinstance(dataset, (DataLoader)):
             if kwargs['batch_size'] is not None:
-                warn("batch_size will only be used for built-in dataset")
+                warn('batch_size will only be used for built-in dataset')
             if kwargs['ops'] is not None:
-                warn("ops will only be used for built-in dataset")
+                warn('ops will only be used for built-in dataset')
             if kwargs['num_process'] is not None:
-                warn("num_process will only be used for built-in dataset")
+                warn('num_process will only be used for built-in dataset')
             return False
         else:
-            raise ValueError(f"Unsupported dataset type: {type(dataset)}")
+            raise ValueError(f'Unsupported dataset type: {type(dataset)}')
 
     def _get_op_split(self, mode: str, epoch: int,
                       ds_id: Union[str, Iterable[str]]) -> Tuple[List[NumpyOp], Batch, List[NumpyOp]]:
@@ -309,7 +291,7 @@ class Pipeline:
         return ds_ids
 
     def benchmark(self,
-                  mode: str = "train",
+                  mode: str = 'train',
                   epoch: int = 1,
                   ds_id: Optional[str] = None,
                   num_steps: int = 1000,
@@ -337,9 +319,9 @@ class Pipeline:
                     if idx % log_interval == 0:
                         duration = time.perf_counter() - start
                         iters_per_sec = log_interval / duration
-                        ds_str = f"Dataset: {ds_id}, " if ds_id else ""
+                        ds_str = f'Dataset: {ds_id}, ' if ds_id else ''
                         print(
-                            f"FastEstimator-Benchmark ({mode.capitalize()}): {ds_str}, Step: {idx}, Epoch: {epoch}, Steps/sec: {iters_per_sec}"
+                            f'FastEstimator-Benchmark ({mode.capitalize()}): {ds_str}, Step: {idx}, Epoch: {epoch}, Steps/sec: {iters_per_sec}'
                         )
                         start = time.perf_counter()
 
@@ -348,9 +330,9 @@ class Pipeline:
                     # (n_visited, duration)
                     duration_list = np.zeros(shape=(len(self.ctx_ops) + 1 + len(self.ctx_batch_ops), 2))
                     data_len = len(loader.dataset)
-                    ds_str = f", Dataset: {ds_id}" if ds_id else ""
+                    ds_str = f', Dataset: {ds_id}' if ds_id else ''
                     print(
-                        f"\nBreakdown of time taken by Pipeline Operations (Mode: {mode.capitalize()}, Epoch: {epoch}{ds_str})\n"
+                        f'\nBreakdown of time taken by Pipeline Operations (Mode: {mode.capitalize()}, Epoch: {epoch}{ds_str})\n'
                     )
                     extra_memory_management_time = 0
                     for _ in range(log_interval):
@@ -425,47 +407,47 @@ class Pipeline:
 
                     total_time = np.sum(duration_list[:, 1])
                     normalized_times_ms = 1000 * duration_list[:, 1] / np.maximum(duration_list[:, 0], 1)
-                    op_names = ["Op"]
+                    op_names = ['Op']
 
                     for op in self.ctx_ops + [self.ctx_batch_info] + self.ctx_batch_ops:
                         if isinstance(op, Sometimes) and op.op:
-                            op_names.append(op.__class__.__name__ + " (" + op.op.__class__.__name__ + ")")
+                            op_names.append(op.__class__.__name__ + ' (' + op.op.__class__.__name__ + ')')
                         elif isinstance(op, Repeat) and op.op:
-                            op_names.append(op.__class__.__name__ + " (" + op.op.__class__.__name__ + ")")
+                            op_names.append(op.__class__.__name__ + ' (' + op.op.__class__.__name__ + ')')
                         elif isinstance(op, OneOf) and op.ops:
-                            op_names.append(op.__class__.__name__ + " (" +
-                                            ", ".join([sub_op.__class__.__name__ for sub_op in op.ops]) + ")")
+                            op_names.append(op.__class__.__name__ + ' (' +
+                                            ', '.join([sub_op.__class__.__name__ for sub_op in op.ops]) + ')')
                         elif isinstance(op, Fuse) and op.ops:
-                            op_names.append(op.__class__.__name__ + " (" +
-                                            ", ".join([sub_op.__class__.__name__ for sub_op in op.ops]) + ")")
+                            op_names.append(op.__class__.__name__ + ' (' +
+                                            ', '.join([sub_op.__class__.__name__ for sub_op in op.ops]) + ')')
                         elif isinstance(op, Batch):
-                            op_names.append("<Collating Batch>")
+                            op_names.append('<Collating Batch>')
                         else:
                             op_names.append(op.__class__.__name__)
 
                     max_op_len = max(len(op_name) for op_name in op_names)
                     max_in_len = max(
-                        [len(", ".join(op.inputs))
-                         for op in self.ctx_ops + [self.ctx_batch_info] + self.ctx_batch_ops] + [len("Inputs")])
+                        [len(', '.join(op.inputs))
+                         for op in self.ctx_ops + [self.ctx_batch_info] + self.ctx_batch_ops] + [len('Inputs')])
                     max_out_len = max([
-                        len(", ".join(op.outputs)) for op in self.ctx_ops + [self.ctx_batch_info] + self.ctx_batch_ops
-                    ] + [len("Outputs")])
-                    ms_visit_len = max(len("{:.3f}".format(max(normalized_times_ms))), len("ms / Visit"))
-                    visit_len = max(len(f"{int(np.max(duration_list[:, 0]))}"), len("Visits"))
+                        len(', '.join(op.outputs)) for op in self.ctx_ops + [self.ctx_batch_info] + self.ctx_batch_ops
+                    ] + [len('Outputs')])
+                    ms_visit_len = max(len('{:.3f}'.format(max(normalized_times_ms))), len('ms / Visit'))
+                    visit_len = max(len(f'{int(np.max(duration_list[:, 0]))}'), len('Visits'))
 
-                    print("{}: {}: {}: {}: {}: {}".format("Op".ljust(max_op_len + 1),
-                                                          "Inputs".ljust(max_in_len + 1),
-                                                          "Outputs".ljust(max_out_len + 1),
-                                                          "ms / Visit".ljust(ms_visit_len + 1),
-                                                          "Visits".ljust(visit_len + 1),
-                                                          "Time (Total)".rjust(12)))
-                    print("-" * (max_op_len + max_in_len + max_out_len + visit_len + 37))
+                    print('{}: {}: {}: {}: {}: {}'.format('Op'.ljust(max_op_len + 1),
+                                                          'Inputs'.ljust(max_in_len + 1),
+                                                          'Outputs'.ljust(max_out_len + 1),
+                                                          'ms / Visit'.ljust(ms_visit_len + 1),
+                                                          'Visits'.ljust(visit_len + 1),
+                                                          'Time (Total)'.rjust(12)))
+                    print('-' * (max_op_len + max_in_len + max_out_len + visit_len + 37))
                     for i, op in enumerate(self.ctx_ops + [self.ctx_batch_info] + self.ctx_batch_ops):
-                        print("{}: {}: {}: {}: {}: {:11.2f}%".format(
+                        print('{}: {}: {}: {}: {}: {:11.2f}%'.format(
                             op_names[i + 1].ljust(max_op_len + 1),
-                            ", ".join(op.inputs).ljust(max_in_len + 1),
-                            ", ".join(op.outputs).ljust(max_out_len + 1),
-                            "{:.3f}".format(normalized_times_ms[i]).ljust(ms_visit_len + 1),
+                            ', '.join(op.inputs).ljust(max_in_len + 1),
+                            ', '.join(op.outputs).ljust(max_out_len + 1),
+                            '{:.3f}'.format(normalized_times_ms[i]).ljust(ms_visit_len + 1),
                             str(int(duration_list[i][0])).ljust(visit_len + 1),
                             100 * duration_list[i][1] / total_time))
                     if self.ctx_batch_ops:
@@ -473,8 +455,8 @@ class Pipeline:
                             100 * (duration_list[len(self.ctx_ops)][1] - extra_memory_management_time) /
                             duration_list[len(self.ctx_ops)][1],
                             1)
-                        print(f"\nNote that collation time would be cut by ~{penalty}% if there were no batched ops.")
-                print("\n")  # to make printing more obvious
+                        print(f'\nNote that collation time would be cut by ~{penalty}% if there were no batched ops.')
+                print('\n')  # to make printing more obvious
 
     def get_scheduled_items(self, mode: str) -> List[Any]:
         """Get a list of items considered for scheduling.
@@ -540,7 +522,7 @@ class Pipeline:
 
     @overload
     def get_results(self,
-                    mode: str = "train",
+                    mode: str = 'train',
                     epoch: int = 1,
                     ds_id: str = '',
                     num_steps: Literal[1] = 1,
@@ -549,7 +531,7 @@ class Pipeline:
 
     @overload
     def get_results(self,
-                    mode: str = "train",
+                    mode: str = 'train',
                     epoch: int = 1,
                     ds_id: str = '',
                     num_steps: int = 1,
@@ -557,7 +539,7 @@ class Pipeline:
         ...
 
     def get_results(self,
-                    mode: str = "train",
+                    mode: str = 'train',
                     epoch: int = 1,
                     ds_id: str = '',
                     num_steps: int = 1,
@@ -656,10 +638,10 @@ class Pipeline:
                     # collate functions are bound to different instances, they are all effectively the same function
                     same_collate = True
             assert same_drop_last and same_collate, \
-                "when using InterleaveDataset, the drop_last and collate behavior for all datasets must be the same"
+                'when using InterleaveDataset, the drop_last and collate behavior for all datasets must be the same'
             # Interleave dataset at current scope does not support batch level, need to make sure batchops are the same
             assert all(ctx_batch_ops_lists[0] == batch_ops for batch_ops in ctx_batch_ops_lists[1:]), \
-                "Current InterleaveDataset does not support different dataset behaviors after the BatchOp."
+                'Current InterleaveDataset does not support different dataset behaviors after the BatchOp.'
             self.ctx_batch_ops = ctx_batch_ops_lists[0]
             self.ctx_batch_info = ctx_batch_infos[0]
             # fill in the correct batch sizes
@@ -710,7 +692,7 @@ class Pipeline:
         """
         acquired = self.ctx_lock.acquire(blocking=False)
         if not acquired:
-            raise ValueError("You cannot generate a new loader from this Pipeline before closing its other loader.")
+            raise ValueError('You cannot generate a new loader from this Pipeline before closing its other loader.')
         # Release the lock if arguments are invalid so that people in Jupyter / debug consoles don't get stuck
         if self.ctx_mode not in self.data:
             self.ctx_lock.release()

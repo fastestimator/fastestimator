@@ -18,13 +18,12 @@ from unittest.mock import patch
 
 import numpy as np
 
-from fastestimator.test.unittest_util import sample_system_object
+from fastestimator.test.unittest_util import sample_system_object_torch
 from fastestimator.trace.adapt import EarlyStopping
 from fastestimator.util.data import Data
 
 
 class TestEarlyStopping(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         cls.data = Data({'loss': 10})
@@ -32,26 +31,26 @@ class TestEarlyStopping(unittest.TestCase):
 
     def test_on_begin_compare_min(self):
         early_stopping = EarlyStopping()
-        early_stopping.system = sample_system_object()
+        early_stopping.system = sample_system_object_torch()
         early_stopping.on_begin(data=self.data)
         self.assertEqual(early_stopping.best, np.Inf)
 
     def test_on_begin_compare_max(self):
         early_stopping = EarlyStopping(compare='max')
-        early_stopping.system = sample_system_object()
+        early_stopping.system = sample_system_object_torch()
         early_stopping.on_begin(data=self.data)
         self.assertEqual(early_stopping.best, -np.Inf)
 
     def test_on_begin_baseline_arbitrary_value(self):
         early_stopping = EarlyStopping(baseline=5.0)
-        early_stopping.system = sample_system_object()
+        early_stopping.system = sample_system_object_torch()
         early_stopping.on_begin(data=self.data)
         self.assertEqual(early_stopping.best, 5.0)
 
     def test_on_epoch_end_early_stopping_msg(self):
         with patch('sys.stdout', new=StringIO()) as fake_stdout:
             early_stopping = EarlyStopping(baseline=5.0)
-            early_stopping.system = sample_system_object()
+            early_stopping.system = sample_system_object_torch()
             early_stopping.system.epoch_idx = 3
             early_stopping.best = 2
             early_stopping.on_epoch_end(data=self.data)
@@ -60,7 +59,7 @@ class TestEarlyStopping(unittest.TestCase):
 
     def test_on_epoch_end_monitor_op(self):
         early_stopping = EarlyStopping(baseline=5.0)
-        early_stopping.system = sample_system_object()
+        early_stopping.system = sample_system_object_torch()
         early_stopping.min_delta = 1
         early_stopping.monitor_op = np.greater
         early_stopping.best = 7

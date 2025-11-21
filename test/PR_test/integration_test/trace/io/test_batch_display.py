@@ -17,14 +17,13 @@ import unittest
 
 import torch
 
-from fastestimator.test.unittest_util import sample_system_object
+from fastestimator.test.unittest_util import sample_system_object_torch
 from fastestimator.trace.io import BatchDisplay
 from fastestimator.trace.trace import Freq
 from fastestimator.util import Data
 
 
 class TestBatchDisplay(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         # Epoch 1 Data
@@ -82,10 +81,9 @@ class TestBatchDisplay(unittest.TestCase):
         trace.on_end(data)
 
     def test_save_and_load_state(self):
-
         def instantiate_system():
             trace = BatchDisplay(image='x', frequency='5e', save_dir='.', mode='train')
-            system = sample_system_object()
+            system = sample_system_object_torch()
             system.traces.append(trace)
             trace.system = system
             return system, trace

@@ -16,7 +16,7 @@ import os
 import tempfile
 import unittest
 
-from fastestimator.test.unittest_util import sample_system_object
+from fastestimator.test.unittest_util import sample_system_object_torch
 from fastestimator.trace.io import RestoreWizard
 from fastestimator.util.data import Data
 
@@ -29,44 +29,43 @@ def get_model_name(system):
 
 
 class TestRestoreWizard(unittest.TestCase):
-
     def test_save(self):
         save_path = tempfile.mkdtemp()
         restore_wizard = RestoreWizard(directory=save_path)
-        restore_wizard.system = sample_system_object()
+        restore_wizard.system = sample_system_object_torch()
         restore_wizard.on_begin(Data())
         restore_wizard.on_epoch_end(Data())
-        with self.subTest("Check Saved Files (1)"):
+        with self.subTest('Check Saved Files (1)'):
             self.assertTrue(os.path.exists(os.path.join(save_path, 'key.txt')))
             self.assertTrue(os.path.exists(os.path.join(save_path, 'A')))
-        with self.subTest("Check Key is Correct (1)"):
+        with self.subTest('Check Key is Correct (1)'):
             with open(os.path.join(save_path, 'key.txt'), 'r') as file:
                 key = file.readline()
-                self.assertEqual(key, "A")
+                self.assertEqual(key, 'A')
         restore_wizard.on_epoch_end(Data())
-        with self.subTest("Check Saved Files (2)"):
+        with self.subTest('Check Saved Files (2)'):
             self.assertTrue(os.path.exists(os.path.join(save_path, 'key.txt')))
             self.assertTrue(os.path.exists(os.path.join(save_path, 'B')))
-        with self.subTest("Check Key is Correct (2)"):
+        with self.subTest('Check Key is Correct (2)'):
             with open(os.path.join(save_path, 'key.txt'), 'r') as file:
                 key = file.readline()
-                self.assertEqual(key, "B")
+                self.assertEqual(key, 'B')
         restore_wizard.on_epoch_end(Data())
-        with self.subTest("Check Saved Files (3)"):
+        with self.subTest('Check Saved Files (3)'):
             self.assertTrue(os.path.exists(os.path.join(save_path, 'key.txt')))
             self.assertTrue(os.path.exists(os.path.join(save_path, 'A')))
-        with self.subTest("Check Key is Correct (3)"):
+        with self.subTest('Check Key is Correct (3)'):
             with open(os.path.join(save_path, 'key.txt'), 'r') as file:
                 key = file.readline()
-                self.assertEqual(key, "A")
+                self.assertEqual(key, 'A')
         restore_wizard.on_epoch_end(Data())
-        with self.subTest("Check Saved Files (4)"):
+        with self.subTest('Check Saved Files (4)'):
             self.assertTrue(os.path.exists(os.path.join(save_path, 'key.txt')))
             self.assertTrue(os.path.exists(os.path.join(save_path, 'B')))
-        with self.subTest("Check Key is Correct (4)"):
+        with self.subTest('Check Key is Correct (4)'):
             with open(os.path.join(save_path, 'key.txt'), 'r') as file:
                 key = file.readline()
-                self.assertEqual(key, "B")
+                self.assertEqual(key, 'B')
 
     def test_restore(self):
         save_path = tempfile.mkdtemp()
@@ -74,18 +73,18 @@ class TestRestoreWizard(unittest.TestCase):
         epoch_idx = 10
 
         restore_wizard = RestoreWizard(directory=save_path)
-        restore_wizard.system = sample_system_object()
+        restore_wizard.system = sample_system_object_torch()
         restore_wizard.on_begin(Data())
         restore_wizard.system.global_step = global_step
         restore_wizard.system.epoch_idx = epoch_idx
         restore_wizard.on_epoch_end(Data())
 
         restore_wizard = RestoreWizard(directory=save_path)
-        restore_wizard.system = sample_system_object()
+        restore_wizard.system = sample_system_object_torch()
         data = Data()
         restore_wizard.on_begin(data)
-        with self.subTest("Check print message"):
+        with self.subTest('Check print message'):
             self.assertEqual(data['epoch'], 10)
-        with self.subTest("Check system variables"):
+        with self.subTest('Check system variables'):
             self.assertEqual(restore_wizard.system.global_step, global_step)
             self.assertEqual(restore_wizard.system.epoch_idx, epoch_idx)

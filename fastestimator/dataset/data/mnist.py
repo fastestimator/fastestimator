@@ -17,12 +17,12 @@ from pathlib import Path
 from typing import Tuple
 
 import numpy as np
-from torchvision import datasets
+from sklearn.datasets import fetch_openml
 
 from fastestimator.dataset.numpy_dataset import NumpyDataset
 
 
-def load_data(image_key: str = "x", label_key: str = "y", root_dir: str = None) -> Tuple[NumpyDataset, NumpyDataset]:
+def load_data(image_key: str = 'x', label_key: str = 'y', root_dir: str = None) -> Tuple[NumpyDataset, NumpyDataset]:
     """Load and return the MNIST dataset.
 
     Args:
@@ -39,14 +39,17 @@ def load_data(image_key: str = "x", label_key: str = "y", root_dir: str = None) 
     else:
         root_dir = os.path.join(os.path.abspath(root_dir), 'mnist')
 
-    train_data = datasets.MNIST(root_dir, train=True, download=True, transform=None)
-    eval_data = datasets.MNIST(root_dir, train=False, transform=None)
+    mnist = fetch_openml('mnist_784', version=1, parser='auto')
+    # Access data and labels
+    X, y = mnist.data, mnist.target
+    x = X.to_numpy().reshape(-1, 28, 28)
+    y = y.to_numpy()
 
-    x_train = np.array([image for image, _ in train_data]).astype(np.float32)
-    y_train = np.array([clas for _, clas in train_data])
+    x_train = x[:60000].astype(np.float32)
+    y_train = y[:60000].astype(np.uint8)
 
-    x_eval = np.array([image for image, _ in eval_data]).astype(np.float32)
-    y_eval = np.array([clas for _, clas in eval_data])
+    x_eval = x[60000:].astype(np.float32)
+    y_eval = y[60000:].astype(np.uint8)
 
     train_data = NumpyDataset({image_key: x_train, label_key: y_train})
     eval_data = NumpyDataset({image_key: x_eval, label_key: y_eval})

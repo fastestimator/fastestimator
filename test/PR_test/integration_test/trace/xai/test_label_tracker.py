@@ -17,13 +17,12 @@ import unittest
 
 import torch
 
-from fastestimator.test.unittest_util import sample_system_object
+from fastestimator.test.unittest_util import sample_system_object_torch
 from fastestimator.trace.xai import LabelTracker
 from fastestimator.util import Data
 
 
 class TestLabelTracker(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         # Epoch 1 Data
@@ -85,7 +84,7 @@ class TestLabelTracker(unittest.TestCase):
 
     def test_basic_happy_path(self):
         labeltracker = LabelTracker(label='y', metric='acc', bounds=None, outputs='out')
-        system = sample_system_object()
+        system = sample_system_object_torch()
         labeltracker.system = system
         response = Data()
         self._simulate_training(labeltracker, response)
@@ -117,7 +116,7 @@ class TestLabelTracker(unittest.TestCase):
                                         'good': 0, 'bad': 1
                                     },
                                     outputs='out')
-        system = sample_system_object()
+        system = sample_system_object_torch()
         labeltracker.system = system
         response = Data()
         self._simulate_training(labeltracker, response)
@@ -141,7 +140,7 @@ class TestLabelTracker(unittest.TestCase):
 
     def test_multiple_bounds(self):
         labeltracker = LabelTracker(label='y', metric='acc', bounds=['std', 'range'], outputs='out')
-        system = sample_system_object()
+        system = sample_system_object_torch()
         labeltracker.system = system
         response = Data()
         self._simulate_training(labeltracker, response)
@@ -165,10 +164,9 @@ class TestLabelTracker(unittest.TestCase):
                 self.assertIn('acc ($min, \\mu, max$)', elem.history['train'])
 
     def test_save_and_load_state(self):
-
         def instantiate_system():
             tracker = LabelTracker(label='y', metric='acc', bounds=[None, 'range'], outputs='out')
-            system = sample_system_object()
+            system = sample_system_object_torch()
             system.traces.append(tracker)
             tracker.system = system
             return system, tracker

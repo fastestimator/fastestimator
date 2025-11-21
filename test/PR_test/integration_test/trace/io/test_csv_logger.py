@@ -19,13 +19,12 @@ import unittest
 
 import numpy as np
 
-from fastestimator.test.unittest_util import sample_system_object
+from fastestimator.test.unittest_util import sample_system_object_torch
 from fastestimator.trace.io import CSVLogger
 from fastestimator.util.data import Data
 
 
 class TestCSVLogger(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         cls.csv_root = tempfile.mkdtemp()
@@ -33,18 +32,18 @@ class TestCSVLogger(unittest.TestCase):
     @staticmethod
     def _run_fake_training(**csv_args):
         csvlogger = CSVLogger(**csv_args)
-        system = sample_system_object()
+        system = sample_system_object_torch()
         system.epoch_idx = 1
         system.global_step = 1
         csvlogger.system = system
 
         batch_data = Data(batch_data={
-            "idx": ['a', 'b', 'c'], "x": np.ones((3, 5, 5)), "y": np.ones((3, 1)), "ce": 12.5
+            'idx': ['a', 'b', 'c'], 'x': np.ones((3, 5, 5)), 'y': np.ones((3, 1)), 'ce': 12.5
         })
-        batch_data.write_per_instance_log(key="dice", value=[0.1, 0.2, 0.3])
+        batch_data.write_per_instance_log(key='dice', value=[0.1, 0.2, 0.3])
 
         epoch_data = Data()
-        epoch_data.write_with_log("ce", 12.5)
+        epoch_data.write_with_log('ce', 12.5)
 
         csvlogger.on_begin(Data())
         csvlogger.on_epoch_begin(Data())
@@ -119,7 +118,7 @@ class TestCSVLogger(unittest.TestCase):
 
     def test_per_instance_extra_key(self):
         csv_path = os.path.join(self.csv_root, 'per_instance.csv')
-        self._run_fake_training(filename=csv_path, instance_id_key='idx', monitor_names=["*", "y"])
+        self._run_fake_training(filename=csv_path, instance_id_key='idx', monitor_names=['*', 'y'])
         with self.subTest('Check that file was generated'):
             self.assertTrue(os.path.exists(csv_path))
 

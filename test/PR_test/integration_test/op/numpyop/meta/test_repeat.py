@@ -3,27 +3,21 @@ import unittest
 
 import fastestimator as fe
 from fastestimator.op.numpyop import NumpyOp
-from fastestimator.test.unittest_util import (
-    sample_system_object,
-    sample_system_object_torch,
-)
+from fastestimator.test.unittest_util import sample_system_object_torch
 
 
 class TestNumpyOp(NumpyOp):
-
     def __init__(self, inputs, outputs, mode, var):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)
         self.var = var
 
 
 class TestRepeat(unittest.TestCase):
-
     def test_save_and_load_state_torch(self):
-
         def instantiate_system():
             system = sample_system_object_torch()
             system.pipeline.ops = [
-                fe.op.numpyop.meta.Repeat(op=TestNumpyOp(inputs="x", outputs="x", mode="train", var=1), repeat=2)
+                fe.op.numpyop.meta.Repeat(op=TestNumpyOp(inputs='x', outputs='x', mode='train', var=1), repeat=2)
             ]
             return system
 

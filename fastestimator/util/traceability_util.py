@@ -25,17 +25,7 @@ from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Type, TypeVa
 import numpy as np
 import pandas as pd
 import torch
-from pylatex import (
-    Document,
-    Label,
-    Marker,
-    MultiColumn,
-    NoEscape,
-    Package,
-    Table,
-    Tabularx,
-    TextColor,
-)
+from pylatex import Document, Label, Marker, MultiColumn, NoEscape, Package, Table, Tabularx, TextColor
 from pylatex.base_classes import LatexObject
 from pylatex.utils import bold, escape_latex, italic
 
@@ -104,7 +94,6 @@ class FeInputSpec:
         model_input: The input to the model.
         model: The model which corresponds to the given `model_input`.
     """
-
     def __init__(self, model_input: Any, model: Model):
         self.shape = to_shape(model_input)
         self.dtype = to_type(model_input)
@@ -173,7 +162,6 @@ class FeSplitSummary(LatexObject):
 
     This class is intentionally not @traceable.
     """
-
     def __init__(self):
         super().__init__()
         self.data = []
@@ -195,10 +183,10 @@ class FeSplitSummary(LatexObject):
         Returns:
             A LaTeX string representation of this object.
         """
-        return " $\\rightarrow$ ".join([
+        return ' $\\rightarrow$ '.join([
             f"{HrefFEID(parent, name='').dumps() if isinstance(parent, FEID) else parent}({escape_latex(fraction)}" +
-            (f", seed={seed}" if seed is not None else "") +
-            (f", stratify=`{escape_latex(stratify)}'" if stratify is not None else "") + ")"
+            (f', seed={seed}' if seed is not None else '') +
+            (f", stratify=`{escape_latex(stratify)}'" if stratify is not None else '') + ')'
             for parent, fraction, seed, stratify in self.data
         ])
 
@@ -231,7 +219,7 @@ class FeSummaryTable:
         self.fe_id = fe_id
         self.type = target_type
         self.path = path
-        self.args = fields.pop("args", None)
+        self.args = fields.pop('args', None)
         self.kwargs = kwargs or {}
         self.fields = fields
 
@@ -250,7 +238,7 @@ class FeSummaryTable:
         """
         with doc.create(Table(position='htp!')) as table:
             table.append(NoEscape(r'\refstepcounter{table}'))
-            table.append(Label(Marker(name=str(self.fe_id), prefix="tbl")))
+            table.append(Label(Marker(name=str(self.fe_id), prefix='tbl')))
             if toc_ref:
                 table.append(NoEscape(r'\addcontentsline{toc}{subsection}{' + escape_latex(toc_ref) + '}'))
             with doc.create(Tabularx('|lX|', booktabs=True)) as tabular:
@@ -264,21 +252,21 @@ class FeSummaryTable:
                 tabular.add_row((name_override if name_override else bold(self.name),
                                  MultiColumn(size=1, align='r|', data=TextColor('blue', self.fe_id))))
                 tabular.add_hline()
-                type_str = f"{self.type}"
+                type_str = f'{self.type}'
                 match = re.fullmatch(r'^<.* \'(?P<typ>.*)\'>$', type_str)
-                type_str = match.group("typ") if match else type_str
-                tabular.add_row(("Type: ", escape_latex(type_str)))
+                type_str = match.group('typ') if match else type_str
+                tabular.add_row(('Type: ', escape_latex(type_str)))
                 if self.path:
                     if isinstance(self.path, LatexObject):
-                        tabular.add_row(("", self.path))
+                        tabular.add_row(('', self.path))
                     else:
-                        tabular.add_row(("", escape_latex(self.path)))
+                        tabular.add_row(('', escape_latex(self.path)))
                 for k, v in self.fields.items():
                     tabular.add_hline()
-                    tabular.add_row((f"{k.capitalize()}: ", v))
+                    tabular.add_row((f'{k.capitalize()}: ', v))
                 if self.args:
                     tabular.add_hline()
-                    tabular.add_row(("Args: ", self.args))
+                    tabular.add_row(('Args: ', self.args))
                 if extra_rows:
                     for (key, val) in extra_rows:
                         tabular.add_hline()
@@ -306,7 +294,7 @@ class SummaryTable:
 
     def __init__(self, name: str, kwargs: Optional[Dict[str, Any]] = None, **fields: Any):
         self.name = name
-        self.args = fields.pop("args", None)
+        self.args = fields.pop('args', None)
         self.kwargs = kwargs or {}
         self.fields = fields
 
@@ -337,10 +325,10 @@ class SummaryTable:
                     tabular.packages.append(package)
                 for k, v in self.fields.items():
                     tabular.add_hline()
-                    tabular.add_row((f"{k.capitalize()}: ", v))
+                    tabular.add_row((f'{k.capitalize()}: ', v))
                 if self.args:
                     tabular.add_hline()
-                    tabular.add_row(("Args: ", self.args))
+                    tabular.add_row(('Args: ', self.args))
                 if extra_rows:
                     for (key, val) in extra_rows:
                         tabular.add_hline()
@@ -405,13 +393,13 @@ def _trace_value(inp: Any, tables: Dict[FEID, FeSummaryTable], ret_ref: Flag, wr
         return HrefFEID(inp_id, tables[inp_id].name)
     elif inspect.ismethod(inp):
         parent = _trace_value(inp.__self__, tables, ret_ref, wrap_str)
-        return ContainerList(data=[parent, escape_latex(f".{inp.__name__}")])
+        return ContainerList(data=[parent, escape_latex(f'.{inp.__name__}')])
     elif inspect.isfunction(inp) or inspect.isclass(inp):
         inp_id = FEID(id(inp))
         if inp_id in tables:
             name = tables[inp_id].name
         else:
-            if inspect.isfunction(inp) and inp.__name__ == "<lambda>":
+            if inspect.isfunction(inp) and inp.__name__ == '<lambda>':
                 code = inp.__code__
                 var_names = code.co_varnames
                 # Attempt to figure out what the lambda function is doing. If it is being used only to invoke some other
@@ -419,7 +407,7 @@ def _trace_value(inp: Any, tables: Dict[FEID, FeSummaryTable], ret_ref: Flag, wr
                 flag = Flag()
                 func_description = _parse_lambda(inp, tables, flag) or {}
                 func_description['vars'] = _trace_value(var_names, tables, flag, wrap_str=False)
-                name = "lambda"
+                name = 'lambda'
                 path = None
                 if not flag and func_description.keys() == {'vars', 'function'}:
                     # This is a simple lambda function, so inline it instead of making a new table
@@ -431,11 +419,11 @@ def _trace_value(inp: Any, tables: Dict[FEID, FeSummaryTable], ret_ref: Flag, wr
                     if formatted_vars:
                         formatted_vars.pop()  # remove trailing comma
                     return ContainerList(data=[
-                        TextColor('cyan', f"{name} "), *formatted_vars, ": ", func_description.get('function', '')
+                        TextColor('cyan', f'{name} '), *formatted_vars, ': ', func_description.get('function', '')
                     ])
             else:
                 name = inp.__name__
-                path = f"{inp.__module__}.{inp.__qualname__}"
+                path = f'{inp.__module__}.{inp.__qualname__}'
                 func_description = {}
             tables[inp_id] = FeSummaryTable(name=name,
                                             fe_id=inp_id,
@@ -450,7 +438,7 @@ def _trace_value(inp: Any, tables: Dict[FEID, FeSummaryTable], ret_ref: Flag, wr
             if inspect.ismethod(inp.func):
                 path = _trace_value(inp.func, tables, ret_ref, wrap_str)
             elif hasattr(inp.func, '__module__') and hasattr(inp.func, '__qualname__'):
-                path = f"{inp.func.__module__}.{inp.func.__qualname__}"
+                path = f'{inp.func.__module__}.{inp.func.__qualname__}'
             else:
                 path = None
             tables[inp_id] = FeSummaryTable(name=inp.name, fe_id=inp_id, target_type=type(inp.func), path=path)
@@ -458,8 +446,8 @@ def _trace_value(inp: Any, tables: Dict[FEID, FeSummaryTable], ret_ref: Flag, wr
         return HrefFEID(inp_id, inp.name)
     elif isinstance(inp, _PartialBind):
         return {
-            "args": _trace_value(inp.args, tables, ret_ref, wrap_str=True),
-            "kwargs": _trace_value(inp.kwargs, tables, ret_ref, wrap_str).raw_input  # unwrap kwargs back into a dict
+            'args': _trace_value(inp.args, tables, ret_ref, wrap_str=True),
+            'kwargs': _trace_value(inp.kwargs, tables, ret_ref, wrap_str).raw_input  # unwrap kwargs back into a dict
         }
     elif isinstance(inp, _Command):
         return ContainerList(data=[
@@ -470,9 +458,9 @@ def _trace_value(inp: Any, tables: Dict[FEID, FeSummaryTable], ret_ref: Flag, wr
     elif isinstance(inp, _Condition):
         return ContainerList(data=[
             _trace_value(inp.left, tables, ret_ref, wrap_str),
-            " if ",
+            ' if ',
             _trace_value(inp.condition, tables, ret_ref, wrap_str),
-            " else ",
+            ' else ',
             _trace_value(inp.right, tables, ret_ref, wrap_str)
         ])
     elif isinstance(inp, _BoundFn):
@@ -480,8 +468,8 @@ def _trace_value(inp: Any, tables: Dict[FEID, FeSummaryTable], ret_ref: Flag, wr
         args = _trace_value(inp.args, tables, flag, wrap_str=False)
         kwargs = {}
         if isinstance(inp.args, _PartialBind):
-            kwargs = args["kwargs"]
-            args = args["args"]
+            kwargs = args['kwargs']
+            args = args['args']
         elif isinstance(args, dict):
             kwargs = args
             args = None
@@ -491,20 +479,20 @@ def _trace_value(inp: Any, tables: Dict[FEID, FeSummaryTable], ret_ref: Flag, wr
                 args = args.raw_input
             if isinstance(kwargs, PyContainer):
                 kwargs = kwargs.raw_input
-            formatted = ["("]
+            formatted = ['(']
             args = args or ()
             kwargs = kwargs or {}
             for arg in args:
                 formatted.append(arg)
-                formatted.append(", ")
+                formatted.append(', ')
             for key, value in kwargs.items():
                 formatted.append(key)
-                formatted.append("=")
+                formatted.append('=')
                 formatted.append(value)
-                formatted.append(", ")
+                formatted.append(', ')
             if len(formatted) > 1:
                 formatted.pop()  # Remove trailing comma
-            formatted.append(")")
+            formatted.append(')')
             if inspect.ismethod(inp.func.func):
                 container_list = _trace_value(inp.func.func, tables, ret_ref, wrap_str)
                 container_list.data.extend(formatted)
@@ -531,7 +519,7 @@ def _trace_value(inp: Any, tables: Dict[FEID, FeSummaryTable], ret_ref: Flag, wr
         if inp_id in tables:
             name = tables[inp_id].name
         else:
-            name = inp.model_name if hasattr(inp, 'model_name') else "<Unknown Model Name>"
+            name = inp.model_name if hasattr(inp, 'model_name') else '<Unknown Model Name>'
             tables[inp_id] = FeSummaryTable(name=name, fe_id=inp_id, target_type=type(inp))
         ret_ref.set_true()
         return HrefFEID(inp_id, name)
@@ -568,9 +556,9 @@ def _trace_value(inp: Any, tables: Dict[FEID, FeSummaryTable], ret_ref: Flag, wr
             description = {'shape': inp.shape}
             if rank == 0 or (rank == 1 and inp.shape[0] <= 10):
                 description['values'] = str(inp)
-            tables[inp_id] = FeSummaryTable(name="tensor", fe_id=inp_id, target_type=inp_type, **description)
+            tables[inp_id] = FeSummaryTable(name='tensor', fe_id=inp_id, target_type=inp_type, **description)
         ret_ref.set_true()
-        return HrefFEID(inp_id, "tensor")
+        return HrefFEID(inp_id, 'tensor')
     # This should be the last elif
     elif hasattr(inp, '__class__'):
         inp_id = FEID(id(inp))
@@ -583,12 +571,12 @@ def _trace_value(inp: Any, tables: Dict[FEID, FeSummaryTable], ret_ref: Flag, wr
                 # This object isn't @traceable but does have some stored variables that we can summarize.
                 kwargs = _trace_value({
                     k: v
-                    for k, v in inp.__dict__.items() if not k.startswith("_")
+                    for k, v in inp.__dict__.items() if not k.startswith('_')
                 },
                                       tables,
                                       ret_ref,
                                       wrap_str=False).raw_input
-                path = "Not @traceable, so summary is approximate"
+                path = 'Not @traceable, so summary is approximate'
             tables[inp_id] = FeSummaryTable(name=inp.__class__.__name__,
                                             target_type=type(inp),
                                             path=path,
@@ -599,9 +587,9 @@ def _trace_value(inp: Any, tables: Dict[FEID, FeSummaryTable], ret_ref: Flag, wr
     else:
         inp_id = FEID(id(inp))
         if inp_id not in tables:
-            tables[inp_id] = FeSummaryTable(name="an object", target_type=type(inp), fe_id=inp_id)
+            tables[inp_id] = FeSummaryTable(name='an object', target_type=type(inp), fe_id=inp_id)
         ret_ref.set_true()
-        return HrefFEID(inp_id, "an object")
+        return HrefFEID(inp_id, 'an object')
 
 
 def _traverse_chunks(lambda_specs: List[_ChunkSpec],
@@ -670,7 +658,7 @@ def _traverse_chunks(lambda_specs: List[_ChunkSpec],
 
 
 def _combine_chunks(chunks: List[str], specs: List[_ChunkSpec],
-                    skip: str = "ambda") -> List[Tuple[Set[str], Set[str], str]]:
+                    skip: str = 'ambda') -> List[Tuple[Set[str], Set[str], str]]:
     """Recombine a series of `chunks` into individual lambda expressions based on the given `specs`.
 
     Args:
@@ -742,7 +730,7 @@ def _extract_args(input_str: str) -> Set[str]:
     open_char = 0
     left_side = True
     for char in input_str:
-        if open_char == 0 and char == ":":
+        if open_char == 0 and char == ':':
             arg = arg.strip()
             if arg:
                 results.add(arg)
@@ -885,7 +873,7 @@ def _parse_lambda_fallback(function: types.FunctionType, tables: Dict[FEID, FeSu
     # De-reference any variables
     refs = code.co_freevars
     lam = lambda_fn[2]
-    response = {"function": escape_latex(lam)}
+    response = {'function': escape_latex(lam)}
     if refs:
         closure_vars = inspect.getclosurevars(function)
         ref_map = {
@@ -962,7 +950,7 @@ def _parse_lambda(function: types.FunctionType, tables: Dict[FEID, FeSummaryTabl
             elif instruction.opname == 'BUILD_SET':
                 arg = set(arg)
             args.append(arg)
-        elif instruction.opname == "BUILD_MAP":
+        elif instruction.opname == 'BUILD_MAP':
             # It's a map
             n_keys = instruction.argval
             arg = {}
@@ -975,7 +963,7 @@ def _parse_lambda(function: types.FunctionType, tables: Dict[FEID, FeSummaryTabl
                 idx -= 1
                 arg[k] = v
             args.append(arg)
-        elif instruction.opname == "BUILD_CONST_KEY_MAP":
+        elif instruction.opname == 'BUILD_CONST_KEY_MAP':
             # It's a map that had constant keys
             keys = args.pop()
             instructions.pop(idx - 1)
@@ -1006,7 +994,7 @@ def _parse_lambda(function: types.FunctionType, tables: Dict[FEID, FeSummaryTabl
             while idx + 1 < len(instructions):
                 if instructions[idx + 1].opname in ('LOAD_METHOD', 'LOAD_ATTR'):
                     name = instructions[idx + 1].argval
-                    func_pair = _Function(getattr(func_pair.func, name), name=func_pair.name + f".{name}")
+                    func_pair = _Function(getattr(func_pair.func, name), name=func_pair.name + f'.{name}')
                     instructions.pop(idx + 1)
                 else:
                     break
@@ -1073,7 +1061,7 @@ def _parse_lambda(function: types.FunctionType, tables: Dict[FEID, FeSummaryTabl
     # Return the bound args
     if conditions or len(args) != 1:
         return _parse_lambda_fallback(function, tables, ret_ref)
-    return {"function": _trace_value(args[0], tables, ret_ref=ret_ref, wrap_str=True)}
+    return {'function': _trace_value(args[0], tables, ret_ref=ret_ref, wrap_str=True)}
 
 
 def fe_summary(self) -> List[FeSummaryTable]:
@@ -1089,7 +1077,7 @@ def fe_summary(self) -> List[FeSummaryTable]:
     from torch.utils.data import Dataset
 
     from fastestimator.estimator import Estimator
-    from fastestimator.network import TFNetwork, TorchNetwork
+    from fastestimator.network import TorchNetwork
     from fastestimator.op.op import Op
     from fastestimator.pipeline import Pipeline
     from fastestimator.schedule.schedule import Scheduler
@@ -1099,15 +1087,13 @@ def fe_summary(self) -> List[FeSummaryTable]:
     # re-number the references for nicer viewing
     ordered_items = sorted(
         self._fe_traceability_summary.items(),
-        key=lambda x: 0 if issubclass(x[1].type, Estimator) else 1
-        if issubclass(x[1].type, (TFNetwork, TorchNetwork)) else 2 if issubclass(x[1].type, Pipeline) else 3
-        if issubclass(x[1].type, Scheduler) else 4 if issubclass(x[1].type, Trace) else 5
-        if issubclass(x[1].type, Op) else 6 if issubclass(x[1].type, Slicer) else 7
-        if issubclass(x[1].type, (Dataset, tf.data.Dataset)) else 8
-        if issubclass(x[1].type, (tf.keras.Model, torch.nn.Module)) else 9
-        if issubclass(x[1].type, types.FunctionType) else 10
-        if issubclass(x[1].type, (np.ndarray, tf.Tensor, tf.Variable, torch.Tensor)) else 11)
-    key_mapping = {fe_id: f"@FE{idx}" for idx, (fe_id, _) in enumerate(ordered_items)}
+        key=lambda x: 0 if issubclass(x[1].type, Estimator) else 1 if issubclass(x[1].type, (TorchNetwork, )) else 2
+        if issubclass(x[1].type, Pipeline) else 3 if issubclass(x[1].type, Scheduler) else 4
+        if issubclass(x[1].type, Trace) else 5 if issubclass(x[1].type, Op) else 6
+        if issubclass(x[1].type, Slicer) else 7 if issubclass(x[1].type, (Dataset, )) else 8
+        if issubclass(x[1].type, (torch.nn.Module, )) else 9 if issubclass(x[1].type, types.FunctionType) else 10
+        if issubclass(x[1].type, (np.ndarray, torch.Tensor)) else 11)
+    key_mapping = {fe_id: f'@FE{idx}' for idx, (fe_id, _) in enumerate(ordered_items)}
     FEID.set_translation_dict(key_mapping)
     return [item[1] for item in ordered_items]
 
@@ -1188,9 +1174,6 @@ def _setdata(current: Any, new: Any) -> Any:
         for key in current.keys():
             current[key] = _setdata(current[key], new[key])
         return current
-    if isinstance(current, tf.Variable) and isinstance(new, tf.Variable) and current.shape == new.shape:
-        current.assign(new)
-        return current
     if isinstance(current, torch.Tensor) and isinstance(new, torch.Tensor) and current.shape == new.shape:
         current.copy_(new)
         return current
@@ -1258,7 +1241,7 @@ def traceable(whitelist: Union[str, Tuple[str, ...]] = (), blacklist: Union[str,
     if isinstance(blacklist, str):
         blacklist = (blacklist, )
     if whitelist and blacklist:
-        raise ValueError("Traceable objects may specify a whitelist or a blacklist, but not both")
+        raise ValueError('Traceable objects may specify a whitelist or a blacklist, but not both')
 
     def make_traceable(cls):
         base_init = getattr(cls, '__init__')
@@ -1315,9 +1298,7 @@ def is_restorable(data: Any, memory_limit: int = 0) -> Tuple[bool, int]:
     """
     if isinstance(data, _RestorableClasses):
         size = sys.getsizeof(data)
-        if isinstance(data, tf.Tensor):
-            size = sys.getsizeof(data.numpy())
-        elif isinstance(data, torch.Tensor):
+        if isinstance(data, torch.Tensor):
             size = data.element_size() * data.nelement()
         return True, size
     elif isinstance(data, dict):

@@ -5,25 +5,19 @@ import numpy as np
 
 import fastestimator as fe
 from fastestimator.dataset import NumpyDataset
-from fastestimator.test.unittest_util import (
-    sample_system_object,
-    sample_system_object_torch,
-)
+from fastestimator.test.unittest_util import sample_system_object_torch
 
 
 class TestDataset(NumpyDataset):
-
     def __init__(self, data, var):
         super().__init__(data)
         self.var = var
 
 
 class TestBatchDataset(unittest.TestCase):
-
     def test_save_and_load_state_with_batch_dataset_tf(self):
-
         def instantiate_system():
-            system = sample_system_object()
+            system = sample_system_object_torch()
             x_train = np.ones((2, 28, 28, 3))
             y_train = np.ones((2, ))
             ds = TestDataset(data={'x': x_train, 'y': y_train}, var=1)
@@ -35,7 +29,7 @@ class TestBatchDataset(unittest.TestCase):
 
         # make some change
         new_var = 2
-        system.pipeline.data["train"][''].datasets[0].var = new_var
+        system.pipeline.data['train'][''].datasets[0].var = new_var
 
         # save the state
         save_path = tempfile.mkdtemp()
@@ -44,12 +38,11 @@ class TestBatchDataset(unittest.TestCase):
         # reinstantiate system and load the state
         system = instantiate_system()
         system.load_state(save_path)
-        loaded_var = system.pipeline.data["train"][''].datasets[0].var
+        loaded_var = system.pipeline.data['train'][''].datasets[0].var
 
         self.assertEqual(loaded_var, new_var)
 
     def test_save_and_load_state_with_batch_dataset_torch(self):
-
         def instantiate_system():
             system = sample_system_object_torch()
             x_train = np.ones((2, 3, 28, 28))
@@ -63,7 +56,7 @@ class TestBatchDataset(unittest.TestCase):
 
         # make some change
         new_var = 2
-        system.pipeline.data["train"][''].datasets[0].var = new_var
+        system.pipeline.data['train'][''].datasets[0].var = new_var
 
         # save the state
         save_path = tempfile.mkdtemp()
@@ -72,6 +65,6 @@ class TestBatchDataset(unittest.TestCase):
         # reinstantiate system and load the state
         system = instantiate_system()
         system.load_state(save_path)
-        loaded_var = system.pipeline.data["train"][''].datasets[0].var
+        loaded_var = system.pipeline.data['train'][''].datasets[0].var
 
         self.assertEqual(loaded_var, new_var)

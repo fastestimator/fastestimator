@@ -33,24 +33,8 @@ import pydot
 import torch
 from cpuinfo import get_cpu_info
 from natsort import humansorted
-from pylatex import (
-    Command,
-    Document,
-    Figure,
-    Hyperref,
-    Itemize,
-    Label,
-    LongTable,
-    Marker,
-    MultiColumn,
-    NoEscape,
-    Package,
-    Section,
-    Subsection,
-    Subsubsection,
-    Tabularx,
-    escape_latex,
-)
+from pylatex import Command, Document, Figure, Hyperref, Itemize, Label, LongTable, Marker, MultiColumn, NoEscape, \
+    Package, Section, Subsection, Subsubsection, Tabularx, escape_latex
 from pylatex.base_classes import Arguments
 from pylatex.section import Paragraph
 from pylatex.utils import bold
@@ -73,46 +57,22 @@ from fastestimator.op.tensorop.meta.repeat import Repeat as RepeatT
 from fastestimator.op.tensorop.meta.sometimes import Sometimes as SometimesT
 from fastestimator.op.tensorop.model import ModelOp
 from fastestimator.pipeline import Pipeline
-from fastestimator.schedule.schedule import (
-    Scheduler,
-    get_current_items,
-    get_signature_epochs,
-)
+from fastestimator.schedule.schedule import Scheduler, get_current_items, get_signature_epochs
 from fastestimator.slicer.slicer import Slicer
 from fastestimator.summary.logs.log_plot import visualize_logs
 from fastestimator.trace.adapt.lr_scheduler import LRScheduler
 from fastestimator.trace.io.restore_wizard import RestoreWizard
 from fastestimator.trace.trace import Trace, sort_traces
-from fastestimator.util.base_util import (
-    FEID,
-    DefaultKeyDict,
-    LogSplicer,
-    NonContext,
-    prettify_metric_name,
-    to_list,
-    warn,
-)
+from fastestimator.util.base_util import FEID, DefaultKeyDict, LogSplicer, NonContext, prettify_metric_name, to_list, \
+    warn
 from fastestimator.util.data import Data
-from fastestimator.util.latex_util import (
-    AdjustBox,
-    Center,
-    ContainerList,
-    HrefFEID,
-    Verbatim,
-)
+from fastestimator.util.latex_util import AdjustBox, Center, ContainerList, HrefFEID, Verbatim
 from fastestimator.util.traceability_util import FeSummaryTable, SummaryTable, traceable
-from fastestimator.util.util import (
-    Suppressor,
-    cpu_count,
-    get_gpu_info,
-    get_model_parameters,
-    get_num_gpus,
-    get_optimizer_name,
-)
+from fastestimator.util.util import Suppressor, cpu_count, get_gpu_info, get_model_parameters, get_num_gpus, \
+    get_optimizer_name
 
 
 class DataOp(Op):
-
     def __init__(self,
                  inputs: Union[None, str, Iterable[str]] = None,
                  outputs: Union[None, str, Iterable[str]] = None,
@@ -122,7 +82,6 @@ class DataOp(Op):
 
 
 class _UnslicerWrapper():
-
     def __init__(self, slicer: Slicer) -> None:
         self.slicer = slicer
 
@@ -140,21 +99,20 @@ class Traceability(Trace):
     Raises:
         OSError: If graphviz is not installed.
     """
-
     def __init__(self, save_path: str, extra_objects: Any = None):
         # Verify that graphviz is available on this machine
         try:
             pydot.Dot.create(pydot.Dot())
         except OSError:
             raise OSError(
-                "Traceability requires that graphviz be installed. See www.graphviz.org/download for more information.")
+                'Traceability requires that graphviz be installed. See www.graphviz.org/download for more information.')
         # Verify that the system locale is functioning correctly
         try:
             locale.getlocale()
         except ValueError:
             raise OSError("Your system locale is not configured correctly. On mac this can be resolved by adding \
                 'export LC_ALL=en_US.UTF-8' and 'export LANG=en_US.UTF-8' to your ~/.bash_profile")
-        super().__init__(inputs="*", mode="!infer")  # Claim wildcard inputs to get this trace sorted last
+        super().__init__(inputs='*', mode='!infer')  # Claim wildcard inputs to get this trace sorted last
         # Report assets will get saved into a folder for portability
         path = os.path.normpath(save_path)
         path = os.path.abspath(path)
@@ -177,14 +135,14 @@ class Traceability(Trace):
     def on_begin(self, data: Data) -> None:
         exp_name = self.system.summary.name
         if not exp_name:
-            raise RuntimeError("Traceability reports require an experiment name to be provided in estimator.fit()")
+            raise RuntimeError('Traceability reports require an experiment name to be provided in estimator.fit()')
         # Convert the experiment name to a report name (useful for saving multiple experiments into same directory)
-        report_name = "".join('_' if c == ' ' else c for c in exp_name
+        report_name = ''.join('_' if c == ' ' else c for c in exp_name
                               if c.isalnum() or c in (' ', '_')).rstrip().lower()
         report_name = re.sub('_{2,}', '_', report_name)
         self.report_name = report_name or 'report'
         # Send experiment logs into a file
-        log_path = os.path.join(self.resource_dir, f"{report_name}.txt")
+        log_path = os.path.join(self.resource_dir, f'{report_name}.txt')
         if self.system.mode != 'test':
             # See if there's a RestoreWizard
             restore = False
@@ -229,7 +187,7 @@ class Traceability(Trace):
         packages.discard(tikz)
         packages.add(tikz)
 
-        if shutil.which("latexmk") is None and shutil.which("pdflatex") is None:
+        if shutil.which('latexmk') is None and shutil.which('pdflatex') is None:
             # No LaTeX Compiler is available
             self.doc.generate_tex(os.path.join(self.save_dir, self.report_name))
             suffix = '.tex'
@@ -238,7 +196,7 @@ class Traceability(Trace):
             self.doc.generate_pdf(os.path.join(self.save_dir, self.report_name), clean_tex=False, clean=False)
             self.doc.generate_pdf(os.path.join(self.save_dir, self.report_name), clean_tex=False)
             suffix = '.pdf'
-        print("FastEstimator-Traceability: Report written to {}{}".format(os.path.join(self.save_dir, self.report_name),
+        print('FastEstimator-Traceability: Report written to {}{}'.format(os.path.join(self.save_dir, self.report_name),
                                                                           suffix))
         self.log_splicer.__exit__()
 
@@ -246,7 +204,7 @@ class Traceability(Trace):
         """Write the title content of the file. Override if you want to build on top of base traceability report.
         """
         self.doc.preamble.append(Command('title', self.system.summary.name))
-        self.doc.preamble.append(Command('author', f"FastEstimator {fe.__version__}"))
+        self.doc.preamble.append(Command('author', f'FastEstimator {fe.__version__}'))
         self.doc.preamble.append(Command('date', NoEscape(r'\today')))
         self.doc.append(NoEscape(r'\maketitle'))
 
@@ -271,7 +229,7 @@ class Traceability(Trace):
     def _document_training_graphs(self) -> None:
         """Add training graphs to the traceability document.
         """
-        with self.doc.create(Section("Training Graphs")):
+        with self.doc.create(Section('Training Graphs')):
             log_path = os.path.join(self.resource_dir, f'{self.report_name}_logs.png')
             visualize_logs(experiments=[self.system.summary],
                            save_path=log_path,
@@ -290,7 +248,7 @@ class Traceability(Trace):
     def _document_fe_graph(self) -> None:
         """Add FE execution graphs into the traceability document.
         """
-        with self.doc.create(Section("FastEstimator Architecture")):
+        with self.doc.create(Section('FastEstimator Architecture')):
             for mode in self.system.pipeline.data.keys():
                 scheduled_items = self.system.pipeline.get_scheduled_items(
                     mode) + self.system.network.get_scheduled_items(mode) + self.system.traces
@@ -305,14 +263,14 @@ class Traceability(Trace):
                                 continue
                             self.doc.append(NoEscape(r'\FloatBarrier'))
                             with self.doc.create(
-                                    Subsubsection(f"Epoch {epoch}",
-                                                  label=Label(Marker(name=f"{mode}{epoch}", prefix="ssubsec")))):
+                                    Subsubsection(f'Epoch {epoch}',
+                                                  label=Label(Marker(name=f'{mode}{epoch}', prefix='ssubsec')))):
                                 ds_ids = self.system.pipeline.get_ds_ids(epoch=epoch, mode=mode)
                                 for ds_id in ds_ids:
                                     with NonContext() if ds_id == '' else self.doc.create(
-                                            Paragraph(f"Dataset {ds_id}",
-                                                      label=Label(Marker(name=f"{mode}{epoch}{ds_id}",
-                                                                         prefix="para")))):
+                                            Paragraph(f'Dataset {ds_id}',
+                                                      label=Label(Marker(name=f'{mode}{epoch}{ds_id}',
+                                                                         prefix='para')))):
                                         diagram = self._draw_diagram(mode, epoch, ds_id)
                                         ltx = d2t.dot2tex(diagram.to_string(), figonly=True)
                                         args = Arguments(**{'max width': r'\textwidth, max height=0.9\textheight'})
@@ -337,10 +295,10 @@ class Traceability(Trace):
         """Add initialization parameters to the traceability document.
         """
         from fastestimator.estimator import Estimator  # Avoid circular import
-        with self.doc.create(Section("Parameters")):
+        with self.doc.create(Section('Parameters')):
             model_ids = {
                 FEID(id(model))
-                for model in self.system.network.models if isinstance(model, (tf.keras.Model, torch.nn.Module))
+                for model in self.system.network.models if isinstance(model, (torch.nn.Module))
             }
             # Locate the datasets in order to provide extra details about them later in the summary
             datasets = {}
@@ -362,38 +320,34 @@ class Traceability(Trace):
             start = 0
             start = self._loop_tables(start,
                                       classes=(Estimator, BaseNetwork, Pipeline),
-                                      name="Base Classes",
+                                      name='Base Classes',
                                       model_ids=model_ids,
                                       datasets=datasets)
             start = self._loop_tables(start,
                                       classes=Scheduler,
-                                      name="Schedulers",
+                                      name='Schedulers',
                                       model_ids=model_ids,
                                       datasets=datasets)
-            start = self._loop_tables(start, classes=Trace, name="Traces", model_ids=model_ids, datasets=datasets)
-            start = self._loop_tables(start, classes=Op, name="Operators", model_ids=model_ids, datasets=datasets)
-            start = self._loop_tables(start, classes=Slicer, name="Slicers", model_ids=model_ids, datasets=datasets)
+            start = self._loop_tables(start, classes=Trace, name='Traces', model_ids=model_ids, datasets=datasets)
+            start = self._loop_tables(start, classes=Op, name='Operators', model_ids=model_ids, datasets=datasets)
+            start = self._loop_tables(start, classes=Slicer, name='Slicers', model_ids=model_ids, datasets=datasets)
+            start = self._loop_tables(start, classes=(Dataset), name='Datasets', model_ids=model_ids, datasets=datasets)
             start = self._loop_tables(start,
-                                      classes=(Dataset, tf.data.Dataset),
-                                      name="Datasets",
-                                      model_ids=model_ids,
-                                      datasets=datasets)
-            start = self._loop_tables(start,
-                                      classes=(tf.keras.Model, torch.nn.Module),
-                                      name="Models",
+                                      classes=(torch.nn.Module),
+                                      name='Models',
                                       model_ids=model_ids,
                                       datasets=datasets)
             start = self._loop_tables(start,
                                       classes=types.FunctionType,
-                                      name="Functions",
+                                      name='Functions',
                                       model_ids=model_ids,
                                       datasets=datasets)
             start = self._loop_tables(start,
-                                      classes=(np.ndarray, tf.Tensor, tf.Variable, torch.Tensor),
-                                      name="Tensors",
+                                      classes=(np.ndarray, torch.Tensor),
+                                      name='Tensors',
                                       model_ids=model_ids,
                                       datasets=datasets)
-            self._loop_tables(start, classes=Any, name="Miscellaneous", model_ids=model_ids, datasets=datasets)
+            self._loop_tables(start, classes=Any, name='Miscellaneous', model_ids=model_ids, datasets=datasets)
             self.get_parameter_summary()
 
     def get_parameter_summary(self):
@@ -405,18 +359,18 @@ class Traceability(Trace):
         }
         parameter_retrieval_errors = []
         try:
-            parameters["no_of_model_parameters"] = {
+            parameters['no_of_model_parameters'] = {
                 model.model_name.lower(): get_model_parameters(model)
-                for model in self.system.network.models if isinstance(model, (tf.keras.Model, torch.nn.Module))
+                for model in self.system.network.models if isinstance(model, (torch.nn.Module))
             }
         except Exception as e:
             print(e)
             parameter_retrieval_errors.append('no_of_model_parameters')
 
         try:
-            parameters["lr"] = {
+            parameters['lr'] = {
                 model.model_name.lower(): fe.backend.get_lr(model=model)
-                for model in self.system.network.models if isinstance(model, (tf.keras.Model, torch.nn.Module))
+                for model in self.system.network.models if isinstance(model, (torch.nn.Module))
             }
         except Exception as e:
             print(e)
@@ -496,17 +450,17 @@ class Traceability(Trace):
             if isinstance(tbl, FeSummaryTable):
                 if tbl.fe_id in model_ids:
                     # Link to a later detailed model description
-                    name_override = Hyperref(Marker(name=str(tbl.name), prefix="subsec"),
+                    name_override = Hyperref(Marker(name=str(tbl.name), prefix='subsec'),
                                              text=NoEscape(r'\textcolor{blue}{') + bold(tbl.name) + NoEscape('}'))
                 if tbl.fe_id in datasets:
                     modes, dataset = datasets[tbl.fe_id]
-                    title = ", ".join([s.capitalize() for s in modes])
+                    title = ', '.join([s.capitalize() for s in modes])
                     name_override = bold(f'{tbl.name} ({title})')
                     # Enhance the dataset summary
                     if isinstance(dataset, FEDataset):
                         extra_rows = list(dataset.summary().__getstate__().items())
                         for idx, (key, val) in enumerate(extra_rows):
-                            key = f"{prettify_metric_name(key)}:"
+                            key = f'{prettify_metric_name(key)}:'
                             if isinstance(val, dict) and val:
                                 if isinstance(list(val.values())[0], (int, float, str, bool, type(None))):
                                     val = jsonpickle.dumps(val, unpicklable=False)
@@ -517,7 +471,7 @@ class Traceability(Trace):
                                             v = jsonpickle.dumps(v, unpicklable=False)
                                         subtable.add_row((k, v))
                                     # To nest TabularX, have to wrap it in brackets
-                                    subtable = ContainerList(data=[NoEscape("{"), subtable, NoEscape("}")])
+                                    subtable = ContainerList(data=[NoEscape('{'), subtable, NoEscape('}')])
                                     val = subtable
                             extra_rows[idx] = (key, val)
             tbl.render_table(self.doc, name_override=name_override, toc_ref=toc_ref, extra_rows=extra_rows)
@@ -525,12 +479,12 @@ class Traceability(Trace):
     def _document_models(self) -> None:
         """Add model summaries to the traceability document.
         """
-        with self.doc.create(Section("Models")):
+        with self.doc.create(Section('Models')):
             for model in humansorted(self.system.network.models, key=lambda m: m.model_name):
                 if not isinstance(model, torch.nn.Module):
                     continue
                 self.doc.append(NoEscape(r'\FloatBarrier'))
-                with self.doc.create(Subsection(f"{model.model_name.capitalize()}", label=model.model_name)):
+                with self.doc.create(Subsection(f'{model.model_name.capitalize()}', label=model.model_name)):
                     if isinstance(model, torch.nn.Module):
                         if hasattr(model, 'fe_input_spec'):
                             # Text Summary
@@ -540,7 +494,7 @@ class Traceability(Trace):
                                 model.to(inputs.device)
                             except Exception:
                                 file_path = None
-                                warn("Model {} could not be visualized by Traceability".format(model.model_name))
+                                warn('Model {} could not be visualized by Traceability'.format(model.model_name))
                             with Suppressor():
                                 self.doc.append(
                                     Verbatim(
@@ -549,9 +503,9 @@ class Traceability(Trace):
                                                 model.module
                                                 if isinstance(model, torch.nn.parallel.DataParallel) else model,
                                                 input_data=inputs,
-                                                col_names=("output_size", "num_params", "trainable"),
+                                                col_names=('output_size', 'num_params', 'trainable'),
                                                 col_width=20,
-                                                row_settings=["ascii_only"],
+                                                row_settings=['ascii_only'],
                                                 verbose=0))))
 
                             with self.doc.create(Center()):
@@ -569,24 +523,24 @@ class Traceability(Trace):
                                 # LaTeX \maxdim is around 575cm (226 inches), so the image must have max dimension less
                                 # than 226 inches. However, the 'size' parameter doesn't account for the whole node
                                 # height, so set the limit lower (100 inches) to leave some wiggle room.
-                                graph.attr(size="100,100")
+                                graph.attr(size='100,100')
                                 graph.attr(margin='0')
-                                file_path = graph.render(filename="{}_{}".format(self.report_name, model.model_name),
+                                file_path = graph.render(filename='{}_{}'.format(self.report_name, model.model_name),
                                                          directory=self.resource_dir,
                                                          format='pdf',
                                                          cleanup=True)
                             except Exception:
                                 file_path = None
-                                warn("Model {} could not be visualized by Traceability".format(model.model_name))
+                                warn('Model {} could not be visualized by Traceability'.format(model.model_name))
                         else:
                             file_path = None
-                            self.doc.append("This model was not used by the Network during training.")
+                            self.doc.append('This model was not used by the Network during training.')
                     else:
                         file_path = None
-                        self.doc.append(f"Model format: {type(model)} not recognized.")
+                        self.doc.append(f'Model format: {type(model)} not recognized.')
                     if file_path:
                         with self.doc.create(Figure(position='ht!')) as fig:
-                            fig.append(Label(Marker(name=str(FEID(id(model))), prefix="model")))
+                            fig.append(Label(Marker(name=str(FEID(id(model))), prefix='model')))
                             fig.add_image(os.path.relpath(file_path, start=self.save_dir),
                                           width=NoEscape(r'1.0\textwidth,height=0.95\textheight,keepaspectratio'))
                             fig.add_caption(NoEscape(HrefFEID(FEID(id(model)), model.model_name).dumps()))
@@ -594,25 +548,25 @@ class Traceability(Trace):
     def _document_sys_config(self) -> None:
         """Add a system config summary to the traceability document.
         """
-        with self.doc.create(Section("System Configuration")):
+        with self.doc.create(Section('System Configuration')):
             with self.doc.create(Itemize()) as itemize:
-                itemize.add_item(escape_latex(f"FastEstimator {fe.__version__}"))
-                itemize.add_item(escape_latex(f"Python {platform.python_version()}"))
-                itemize.add_item(escape_latex(f"OS: {sys.platform}"))
+                itemize.add_item(escape_latex(f'FastEstimator {fe.__version__}'))
+                itemize.add_item(escape_latex(f'Python {platform.python_version()}'))
+                itemize.add_item(escape_latex(f'OS: {sys.platform}'))
                 cpu = get_cpu_info()
-                itemize.add_item(f"CPU Used: {cpu_count()} Threads")
+                itemize.add_item(f'CPU Used: {cpu_count()} Threads')
                 with self.doc.create(Itemize()) as subitem:
                     subitem.add_item(f"{cpu['brand_raw']} ({cpu['count']} Threads)")
-                itemize.add_item(f"GPU(s) Used: {get_num_gpus()}")
+                itemize.add_item(f'GPU(s) Used: {get_num_gpus()}')
                 gpus = get_gpu_info()
                 if gpus:
                     with self.doc.create(Itemize()) as subitem:
                         for gpu in gpus:
                             subitem.add_item(gpu)
                 if fe.fe_deterministic_seed is not None:
-                    itemize.add_item(escape_latex(f"Deterministic Seed: {fe.fe_deterministic_seed}"))
+                    itemize.add_item(escape_latex(f'Deterministic Seed: {fe.fe_deterministic_seed}'))
             with self.doc.create(LongTable('|lr|', pos=['h!'], booktabs=True)) as tabular:
-                tabular.add_row((bold("Module"), bold("Version")))
+                tabular.add_row((bold('Module'), bold('Version')))
                 tabular.add_hline()
                 tabular.end_table_header()
                 tabular.add_hline()
@@ -622,9 +576,9 @@ class Traceability(Trace):
                 tabular.end_table_last_footer()
                 color = True
                 for name, module in humansorted(sys.modules.items(), key=lambda x: x[0]):
-                    if "." in name:
+                    if '.' in name:
                         continue  # Skip sub-packages
-                    if name.startswith("_"):
+                    if name.startswith('_'):
                         continue  # Skip private packages
                     if isinstance(module, Base):
                         continue  # Skip fake packages we mocked
@@ -698,7 +652,7 @@ class Traceability(Trace):
             dataop: The data op to be wrapped in this diagram.
             label_last_seen: A mapping of {data_dict_key: node_id} indicating the last node which generated the key.
         """
-        diagram.add_node(pydot.Node(str(id(dataop)), label="Inference Data", texlbl="Inference Data"))
+        diagram.add_node(pydot.Node(str(id(dataop)), label='Inference Data', texlbl='Inference Data'))
         self._add_edge(diagram, dataop, label_last_seen, None)
 
     def _draw_diagram(self, mode: str, epoch: int, ds_id: str) -> pydot.Dot:
@@ -731,9 +685,9 @@ class Traceability(Trace):
         pipe_ops.insert(0, ds)
         label_last_seen = DefaultKeyDict(lambda k: str(id(ds)))  # Where was this key last generated
 
-        batch_size = ""
+        batch_size = ''
         if isinstance(ds, Dataset):
-            if hasattr(ds, "fe_batch") and ds.fe_batch:
+            if hasattr(ds, 'fe_batch') and ds.fe_batch:
                 batch_size = ds.fe_batch
             else:
                 batch_size = self.system.pipeline.batch_size
@@ -742,7 +696,7 @@ class Traceability(Trace):
                 if isinstance(batch_size, dict):
                     batch_size = batch_size[mode]
         if batch_size is not None:
-            batch_size = f" (Batch Size: {batch_size})"
+            batch_size = f' (Batch Size: {batch_size})'
         self._draw_subgraph(diagram, diagram, label_last_seen, f'Pipeline{batch_size}', pipe_ops, ds_id)
         self._draw_subgraph(diagram,
                             diagram,
@@ -835,7 +789,7 @@ class Traceability(Trace):
                            shape='doublecircle',
                            width=0.1))
             # dot2tex doesn't seem to handle edge color conversion correctly, so have to set hex color
-            progenitor.add_edge(pydot.Edge(src=node_id + ":ne", dst=node_id + ":w", color='#006300'))
+            progenitor.add_edge(pydot.Edge(src=node_id + ':ne', dst=node_id + ':w', color='#006300'))
             self._add_node(progenitor, wrapper, op.op, label_last_seen, ds_id)
             # Add repeat edges
             edge_srcs = defaultdict(lambda: [])
@@ -849,31 +803,31 @@ class Traceability(Trace):
             diagram.add_subgraph(wrapper)
         else:
             if isinstance(op, ModelOp):
-                label = f"{op.__class__.__name__} ({FEID(id(op))}): {op.model.model_name}"
+                label = f'{op.__class__.__name__} ({FEID(id(op))}): {op.model.model_name}'
                 model_ref = Hyperref(Marker(name=str(op.model.model_name), prefix='subsec'),
                                      text=NoEscape(r'\textcolor{blue}{') + bold(op.model.model_name) +
                                      NoEscape('}')).dumps()
-                texlbl = f"{HrefFEID(FEID(id(op)), name=op.__class__.__name__).dumps()}: {model_ref}"
+                texlbl = f'{HrefFEID(FEID(id(op)), name=op.__class__.__name__).dumps()}: {model_ref}'
             elif isinstance(op, Batch):
-                label = f"{op.__class__.__name__} ({FEID(id(op))})"
+                label = f'{op.__class__.__name__} ({FEID(id(op))})'
                 texlbl = HrefFEID(FEID(id(op)), name=op.__class__.__name__, color='purple').dumps()
                 if op.batch_size is not None:
-                    diagram.set_label(f"Pipeline (Batch Size: {op.batch_size})")
+                    diagram.set_label(f'Pipeline (Batch Size: {op.batch_size})')
                 label_last_seen.factory = functools.partial(self._delayed_edge,
                                                             progenitor=progenitor,
                                                             old_source=label_last_seen.factory(''),
                                                             new_source=str(id(op)))
             elif isinstance(op, Slicer):
-                label = f"{op.__class__.__name__} ({FEID(id(op))})"
+                label = f'{op.__class__.__name__} ({FEID(id(op))})'
                 texlbl = HrefFEID(FEID(id(op)), name=op.__class__.__name__, color='purple').dumps()
                 if op.minibatch_size:
-                    diagram.set_label(f"Network (Slices Per Step: {op.minibatch_size})")
+                    diagram.set_label(f'Network (Slices Per Step: {op.minibatch_size})')
             elif isinstance(op, _UnslicerWrapper):
                 # The corresponding Slicer is already in the graph earlier
                 label = None
                 texlbl = None
             else:
-                label = f"{op.__class__.__name__} ({FEID(id(op))})"
+                label = f'{op.__class__.__name__} ({FEID(id(op))})'
                 texlbl = HrefFEID(FEID(id(op)), name=op.__class__.__name__).dumps()
             if label is not None:
                 diagram.add_node(pydot.Node(node_id, label=label, texlbl=texlbl))
@@ -897,10 +851,10 @@ class Traceability(Trace):
         edge = progenitor.get_edge(old_source, new_source)
         if edge:
             edge = edge[0]
-            label = f"{edge.get_label()}, {key}"
+            label = f'{edge.get_label()}, {key}'
             edge.set_label(label)
         else:
-            progenitor.add_edge(pydot.Edge(src=old_source, dst=new_source, label=f" {key}"))
+            progenitor.add_edge(pydot.Edge(src=old_source, dst=new_source, label=f' {key}'))
         return new_source
 
     def _add_edge(self,
@@ -923,7 +877,7 @@ class Traceability(Trace):
                 op, Slicer) else op.slicer.unslice_inputs if isinstance(op, _UnslicerWrapper) else op.inputs:
             if inp == '*':
                 continue
-            _, candidate_id, *_ = f"{inp}|".split('|')
+            _, candidate_id, *_ = f'{inp}|'.split('|')
             if candidate_id in global_ds_ids and candidate_id != ds_id and ds_id is not None:
                 continue  # Skip inputs which will be provided in other ds_id plots
             edge_srcs[label_last_seen[inp]].append(inp)

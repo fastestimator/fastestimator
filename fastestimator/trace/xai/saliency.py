@@ -30,7 +30,10 @@ from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import to_number
 from fastestimator.xai.saliency import SaliencyNet
 
-Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
+# Breaking change: The Model TypeVar now only supports torch.nn.Module (PyTorch models).
+# TensorFlow models (tf.keras.Model) are no longer supported.
+# Please refer to the release notes or migration guide for details.
+Model = TypeVar('Model', bound=torch.nn.Module)
 
 
 @traceable()
@@ -65,9 +68,9 @@ class Saliency(Trace):
                  model_outputs: Union[str, Sequence[str]],
                  class_key: Optional[str] = None,
                  label_mapping: Optional[Dict[str, Any]] = None,
-                 outputs: Union[str, List[str]] = "saliency",
+                 outputs: Union[str, List[str]] = 'saliency',
                  samples: Union[None, int, Dict[str, Any]] = None,
-                 mode: Union[None, str, Iterable[str]] = ("eval", "test"),
+                 mode: Union[None, str, Iterable[str]] = ('eval', 'test'),
                  ds_id: Union[None, str, Iterable[str]] = None,
                  smoothing: int = 25,
                  integrating: Union[int, Tuple[int, int]] = (100, 6)) -> None:
@@ -85,7 +88,7 @@ class Saliency(Trace):
         self.n_required = {}
         # TODO - handle non-hashable labels
         self.label_mapping = {val: key for key, val in label_mapping.items()} if label_mapping else None
-        for mode in mode or ("train", "eval", "test"):
+        for mode in mode or ('train', 'eval', 'test'):
             self.samples[mode] = samples
             if isinstance(samples, int):
                 self.samples[mode] = None
@@ -164,15 +167,15 @@ class Saliency(Trace):
                         BatchDisplay(
                             image=(0.3 * (sal[outkey] * (val - min_val) + min_val) + 0.3 * val +
                                    0.4 * sal[outkey] * diff + min_val),
-                            title="{} {}".format(key, outkey)))
+                            title='{} {}'.format(key, outkey)))
         for key in self.outputs:
-            columns.append(BatchDisplay(image=masks[key], title=key, color_map="inferno"))
+            columns.append(BatchDisplay(image=masks[key], title=key, color_map='inferno'))
             if smoothed:
-                columns.append(BatchDisplay(image=smoothed[key], title=f"Smoothed {key}", color_map="inferno"))
+                columns.append(BatchDisplay(image=smoothed[key], title=f'Smoothed {key}', color_map='inferno'))
             if integrated:
-                columns.append(BatchDisplay(image=integrated[key], title=f"Integrated {key}", color_map="inferno"))
+                columns.append(BatchDisplay(image=integrated[key], title=f'Integrated {key}', color_map='inferno'))
             if smint:
-                columns.append(BatchDisplay(image=smint[key], title=f"SmInt {key}", color_map="inferno"))
+                columns.append(BatchDisplay(image=smint[key], title=f'SmInt {key}', color_map='inferno'))
         result = GridDisplay(columns=columns)
 
         data.write_without_log(self.outputs[0], result)

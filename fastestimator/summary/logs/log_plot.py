@@ -25,18 +25,10 @@ from natsort import humansorted
 from plotly.io import _html, _kaleido
 from plotly.offline.offline import get_plotlyjs
 from plotly.subplots import make_subplots
-from scipy.ndimage.filters import gaussian_filter1d
+from scipy.ndimage import gaussian_filter1d
 
 from fastestimator.summary.summary import Summary, ValWithError
-from fastestimator.util.base_util import (
-    FigureFE,
-    get_colors,
-    in_notebook,
-    prettify_metric_name,
-    to_list,
-    to_set,
-    warn,
-)
+from fastestimator.util.base_util import FigureFE, get_colors, in_notebook, prettify_metric_name, to_list, to_set, warn
 
 
 class _MetricGroup:
@@ -150,13 +142,13 @@ class _MetricGroup:
         if vals.ndim in (0, 1):
             item = vals.item()
             if isinstance(item, float):
-                return "{:.5f}".format(item)
+                return '{:.5f}'.format(item)
             return str(item)
         if vals.ndim == 2 and vals.shape[0] == 1:
             # This value isn't really time dependent
             item = vals[0][1]
             if isinstance(item, float):
-                return "{:.5f}".format(item)
+                return '{:.5f}'.format(item)
             return str(item)
         else:
             return vals
@@ -292,14 +284,14 @@ def plot_logs(experiments: List[Summary],
 
     # Set x-labels
     for idx, metric in enumerate(titles, start=1):
-        plotly_idx = idx if idx > 1 else ""
+        plotly_idx = idx if idx > 1 else ''
         x_axis_name = f'xaxis{plotly_idx}'
         y_axis_name = f'yaxis{plotly_idx}'
         if metric_histories[metric].ndim() > 1:
             fig['layout'][x_axis_name]['title'] = 'Steps'
             fig['layout'][x_axis_name]['showticklabels'] = True
-            fig['layout'][x_axis_name]['linecolor'] = "#BCCCDC"
-            fig['layout'][y_axis_name]['linecolor'] = "#BCCCDC"
+            fig['layout'][x_axis_name]['linecolor'] = '#BCCCDC'
+            fig['layout'][y_axis_name]['linecolor'] = '#BCCCDC'
         else:
             # Put blank data onto the axis to instantiate the domain
             row, col = metric_grid_location[metric][0], metric_grid_location[metric][1]
@@ -341,8 +333,8 @@ def plot_logs(experiments: List[Summary],
         for metric, group in metric_histories.items():
             for mode in group.modes(exp_idx):
                 for ds_id in group.ds_ids(exp_idx, mode):
-                    ds_title = f"{ds_id} " if ds_id else ''
-                    title = f"{experiment.name} ({ds_title}{mode})" if n_experiments > 1 else f"{ds_title}{mode}"
+                    ds_title = f'{ds_id} ' if ds_id else ''
+                    title = f'{experiment.name} ({ds_title}{mode})' if n_experiments > 1 else f'{ds_title}{mode}'
                     legend_order.append(title)
     legend_order.sort()
     legend_order = {legend: order for order, legend in enumerate(legend_order)}
@@ -355,10 +347,10 @@ def plot_logs(experiments: List[Summary],
                 # Single value
                 for mode in group.modes(exp_idx):
                     for ds_id in group.ds_ids(exp_idx, mode):
-                        ds_title = f"{ds_id} " if ds_id else ''
-                        prefix = f"{experiment.name} ({ds_title}{mode})" if n_experiments > 1 else f"{ds_title}{mode}"
+                        ds_title = f'{ds_id} ' if ds_id else ''
+                        prefix = f'{experiment.name} ({ds_title}{mode})' if n_experiments > 1 else f'{ds_title}{mode}'
                         plotly_idx = row * n_cols + col + 1 if row * n_cols + col + 1 > 1 else ''
-                        fig.add_annotation(text=f"{prefix}: {group.get_val(exp_idx, mode, ds_id)}",
+                        fig.add_annotation(text=f'{prefix}: {group.get_val(exp_idx, mode, ds_id)}',
                                            font={'color': colors[exp_idx + color_offset[mode]]},
                                            showarrow=False,
                                            xref=f'x{plotly_idx} domain',
@@ -375,8 +367,8 @@ def plot_logs(experiments: List[Summary],
                 for mode, dsv in group[exp_idx].items():
                     color = colors[exp_idx + color_offset[mode]]
                     for ds_id, data in dsv.items():
-                        ds_title = f"{ds_id} " if ds_id else ''
-                        title = f"{experiment.name} ({ds_title}{mode})" if n_experiments > 1 else f"{ds_title}{mode}"
+                        ds_title = f'{ds_id} ' if ds_id else ''
+                        title = f'{experiment.name} ({ds_title}{mode})' if n_experiments > 1 else f'{ds_title}{mode}'
                         if data.shape[0] < 2:
                             x = data[0][0]
                             y = data[0][1]
@@ -389,8 +381,8 @@ def plot_logs(experiments: List[Summary],
                             marker_style = 'circle' if mode == 'train' else 'diamond' if mode == 'eval' \
                                 else 'square' if mode == 'test' else 'hexagram'
                             limit_data = [(y_max, y_min)] if y_max is not None and y_min is not None else None
-                            tip_text = "%{x}: (%{customdata[1]:.3f}, %{y:.3f}, %{customdata[0]:.3f})" if \
-                                limit_data is not None else "%{x}: %{y:.3f}"
+                            tip_text = '%{x}: (%{customdata[1]:.3f}, %{y:.3f}, %{customdata[0]:.3f})' if \
+                                limit_data is not None else '%{x}: %{y:.3f}'
                             error_y = None if limit_data is None else {
                                 'type': 'data', 'symmetric': False, 'array': [y_max - y], 'arrayminus': [y - y_min]
                             }
@@ -437,14 +429,14 @@ def plot_logs(experiments: List[Summary],
                                 mode == 'test' else 'dashdot'
                             limit_data = [(mx, mn) for mx, mn in zip(y_max, y_min)] if y_max is not None and y_min is \
                                                                                        not None else None
-                            tip_text = "%{x}: (%{customdata[1]:.3f}, %{y:.3f}, %{customdata[0]:.3f})" if \
-                                limit_data is not None else "%{x}: %{y:.3f}"
+                            tip_text = '%{x}: (%{customdata[1]:.3f}, %{y:.3f}, %{customdata[0]:.3f})' if \
+                                limit_data is not None else '%{x}: %{y:.3f}'
                             z_order[1].append((go.Scatter(
                                 x=x,
                                 y=y,
                                 name=title,
                                 legendgroup=title,
-                                mode="lines+markers" if ds_id_markers[ds_id] else 'lines',
+                                mode='lines+markers' if ds_id_markers[ds_id] else 'lines',
                                 marker={
                                     'color': color,
                                     'size': 8,
@@ -705,7 +697,7 @@ def _get_plotlyjs() -> str:
         for ds in ds_ids:
             old, new = _draw_mash(base_symbol=base, ds_symbol=ds)
             if len(re.findall(old, js)) != 1:
-                raise ImportError("Warning: Incompatible version of Plotly Detected. Please use v5.7.0")
+                raise ImportError('Warning: Incompatible version of Plotly Detected. Please use v5.7.0')
             js = re.sub(old, new, js)
     return js
 

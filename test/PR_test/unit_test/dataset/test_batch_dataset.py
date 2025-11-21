@@ -15,6 +15,7 @@
 import unittest
 
 import numpy as np
+from sklearn.datasets import fetch_openml
 
 import fastestimator as fe
 from fastestimator.dataset import GeneratorDataset
@@ -26,7 +27,6 @@ def inputs():
 
 
 class TestBatchDataset(unittest.TestCase):
-
     def test_dataset(self):
         ds1 = GeneratorDataset(generator=inputs(), samples_per_epoch=10)
         ds2 = GeneratorDataset(generator=inputs(), samples_per_epoch=10)
@@ -42,10 +42,11 @@ class TestBatchDataset(unittest.TestCase):
         self.assertEqual(len(unpaired_ds), 5)
 
     def test_split(self):
-        ## TODO: replace with torch data
-        pass
-        #(x_train, y_train), _ = tf.keras.datasets.mnist.load_data()
-        #train_data = fe.dataset.NumpyDataset({"x": x_train, "y": y_train})
-        #train_data.split(0.1)
+        x_train = np.random.rand(100, 28, 28) * 255.0  # Synthetic random data with MNIST-like shape and value range
+        y_train = np.random.randint(0, 10, size=(100, ))  # MNIST-like labels
+        x_train = np.expand_dims(x_train, axis=1) / 255.0
+        x_train = x_train.astype(np.float32)
+        train_data = fe.dataset.NumpyDataset({'x': x_train, 'y': y_train.astype(np.uint8)})
+        train_data.split(0.1)
 
-        #self.assertEqual(len(train_data), 54000)
+        self.assertEqual(len(train_data), 90)
