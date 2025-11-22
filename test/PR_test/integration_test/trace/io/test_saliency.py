@@ -49,7 +49,7 @@ class TestSaliency(unittest.TestCase):
         test_data = train_data.split([i for i in range(10)])
         pipeline = fe.Pipeline(test_data=test_data,
                                batch_size=batch_size,
-                               ops=[ExpandDims(inputs="x", outputs="x", axis=-1), Minmax(inputs="x", outputs="x")])
+                               ops=[ExpandDims(inputs="x", outputs="x", axis=0), Minmax(inputs="x", outputs="x")])
 
         weight_path = os.path.abspath(os.path.join(__file__, "..", "resources", "lenet_mnist_torch.pt"))
 
