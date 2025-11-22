@@ -21,12 +21,11 @@ import torch
 import fastestimator as fe
 from fastestimator.op.tensorop.loss import CrossEntropy, Hinge, SuperLoss
 from fastestimator.op.tensorop.model import ModelOp
-from fastestimator.test.unittest_util import sample_system_object
+from fastestimator.test.unittest_util import sample_system_object_torch
 from fastestimator.util.util import get_device
 
 
 class TestSuperLoss(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         device = get_device()
@@ -56,9 +55,8 @@ class TestSuperLoss(unittest.TestCase):
         self.assertTrue(np.allclose(output.to("cpu").numpy(), -0.072016776))
 
     def test_save_and_load_state_torch(self):
-
         def instantiate_system():
-            system = sample_system_object()
+            system = sample_system_object_torch()
             model = fe.build(model_fn=fe.architecture.pytorch.LeNet, optimizer_fn='adam', model_name='tf')
             system.network = fe.Network(ops=[
                 ModelOp(model=model, inputs="x_out", outputs="y_pred"),

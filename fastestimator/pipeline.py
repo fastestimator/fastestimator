@@ -20,21 +20,7 @@ import time
 from copy import deepcopy
 from operator import mul
 from threading import Lock
-from typing import (
-    Any,
-    Dict,
-    Iterable,
-    List,
-    Literal,
-    Optional,
-    Set,
-    Tuple,
-    Type,
-    TypeVar,
-    Union,
-    cast,
-    overload,
-)
+from typing import Any, Dict, Iterable, List, Literal, Optional, Set, Tuple, Type, TypeVar, Union, cast, overload
 
 import numpy as np
 from torch.utils.data import DataLoader, Dataset
@@ -49,12 +35,7 @@ from fastestimator.op.numpyop.meta.one_of import OneOf
 from fastestimator.op.numpyop.meta.repeat import Repeat
 from fastestimator.op.numpyop.meta.sometimes import Sometimes
 from fastestimator.op.numpyop.numpyop import Batch, NumpyOp, forward_numpyop
-from fastestimator.schedule.schedule import (
-    EpochScheduler,
-    RepeatScheduler,
-    Scheduler,
-    get_current_items,
-)
+from fastestimator.schedule.schedule import EpochScheduler, RepeatScheduler, Scheduler, get_current_items
 from fastestimator.types import FilteredData
 from fastestimator.util.base_util import filter_nones, to_list, to_set, warn
 from fastestimator.util.traceability_util import traceable
@@ -232,6 +213,7 @@ class Pipeline:
             # num_process check
             assert isinstance(self.num_process, int), "number of processes must be an integer"
             return True
+        elif isinstance(dataset, (DataLoader)):
             if kwargs['batch_size'] is not None:
                 warn("batch_size will only be used for built-in dataset")
             if kwargs['ops'] is not None:

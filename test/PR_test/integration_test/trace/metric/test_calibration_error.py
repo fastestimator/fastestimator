@@ -16,17 +16,16 @@ import unittest
 
 import numpy as np
 
-from fastestimator.test.unittest_util import is_equal, sample_system_object
+from fastestimator.test.unittest_util import is_equal, sample_system_object_torch
 from fastestimator.trace.metric import CalibrationError
 from fastestimator.util import Data
 
 
 class TestCalibrationError(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         cls.calibration_error = CalibrationError(true_key='y', pred_key='y_pred')
-        cls.calibration_error.system = sample_system_object()
+        cls.calibration_error.system = sample_system_object_torch()
 
     def test_on_epoch_begin(self):
         self.calibration_error.on_epoch_begin(data=Data())

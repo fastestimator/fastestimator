@@ -16,6 +16,7 @@ import inspect
 import math
 import os
 import random
+from itertools import islice
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Union, overload
 
 import numpy as np
@@ -26,28 +27,17 @@ import fastestimator as fe
 from fastestimator.backend._to_shape import to_shape
 from fastestimator.backend._to_tensor import to_tensor
 from fastestimator.backend._to_type import to_type
-from fastestimator.network import BaseNetwork, TFNetwork, TorchNetwork
+from fastestimator.network import BaseNetwork, TorchNetwork
 from fastestimator.pipeline import Pipeline
-from fastestimator.schedule.schedule import (
-    Scheduler,
-    get_current_items,
-    get_signature_epochs,
-)
+from fastestimator.schedule.schedule import Scheduler, get_current_items, get_signature_epochs
 from fastestimator.summary.history import HistoryRecorder
 from fastestimator.summary.system import Summary, System
 from fastestimator.trace.io.best_model_saver import BestModelSaver
 from fastestimator.trace.io.model_saver import ModelSaver
 from fastestimator.trace.io.restore_wizard import RestoreWizard
 from fastestimator.trace.io.traceability import Traceability
-from fastestimator.trace.trace import (
-    EvalEssential,
-    Logger,
-    PerDSTrace,
-    TestEssential,
-    Trace,
-    TrainEssential,
-    sort_traces,
-)
+from fastestimator.trace.trace import EvalEssential, Logger, PerDSTrace, TestEssential, Trace, TrainEssential, \
+    sort_traces
 from fastestimator.types import FilteredData
 from fastestimator.util.base_util import NonContext, filter_nones, to_list, to_set, warn
 from fastestimator.util.data import Data
@@ -277,12 +267,7 @@ class Estimator:
                                 output_keys=(trace_input_keys - network_output_keys)
                                 | network_input_keys | monitor_names) as loader:
                             loader = self._configure_loader(loader)
-                            if isinstance(loader, tf.data.Dataset):
-                                batch = list(loader.take(1))[0]
-                            else:
-                                with Suppressor(allow_pyprint=True, show_if_exception=True):
-                                    # TF multi-gpu print-spams here in version 2.11
-                                    batch = next(iter(loader))
+                            batch = next(iter(loader))
                             batch = self._configure_tensor(loader, batch)
                         assert isinstance(batch, dict), \
                             f"please make sure data output format is dictionary (got {type(batch)})"
