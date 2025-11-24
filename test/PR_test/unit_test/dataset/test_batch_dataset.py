@@ -15,7 +15,6 @@
 import unittest
 
 import numpy as np
-from sklearn.datasets import fetch_openml
 
 import fastestimator as fe
 from fastestimator.dataset import GeneratorDataset

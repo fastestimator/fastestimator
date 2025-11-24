@@ -16,7 +16,6 @@ import inspect
 import math
 import os
 import random
-from itertools import islice
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Union, overload
 
 import numpy as np
@@ -27,7 +26,7 @@ import fastestimator as fe
 from fastestimator.backend._to_shape import to_shape
 from fastestimator.backend._to_tensor import to_tensor
 from fastestimator.backend._to_type import to_type
-from fastestimator.network import BaseNetwork, TorchNetwork
+from fastestimator.network import BaseNetwork
 from fastestimator.pipeline import Pipeline
 from fastestimator.schedule.schedule import Scheduler, get_current_items, get_signature_epochs
 from fastestimator.summary.history import HistoryRecorder
