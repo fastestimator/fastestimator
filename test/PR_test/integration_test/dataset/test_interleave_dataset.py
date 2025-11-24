@@ -206,7 +206,7 @@ class TestInterleaveDataset(unittest.TestCase):
 
         dataset = InterleaveDataset(datasets=[ds1, ds2])
         pipeline = fe.Pipeline(train_data=dataset, batch_size=2)
-        model = fe.build(model_fn=SimpleNN(), optimizer_fn="adam")
+        model = fe.build(model_fn=lambda: SimpleNN(), optimizer_fn="adam")
         network = fe.Network(ops=[ModelOp(inputs="x", outputs="y_pred", model=model)])
         estimator = fe.Estimator(pipeline=pipeline, network=network, epochs=1, traces=Collector())
         summary = estimator.fit("test")
