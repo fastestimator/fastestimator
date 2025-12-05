@@ -20,12 +20,10 @@ import torch
 import fastestimator as fe
 from fastestimator.backend._get_gradient import get_gradient
 from fastestimator.op.tensorop.model import ModelOp
-from fastestimator.test.unittest_util import MultiLayerTorchModel, OneLayerTorchModel, is_equal, multi_layer_tf_model, \
-    one_layer_tf_model
+from fastestimator.test.unittest_util import MultiLayerTorchModel, OneLayerTorchModel, is_equal
 
 
 class TestModelOp(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         cls.state = {'mode': 'train', 'epoch': 1, 'tape': None}

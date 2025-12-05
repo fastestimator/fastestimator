@@ -20,13 +20,13 @@ import fastestimator as fe
 
 
 class TestNumpyDataset(unittest.TestCase):
-
     def test_dataset(self):
-        ## TODO: replace with torch data
-        '''(x_train, y_train), _ = tf.keras.datasets.mnist.load_data()
-        train_data = fe.dataset.NumpyDataset({"x": x_train, "y": y_train})
+        # Use a small dummy dataset for unit testing
+        X = np.random.rand(10, 28, 28)
+        y = np.random.randint(0, 10, size=(10, ), dtype=np.uint8)
+        train_data = fe.dataset.NumpyDataset({"x": X, "y": y})
 
-        self.assertEqual(len(train_data), 60000)'''
+        self.assertEqual(len(train_data), 10)
 
     def test_single_frac_split(self):
         ds1 = fe.dataset.NumpyDataset({

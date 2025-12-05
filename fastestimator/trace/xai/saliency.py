@@ -30,7 +30,10 @@ from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import to_number
 from fastestimator.xai.saliency import SaliencyNet
 
-Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
+# Breaking change: The Model TypeVar now only supports torch.nn.Module (PyTorch models).
+# TensorFlow models (tf.keras.Model) are no longer supported.
+# Please refer to the release notes or migration guide for details.
+Model = TypeVar('Model', bound=torch.nn.Module)
 
 
 @traceable()

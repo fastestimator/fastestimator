@@ -25,17 +25,7 @@ from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Type, TypeVa
 import numpy as np
 import pandas as pd
 import torch
-from pylatex import (
-    Document,
-    Label,
-    Marker,
-    MultiColumn,
-    NoEscape,
-    Package,
-    Table,
-    Tabularx,
-    TextColor,
-)
+from pylatex import Document, Label, Marker, MultiColumn, NoEscape, Package, Table, Tabularx, TextColor
 from pylatex.base_classes import LatexObject
 from pylatex.utils import bold, escape_latex, italic
 
@@ -104,7 +94,6 @@ class FeInputSpec:
         model_input: The input to the model.
         model: The model which corresponds to the given `model_input`.
     """
-
     def __init__(self, model_input: Any, model: Model):
         self.shape = to_shape(model_input)
         self.dtype = to_type(model_input)
@@ -173,7 +162,6 @@ class FeSplitSummary(LatexObject):
 
     This class is intentionally not @traceable.
     """
-
     def __init__(self):
         super().__init__()
         self.data = []
@@ -1089,7 +1077,7 @@ def fe_summary(self) -> List[FeSummaryTable]:
     from torch.utils.data import Dataset
 
     from fastestimator.estimator import Estimator
-    from fastestimator.network import TFNetwork, TorchNetwork
+    from fastestimator.network import TorchNetwork
     from fastestimator.op.op import Op
     from fastestimator.pipeline import Pipeline
     from fastestimator.schedule.schedule import Scheduler
@@ -1099,14 +1087,12 @@ def fe_summary(self) -> List[FeSummaryTable]:
     # re-number the references for nicer viewing
     ordered_items = sorted(
         self._fe_traceability_summary.items(),
-        key=lambda x: 0 if issubclass(x[1].type, Estimator) else 1
-        if issubclass(x[1].type, (TFNetwork, TorchNetwork)) else 2 if issubclass(x[1].type, Pipeline) else 3
-        if issubclass(x[1].type, Scheduler) else 4 if issubclass(x[1].type, Trace) else 5
-        if issubclass(x[1].type, Op) else 6 if issubclass(x[1].type, Slicer) else 7
-        if issubclass(x[1].type, (Dataset, tf.data.Dataset)) else 8
-        if issubclass(x[1].type, (tf.keras.Model, torch.nn.Module)) else 9
-        if issubclass(x[1].type, types.FunctionType) else 10
-        if issubclass(x[1].type, (np.ndarray, tf.Tensor, tf.Variable, torch.Tensor)) else 11)
+        key=lambda x: 0 if issubclass(x[1].type, Estimator) else 1 if issubclass(x[1].type, (TorchNetwork, )) else 2
+        if issubclass(x[1].type, Pipeline) else 3 if issubclass(x[1].type, Scheduler) else 4
+        if issubclass(x[1].type, Trace) else 5 if issubclass(x[1].type, Op) else 6
+        if issubclass(x[1].type, Slicer) else 7 if issubclass(x[1].type, (Dataset, )) else 8
+        if issubclass(x[1].type, (torch.nn.Module, )) else 9 if issubclass(x[1].type, types.FunctionType) else 10
+        if issubclass(x[1].type, (np.ndarray, torch.Tensor)) else 11)
     key_mapping = {fe_id: f"@FE{idx}" for idx, (fe_id, _) in enumerate(ordered_items)}
     FEID.set_translation_dict(key_mapping)
     return [item[1] for item in ordered_items]
@@ -1187,9 +1173,6 @@ def _setdata(current: Any, new: Any) -> Any:
         # Might want to consider removing the key equality requirement, but unclear what ramifications that would have.
         for key in current.keys():
             current[key] = _setdata(current[key], new[key])
-        return current
-    if isinstance(current, tf.Variable) and isinstance(new, tf.Variable) and current.shape == new.shape:
-        current.assign(new)
         return current
     if isinstance(current, torch.Tensor) and isinstance(new, torch.Tensor) and current.shape == new.shape:
         current.copy_(new)
@@ -1315,9 +1298,7 @@ def is_restorable(data: Any, memory_limit: int = 0) -> Tuple[bool, int]:
     """
     if isinstance(data, _RestorableClasses):
         size = sys.getsizeof(data)
-        if isinstance(data, tf.Tensor):
-            size = sys.getsizeof(data.numpy())
-        elif isinstance(data, torch.Tensor):
+        if isinstance(data, torch.Tensor):
             size = data.element_size() * data.nelement()
         return True, size
     elif isinstance(data, dict):

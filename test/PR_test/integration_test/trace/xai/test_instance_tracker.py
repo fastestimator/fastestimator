@@ -18,13 +18,12 @@ from collections import defaultdict
 
 import torch
 
-from fastestimator.test.unittest_util import sample_system_object
+from fastestimator.test.unittest_util import sample_system_object_torch
 from fastestimator.trace.xai import InstanceTracker
 from fastestimator.util import Data
 
 
 class TestInstanceTracker(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         # Epoch 1 Data
@@ -83,7 +82,7 @@ class TestInstanceTracker(unittest.TestCase):
 
     def test_basic_happy_path(self):
         instance_tracker = InstanceTracker(index='idx', metric='ce', outputs='out', mode='train')
-        system = sample_system_object()
+        system = sample_system_object_torch()
         instance_tracker.system = system
         response = Data()
         self._simulate_training(instance_tracker, response)
@@ -116,7 +115,7 @@ class TestInstanceTracker(unittest.TestCase):
                                            list_to_keep=[1, 5, 17],
                                            outputs='out',
                                            mode='train')
-        system = sample_system_object()
+        system = sample_system_object_torch()
         instance_tracker.system = system
         response = Data()
         self._simulate_training(instance_tracker, response)
@@ -143,7 +142,7 @@ class TestInstanceTracker(unittest.TestCase):
                                            list_to_keep=[1, 5, 17],
                                            outputs='out',
                                            mode='train')
-        system = sample_system_object()
+        system = sample_system_object_torch()
         instance_tracker.system = system
         response = Data()
         self._simulate_training(instance_tracker, response)
@@ -173,7 +172,6 @@ class TestInstanceTracker(unittest.TestCase):
                 self.assertIn(key, recorded_indices)
 
     def test_save_and_load_state(self):
-
         def instantiate_system():
             tracker = InstanceTracker(index='idx',
                                       metric='ce',
@@ -182,7 +180,7 @@ class TestInstanceTracker(unittest.TestCase):
                                       list_to_keep=[1, 5, 17],
                                       outputs='out',
                                       mode='train')
-            system = sample_system_object()
+            system = sample_system_object_torch()
             system.traces.append(tracker)
             tracker.system = system
             return system, tracker

@@ -20,7 +20,6 @@ import torch
 
 from fastestimator.backend._get_lr import get_lr
 from fastestimator.backend._set_lr import set_lr
-from fastestimator.schedule.lr_schedule import ARC
 from fastestimator.summary.system import System
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
@@ -41,7 +40,7 @@ class LRScheduler(Trace):
 
     Args:
         model: A model instance compiled with fe.build.
-        lr_fn: A lr scheduling function that takes either 'epoch' or 'step' as input, or the string 'arc'.
+        lr_fn: A lr scheduling function that takes either 'epoch' or 'step' as input.
         ds_id: What dataset id(s) to execute this Trace in. To execute regardless of ds_id, pass None. To execute in all
             ds_ids except for a particular one, you can pass an argument like "!ds1".
 
@@ -55,33 +54,17 @@ class LRScheduler(Trace):
                  lr_fn: Union[str, Callable[[int], float]],
                  ds_id: Union[None, str, Iterable[str]] = None) -> None:
         self.model = model
-        self.lr_fn = ARC() if lr_fn == "arc" else lr_fn
-        assert hasattr(self.lr_fn, "__call__") or isinstance(self.lr_fn, ARC), "lr_fn must be either a function or ARC"
-        if isinstance(self.lr_fn, ARC):
-            self.schedule_mode = "epoch"
-        else:
-            arg = list(inspect.signature(lr_fn).parameters.keys())
-            assert len(arg) == 1 and arg[0] in {"step", "epoch"}, "the lr_fn input arg must be either 'step' or 'epoch'"
-            self.schedule_mode = arg[0]
+        self.lr_fn = lr_fn
+        assert hasattr(self.lr_fn, "__call__"), "lr_fn must be a function"
+        arg = list(inspect.signature(lr_fn).parameters.keys())
+        assert len(arg) == 1 and arg[0] in {"step", "epoch"}, "the lr_fn input arg must be either 'step' or 'epoch'"
+        self.schedule_mode = arg[0]
         super().__init__(outputs=self.model.model_name + "_lr", ds_id=ds_id)
-
-    def on_begin(self, data: Data) -> None:
-        if isinstance(self.lr_fn, ARC):
-            assert len(self.model.loss_name) == 1, "arc can only work with single model loss"
-            self.lr_fn.use_eval_loss = "eval" in self.system.pipeline.data
 
     def on_epoch_begin(self, data: Data) -> None:
         if self.system.mode == "train" and self.schedule_mode == "epoch":
-            if isinstance(self.lr_fn, ARC):
-                if self.system.epoch_idx > 1 and (self.system.epoch_idx % self.lr_fn.frequency == 1
-                                                  or self.lr_fn.frequency == 1):
-                    multiplier = self.lr_fn.predict_next_multiplier()
-                    new_lr = np.float32(get_lr(model=self.model) * multiplier)
-                    set_lr(self.model, new_lr)
-                    print("FastEstimator-ARC: Multiplying LR by {}".format(multiplier))
-            else:
-                new_lr = np.float32(self.lr_fn(self.system.epoch_idx))
-                set_lr(self.model, new_lr)
+            new_lr = np.float32(self.lr_fn(self.system.epoch_idx))
+            set_lr(self.model, new_lr)
 
     def on_batch_begin(self, data: Data) -> None:
         if self.system.mode == "train" and self.schedule_mode == "step":
@@ -89,19 +72,7 @@ class LRScheduler(Trace):
             set_lr(self.model, new_lr)
 
     def on_batch_end(self, data: Data) -> None:
-        if self.system.mode == "train" and isinstance(self.lr_fn, ARC):
-            self.lr_fn.accumulate_single_train_loss(data[min(self.model.loss_name)].numpy())
         if self.system.mode == "train" and self.system.log_steps and (self.system.global_step % self.system.log_steps
                                                                       == 0 or self.system.global_step == 1):
             current_lr = np.float32(get_lr(self.model))
             data.write_with_log(self.outputs[0], current_lr)
-
-    def on_epoch_end(self, data: Data) -> None:
-        if self.system.mode == "eval" and isinstance(self.lr_fn, ARC):
-            self.lr_fn.accumulate_single_eval_loss(data[min(self.model.loss_name)])
-            if self.system.epoch_idx % self.lr_fn.frequency == 0:
-                self.lr_fn.gather_multiple_eval_losses()
-        if self.system.mode == "train" and isinstance(self.lr_fn,
-                                                      ARC) and self.system.epoch_idx % self.lr_fn.frequency == 0:
-            self.lr_fn.accumulate_all_lrs(get_lr(model=self.model))
-            self.lr_fn.gather_multiple_train_losses()

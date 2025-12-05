@@ -19,13 +19,12 @@ import unittest
 
 import numpy as np
 
-from fastestimator.test.unittest_util import sample_system_object
+from fastestimator.test.unittest_util import sample_system_object_torch
 from fastestimator.trace.io import CSVLogger
 from fastestimator.util.data import Data
 
 
 class TestCSVLogger(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         cls.csv_root = tempfile.mkdtemp()
@@ -33,7 +32,7 @@ class TestCSVLogger(unittest.TestCase):
     @staticmethod
     def _run_fake_training(**csv_args):
         csvlogger = CSVLogger(**csv_args)
-        system = sample_system_object()
+        system = sample_system_object_torch()
         system.epoch_idx = 1
         system.global_step = 1
         csvlogger.system = system

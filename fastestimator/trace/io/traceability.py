@@ -33,24 +33,8 @@ import pydot
 import torch
 from cpuinfo import get_cpu_info
 from natsort import humansorted
-from pylatex import (
-    Command,
-    Document,
-    Figure,
-    Hyperref,
-    Itemize,
-    Label,
-    LongTable,
-    Marker,
-    MultiColumn,
-    NoEscape,
-    Package,
-    Section,
-    Subsection,
-    Subsubsection,
-    Tabularx,
-    escape_latex,
-)
+from pylatex import Command, Document, Figure, Hyperref, Itemize, Label, LongTable, Marker, MultiColumn, NoEscape, \
+    Package, Section, Subsection, Subsubsection, Tabularx, escape_latex
 from pylatex.base_classes import Arguments
 from pylatex.section import Paragraph
 from pylatex.utils import bold
@@ -73,46 +57,22 @@ from fastestimator.op.tensorop.meta.repeat import Repeat as RepeatT
 from fastestimator.op.tensorop.meta.sometimes import Sometimes as SometimesT
 from fastestimator.op.tensorop.model import ModelOp
 from fastestimator.pipeline import Pipeline
-from fastestimator.schedule.schedule import (
-    Scheduler,
-    get_current_items,
-    get_signature_epochs,
-)
+from fastestimator.schedule.schedule import Scheduler, get_current_items, get_signature_epochs
 from fastestimator.slicer.slicer import Slicer
 from fastestimator.summary.logs.log_plot import visualize_logs
 from fastestimator.trace.adapt.lr_scheduler import LRScheduler
 from fastestimator.trace.io.restore_wizard import RestoreWizard
 from fastestimator.trace.trace import Trace, sort_traces
-from fastestimator.util.base_util import (
-    FEID,
-    DefaultKeyDict,
-    LogSplicer,
-    NonContext,
-    prettify_metric_name,
-    to_list,
-    warn,
-)
+from fastestimator.util.base_util import FEID, DefaultKeyDict, LogSplicer, NonContext, prettify_metric_name, to_list, \
+    warn
 from fastestimator.util.data import Data
-from fastestimator.util.latex_util import (
-    AdjustBox,
-    Center,
-    ContainerList,
-    HrefFEID,
-    Verbatim,
-)
+from fastestimator.util.latex_util import AdjustBox, Center, ContainerList, HrefFEID, Verbatim
 from fastestimator.util.traceability_util import FeSummaryTable, SummaryTable, traceable
-from fastestimator.util.util import (
-    Suppressor,
-    cpu_count,
-    get_gpu_info,
-    get_model_parameters,
-    get_num_gpus,
-    get_optimizer_name,
-)
+from fastestimator.util.util import Suppressor, cpu_count, get_gpu_info, get_model_parameters, get_num_gpus, \
+    get_optimizer_name
 
 
 class DataOp(Op):
-
     def __init__(self,
                  inputs: Union[None, str, Iterable[str]] = None,
                  outputs: Union[None, str, Iterable[str]] = None,
@@ -122,7 +82,6 @@ class DataOp(Op):
 
 
 class _UnslicerWrapper():
-
     def __init__(self, slicer: Slicer) -> None:
         self.slicer = slicer
 
@@ -140,7 +99,6 @@ class Traceability(Trace):
     Raises:
         OSError: If graphviz is not installed.
     """
-
     def __init__(self, save_path: str, extra_objects: Any = None):
         # Verify that graphviz is available on this machine
         try:
@@ -340,7 +298,7 @@ class Traceability(Trace):
         with self.doc.create(Section("Parameters")):
             model_ids = {
                 FEID(id(model))
-                for model in self.system.network.models if isinstance(model, (tf.keras.Model, torch.nn.Module))
+                for model in self.system.network.models if isinstance(model, (torch.nn.Module))
             }
             # Locate the datasets in order to provide extra details about them later in the summary
             datasets = {}
@@ -362,38 +320,34 @@ class Traceability(Trace):
             start = 0
             start = self._loop_tables(start,
                                       classes=(Estimator, BaseNetwork, Pipeline),
-                                      name="Base Classes",
+                                      name='Base Classes',
                                       model_ids=model_ids,
                                       datasets=datasets)
             start = self._loop_tables(start,
                                       classes=Scheduler,
-                                      name="Schedulers",
+                                      name='Schedulers',
                                       model_ids=model_ids,
                                       datasets=datasets)
-            start = self._loop_tables(start, classes=Trace, name="Traces", model_ids=model_ids, datasets=datasets)
-            start = self._loop_tables(start, classes=Op, name="Operators", model_ids=model_ids, datasets=datasets)
-            start = self._loop_tables(start, classes=Slicer, name="Slicers", model_ids=model_ids, datasets=datasets)
+            start = self._loop_tables(start, classes=Trace, name='Traces', model_ids=model_ids, datasets=datasets)
+            start = self._loop_tables(start, classes=Op, name='Operators', model_ids=model_ids, datasets=datasets)
+            start = self._loop_tables(start, classes=Slicer, name='Slicers', model_ids=model_ids, datasets=datasets)
+            start = self._loop_tables(start, classes=(Dataset), name='Datasets', model_ids=model_ids, datasets=datasets)
             start = self._loop_tables(start,
-                                      classes=(Dataset, tf.data.Dataset),
-                                      name="Datasets",
-                                      model_ids=model_ids,
-                                      datasets=datasets)
-            start = self._loop_tables(start,
-                                      classes=(tf.keras.Model, torch.nn.Module),
-                                      name="Models",
+                                      classes=(torch.nn.Module),
+                                      name='Models',
                                       model_ids=model_ids,
                                       datasets=datasets)
             start = self._loop_tables(start,
                                       classes=types.FunctionType,
-                                      name="Functions",
+                                      name='Functions',
                                       model_ids=model_ids,
                                       datasets=datasets)
             start = self._loop_tables(start,
-                                      classes=(np.ndarray, tf.Tensor, tf.Variable, torch.Tensor),
-                                      name="Tensors",
+                                      classes=(np.ndarray, torch.Tensor),
+                                      name='Tensors',
                                       model_ids=model_ids,
                                       datasets=datasets)
-            self._loop_tables(start, classes=Any, name="Miscellaneous", model_ids=model_ids, datasets=datasets)
+            self._loop_tables(start, classes=Any, name='Miscellaneous', model_ids=model_ids, datasets=datasets)
             self.get_parameter_summary()
 
     def get_parameter_summary(self):
@@ -405,18 +359,18 @@ class Traceability(Trace):
         }
         parameter_retrieval_errors = []
         try:
-            parameters["no_of_model_parameters"] = {
+            parameters['no_of_model_parameters'] = {
                 model.model_name.lower(): get_model_parameters(model)
-                for model in self.system.network.models if isinstance(model, (tf.keras.Model, torch.nn.Module))
+                for model in self.system.network.models if isinstance(model, (torch.nn.Module))
             }
         except Exception as e:
             print(e)
             parameter_retrieval_errors.append('no_of_model_parameters')
 
         try:
-            parameters["lr"] = {
+            parameters['lr'] = {
                 model.model_name.lower(): fe.backend.get_lr(model=model)
-                for model in self.system.network.models if isinstance(model, (tf.keras.Model, torch.nn.Module))
+                for model in self.system.network.models if isinstance(model, (torch.nn.Module))
             }
         except Exception as e:
             print(e)

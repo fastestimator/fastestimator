@@ -25,18 +25,10 @@ from natsort import humansorted
 from plotly.io import _html, _kaleido
 from plotly.offline.offline import get_plotlyjs
 from plotly.subplots import make_subplots
-from scipy.ndimage.filters import gaussian_filter1d
+from scipy.ndimage import gaussian_filter1d
 
 from fastestimator.summary.summary import Summary, ValWithError
-from fastestimator.util.base_util import (
-    FigureFE,
-    get_colors,
-    in_notebook,
-    prettify_metric_name,
-    to_list,
-    to_set,
-    warn,
-)
+from fastestimator.util.base_util import FigureFE, get_colors, in_notebook, prettify_metric_name, to_list, to_set, warn
 
 
 class _MetricGroup:

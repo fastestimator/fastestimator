@@ -18,12 +18,12 @@ import lazy_loader as lazy
 
 __getattr__, __dir__, __all__ = lazy.attach(__name__,
                                             submod_attrs={
-                                                'lr_schedule': ['ARC', 'cosine_decay'],
+                                                'lr_schedule': ['cosine_decay'],
                                                 'schedule': ['EpochScheduler', 'RepeatScheduler', 'Scheduler',
                                                              'get_current_items', 'get_signature_epochs'],
                                             })
 
 if TYPE_CHECKING:
-    from fastestimator.schedule.lr_schedule import ARC, cosine_decay
+    from fastestimator.schedule.lr_schedule import cosine_decay
     from fastestimator.schedule.schedule import EpochScheduler, RepeatScheduler, Scheduler, get_current_items, \
         get_signature_epochs

@@ -62,6 +62,12 @@ def sparse_categorical_crossentropy(y_pred: Tensor,
     """
     assert isinstance(y_pred, (torch.Tensor)), "only support torch.Tensor as y_pred"
     assert isinstance(y_true, (torch.Tensor)), "only support torch.Tensor as y_true"
+
+    # Squeeze y_true if it has an extra dimension (e.g., shape (N, 1) -> (N,))
+    # PyTorch CrossEntropyLoss and NLLLoss expect 1D target tensors
+    if y_true.dim() > 1 and y_true.shape[-1] == 1:
+        y_true = y_true.squeeze(-1)
+
     if from_logits:
         ce = torch.nn.CrossEntropyLoss(reduction="none")(input=y_pred, target=y_true.long())
     else:

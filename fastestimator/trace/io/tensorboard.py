@@ -40,8 +40,8 @@ from fastestimator.util.img_data import Display
 from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import get_num_gpus, to_number
 
-Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
+Model = TypeVar('Model', bound=torch.nn.Module)
+Tensor = TypeVar('Tensor', bound=torch.Tensor)
 
 
 class _BaseWriter:
@@ -195,7 +195,6 @@ class _TorchWriter(_BaseWriter):
 
     This class is intentionally not @traceable.
     """
-
     def write_epoch_models(self, mode: str, epoch: int) -> None:
         for model in self.network.ctx_models:
             inputs = model.fe_input_spec.get_dummy_input()

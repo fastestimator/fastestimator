@@ -22,12 +22,11 @@ import fastestimator as fe
 from fastestimator.op.tensorop import Delete
 from fastestimator.op.tensorop.model import ModelOp
 from fastestimator.slicer import Slicer
-from fastestimator.test.unittest_util import sample_system_object
+from fastestimator.test.unittest_util import sample_system_object_torch
 from fastestimator.types import Array
 
 
 class FakeSlicer(Slicer):
-
     def __init__(self, slice, unslice, mode, ds_id, var):
         super().__init__(slice=slice, unslice=unslice, mode=mode, ds_id=ds_id)
         self.var = var
@@ -40,11 +39,9 @@ class FakeSlicer(Slicer):
 
 
 class TestSlicer(unittest.TestCase):
-
     def test_unslice_key_check(self):
-
         def instantiate_system():
-            system = sample_system_object()
+            system = sample_system_object_torch()
             model = fe.build(model_fn=fe.architecture.pytorch.LeNet, optimizer_fn='adam', model_name='tf')
             system.network = fe.Network(
                 ops=[ModelOp(model=model, inputs="x", outputs="y_pred")],
@@ -58,9 +55,8 @@ class TestSlicer(unittest.TestCase):
         self.assertTupleEqual(tuple(result['y_pred'].shape), (1, 10))
 
     def test_unslice_key_check_missing_unslice(self):
-
         def instantiate_system():
-            system = sample_system_object()
+            system = sample_system_object_torch()
             model = fe.build(model_fn=fe.architecture.pytorch.LeNet, optimizer_fn='adam', model_name='tf')
             system.network = fe.Network(ops=[ModelOp(model=model, inputs="x", outputs="y_pred")],
                                         slicers=FakeSlicer(slice="x", unslice="x", mode=None, ds_id=None, var=2.0))
@@ -73,9 +69,8 @@ class TestSlicer(unittest.TestCase):
                 (1, 1, 28, 28), dtype=np.float32)}, mode="test"))
 
     def test_unslice_key_check_missing_deleted(self):
-
         def instantiate_system():
-            system = sample_system_object()
+            system = sample_system_object_torch()
             model = fe.build(model_fn=fe.architecture.pytorch.LeNet, optimizer_fn='adam', model_name='tf')
             system.network = fe.Network(ops=[ModelOp(model=model, inputs="x", outputs="y_pred"), Delete("y_pred")],
                                         slicers=FakeSlicer(slice="x", unslice="x", mode=None, ds_id=None, var=2.0))
@@ -88,9 +83,8 @@ class TestSlicer(unittest.TestCase):
         self.assertNotIn("y_pred", result)
 
     def test_save_and_load_state_torch(self):
-
         def instantiate_system():
-            system = sample_system_object()
+            system = sample_system_object_torch()
             model = fe.build(model_fn=fe.architecture.pytorch.LeNet, optimizer_fn='adam', model_name='torch')
             system.network = fe.Network(
                 ops=[ModelOp(model=model, inputs="x_out", outputs="y_pred")],

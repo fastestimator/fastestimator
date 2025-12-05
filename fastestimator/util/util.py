@@ -25,17 +25,7 @@ import time
 from contextlib import ContextDecorator
 from functools import lru_cache
 from pathlib import Path
-from typing import (
-    Any,
-    Dict,
-    List,
-    MutableMapping,
-    Optional,
-    Tuple,
-    Type,
-    TypeVar,
-    Union,
-)
+from typing import Any, Dict, List, MutableMapping, Optional, Tuple, Type, TypeVar, Union
 
 import numpy as np
 import torch
@@ -136,11 +126,6 @@ class Suppressor(object):
         self.reals = [os.dup(1), os.dup(2)]  # [stdout, stderr]
         os.dup2(self.fake, 1)
         os.dup2(self.fake, 2)
-        # This avoids "OSError: [WinError 6] The handle is invalid" while logging tensorflow information in windows
-        for handler in tf.get_logger().handlers:
-            handler.setStream(sys.stderr)
-        if self.allow_pyprint:
-            tf.print = _custom_tf_print
 
     def __exit__(self, *exc: Tuple[Optional[Type], Optional[Exception], Optional[Any]]) -> None:
         # If there was an error, display any print messages
@@ -154,9 +139,6 @@ class Suppressor(object):
         # Set the python pointers back too
         sys.stdout, sys.stderr = self.py_reals[0], self.py_reals[1]
 
-        for handler in tf.get_logger().handlers:
-            handler.setStream(sys.stderr)
-
         # Clean up the descriptors
         for fd in self.reals:
             os.close(fd)
@@ -164,12 +146,6 @@ class Suppressor(object):
         if self.show_if_exception:
             # Clear the file
             open(self.stash_name, 'w').close()
-        if self.allow_pyprint:
-            tf.print = print_v2
-            with open(self.tf_print_name, 'r') as f:
-                for line in f:
-                    print(line, end='')  # Endings already included from tf.print
-            open(self.tf_print_name, 'w').close()
 
     def write(self, dummy: str) -> None:
         """A function which is invoked during print calls.
@@ -215,7 +191,15 @@ def get_model_parameters(model: torch.nn.Module) -> Dict[str, int]:
         total_params = sum(p.numel() for p in model.parameters())
         trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     else:
-        raise ValueError("Model not recognized.")
+        try:
+            truncated_model = repr(model)
+        except (TypeError, RuntimeError) as e:
+            truncated_model = f'<repr failed: {e}>'
+        if len(truncated_model) > 100:
+            truncated_model = truncated_model[:100] + '...'
+        raise ValueError(
+            f"Model not recognized. Expected a torch.nn.Module, but received type '{type(model).__name__}' with value '{truncated_model}'."
+        )
     return {'total_params': total_params, 'trainable_params': trainable_params}
 
 
@@ -271,8 +255,7 @@ class Timer(ContextDecorator):
     func()  # T2 took 0.14819 seconds
     ```
     """
-
-    def __init__(self, name="Task") -> None:
+    def __init__(self, name='Task') -> None:
         self.name = name
         self.start = None
         self.end = None
@@ -285,7 +268,7 @@ class Timer(ContextDecorator):
     def __exit__(self, *exc: Tuple[Optional[Type], Optional[Exception], Optional[Any]]) -> None:
         self.end = time.perf_counter()
         self.interval = self.end - self.start
-        tf.print("{} took {} seconds".format(self.name, self.interval))
+        print(f"{self.name} took {self.interval} seconds")
 
 
 def draw() -> None:
@@ -296,7 +279,7 @@ def draw() -> None:
 
 def pad_batch(batch: List[MutableMapping[str, np.ndarray]], pad_value: Union[float, int]) -> None:
     """A function to pad a batch of data in-place by appending to the ends of the tensors. Tensor type needs to be
-    numpy array otherwise would get ignored. (tf.Tensor and torch.Tensor will cause error)
+    numpy array otherwise would get ignored. (torch.Tensor will cause error)
 
     ```python
     data = [{"x": np.ones((2, 2)), "y": 8}, {"x": np.ones((3, 1)), "y": 4}]
