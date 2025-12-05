@@ -4,15 +4,33 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-FastEstimator is a high-level deep learning library built on TensorFlow 2 and PyTorch. It provides a unified API that works seamlessly with both frameworks.
+FastEstimator is a high-level deep learning library built on PyTorch. It provides a clean, modular API for building and training deep learning models.
 
-**Current Version**: 1.7.0 | **Python**: 3.10-3.12 | **TensorFlow**: 2.15.1 | **PyTorch**: 2.3.1
+**Current Version**: 2.0.0 | **Python**: 3.10-3.12 | **PyTorch**: 2.3.1
 
 ## Common Commands
+
+### Environment Setup (UV)
+```bash
+# Install UV
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Install dependencies
+uv sync                        # Base install
+uv sync --extra jupyter        # With Jupyter support
+uv sync --extra dev            # With dev tools (coverage, yapf, isort)
+
+# Run commands
+uv run python script.py
+uv run fastestimator train script.py
+```
 
 ### Running Tests
 ```bash
 # Run all PR tests
+cd test && python3 -m unittest discover PR_test
+
+# Or from project root
 python3 -m unittest discover test/PR_test
 
 # Run a single test file
@@ -22,7 +40,8 @@ python3 -m unittest test/PR_test/unit_test/backend/test_abs.py
 python3 -m unittest PR_test.unit_test.backend.test_abs.TestAbs
 
 # Run tests with coverage
-coverage run --source ../fastestimator -m unittest discover test/PR_test
+cd test
+coverage run --source ../fastestimator -m unittest discover PR_test
 coverage report  # or: coverage html
 ```
 
@@ -34,7 +53,11 @@ fastestimator run <script.py>     # Run inference
 ```
 
 ### Code Formatting
-YAPF formatter with PEP8 base style, 120 column limit. Config in `.style.yapf`.
+```bash
+yapf -i <file.py>      # Format a file
+isort <file.py>        # Sort imports
+```
+YAPF config is in `pyproject.toml` under `[tool.yapf]`. Uses PEP8 base style with 120 column limit.
 
 ## Architecture
 
@@ -59,15 +82,12 @@ All operations follow a modular pattern with defined inputs/outputs:
 - **Trace** (`trace/`): Training callbacks for monitoring/control
 
 ### Key Modules
-- `backend/`: Framework-agnostic tensor operations (68 modules abstracting TF/PyTorch differences)
-- `architecture/`: Pre-built model architectures for both TensorFlow and PyTorch
+- `backend/`: Tensor operations (PyTorch-based)
+- `architecture/`: Pre-built model architectures
 - `dataset/`: Data loading utilities
 - `schedule/`: Learning rate and parameter scheduling
 - `trace/`: Training callbacks (metrics, logging, model saving)
 - `xai/`: Explainable AI utilities
-
-### Framework Detection
-FastEstimator auto-detects whether models/tensors are TensorFlow or PyTorch and routes operations accordingly through the `backend/` module.
 
 ## Test Structure
 
@@ -77,12 +97,26 @@ Tests mirror the source structure:
 
 Unit tests involve only the tested module. Integration tests involve multiple modules.
 
+The project uses Python's built-in `unittest` framework (not pytest).
+
 ## Development Notes
 
 - Mac-specific: tkinter is disabled for multiprocessing compatibility
 - OpenCV threads are disabled (`cv2.setNumThreads(0)`) to avoid PyTorch DataLoader conflicts
 - Uses `lazy_loader` for efficient module imports
 - History logging is auto-disabled during test runs
+- GPU support: CUDA on Linux/Windows, MPS on Apple Silicon Macs
+
+## Package Management
+
+The project uses UV for package management with `pyproject.toml`. Key files:
+- `pyproject.toml`: Dependencies and UV configuration
+- `setup.py`: Legacy pip support (kept for compatibility)
+- `.python-version`: Specifies Python 3.10
+
+PyTorch is automatically installed with the correct build:
+- macOS: Standard PyTorch with MPS support
+- Linux/Windows: CPU-optimized build (GPU users override manually)
 
 ## Application Hub
 
@@ -90,4 +124,3 @@ The `apphub/` directory contains end-to-end examples covering:
 - Image classification, generation, segmentation
 - Object detection, NLP tasks
 - Adversarial training, neural architecture search
-- Each example has both TensorFlow and PyTorch implementations
