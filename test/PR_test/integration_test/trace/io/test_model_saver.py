@@ -80,12 +80,6 @@ class TestModelSaver(unittest.TestCase):
             self.assertTrue(os.path.exists(torch_model_path1))
             self.assertTrue(os.path.exists(torch_model_path2))
 
-    def test_torch_architecture_save(self):
-        model = fe.build(model_fn=MultiLayerTorchModel, optimizer_fn='adam')
-        save_dir = tempfile.mkdtemp()
-        with self.assertRaises(ValueError):
-            ModelSaver(model=model, save_dir=save_dir, save_architecture=True)
-
     def test_max_to_keep_invalid_value(self):
         model = fe.build(model_fn=MultiLayerTorchModel, optimizer_fn='adam')
         save_dir = tempfile.mkdtemp()

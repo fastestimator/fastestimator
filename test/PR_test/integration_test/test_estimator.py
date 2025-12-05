@@ -17,7 +17,6 @@ from io import StringIO
 
 import numpy as np
 import torch
-from tensorflow.python.autograph.impl.api import StagingError
 from torch.utils.data import DataLoader, Dataset
 
 import fastestimator as fe
@@ -216,8 +215,7 @@ class TestEstimatorWarmup(unittest.TestCase):
         est = fe.Estimator(pipeline=pipeline, network=network, epochs=2)
         est._prepare_traces(run_modes={"train", "eval"})
 
-        # in multi-gpu environment it may raise Staging Error instead of KeyError
-        with self.assertRaises((StagingError, KeyError)):
+        with self.assertRaises(KeyError):
             est._warmup()
 
     def test_estimator_warmup_trace_missing_key(self):
