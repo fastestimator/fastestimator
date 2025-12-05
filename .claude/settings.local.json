@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cat:*)",
+      "Bash(wc:*)",
+      "Bash(find:*)",
+      "Bash(python3 -m py_compile:*)",
+      "Bash(python3 -m unittest:*)",
+      "Bash(pip install:*)",
+      "Bash(python3:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
