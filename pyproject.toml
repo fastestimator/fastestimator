@@ -69,7 +69,6 @@ dependencies = [
 [project.optional-dependencies]
 # Development dependencies
 dev = [
-    "pytest",
     "coverage",
     "pre-commit",
     "isort",
