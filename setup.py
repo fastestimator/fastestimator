@@ -73,7 +73,8 @@ def get_dependency():
         'py-cpuinfo==9.0.0',
         'fastparquet==2024.2.0',
         'jax==0.4.33',
-        'jaxlib==0.4.33'
+        'jaxlib==0.4.33',
+        'tensorboard'
     ]
     return dependencies
 

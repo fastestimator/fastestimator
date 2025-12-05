@@ -57,6 +57,7 @@ dependencies = [
     "fastparquet==2024.2.0",
     "jax==0.4.33",
     "jaxlib==0.4.33",
+    "tensorboard",
     # PyTorch - macOS gets standard build (with MPS), others get CPU build by default
     "torch==2.3.1 ; sys_platform == 'darwin'",
     "torchvision==0.18.1 ; sys_platform == 'darwin'",
