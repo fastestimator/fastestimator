@@ -223,8 +223,8 @@ def is_valid_file(file_path: str) -> bool:
     try:
         if suffix == '.zip':
             import zipfile
-            zip_file = zipfile.ZipFile(file_path)
-            _ = zip_file.namelist()
+            with zipfile.ZipFile(file_path) as zip_file:
+                _ = zip_file.namelist()
         elif suffix == '.gz':
             if file_path.endswith('.tar.gz'):
                 import tarfile
@@ -232,8 +232,8 @@ def is_valid_file(file_path: str) -> bool:
                     _ = img_tar.getmembers()
             else:
                 import gzip
-                f = gzip.open(file_path, 'rb')
-                _ = f.read()
+                with gzip.open(file_path, 'rb') as f:
+                    _ = f.read()
         return True
     except Exception as e:
         print(e)

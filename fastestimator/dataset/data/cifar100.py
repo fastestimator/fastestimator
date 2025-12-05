@@ -13,16 +13,39 @@
 # limitations under the License.
 # ==============================================================================
 import os
+import pickle
 import tarfile
 from pathlib import Path
 from typing import Tuple
 
 import numpy as np
-from keras.datasets.cifar import load_batch
 
 from fastestimator.dataset.numpy_dataset import NumpyDataset
 from fastestimator.util.base_util import warn
 from fastestimator.util.google_download_util import download_file_from_google_drive
+
+
+def _load_batch(fpath: str, label_key: str = "labels") -> Tuple[np.ndarray, np.ndarray]:
+    """Load a batch of CIFAR data from a pickle file.
+
+    Args:
+        fpath: Path to the pickle file.
+        label_key: Key for label data in the retrieved dictionary.
+
+    Returns:
+        A tuple of (data, labels).
+    """
+    with open(fpath, "rb") as f:
+        d = pickle.load(f, encoding="bytes")
+        # Decode utf8 keys
+        d_decoded = {}
+        for k, v in d.items():
+            d_decoded[k.decode("utf8")] = v
+        d = d_decoded
+    data = d["data"]
+    labels = d[label_key]
+    data = data.reshape(data.shape[0], 3, 32, 32)
+    return data, labels
 
 
 def load_data(root_dir: str = None,
@@ -71,10 +94,10 @@ def load_data(root_dir: str = None,
             img_tar.extractall(root_dir)
 
     train_data_path = os.path.join(image_extracted_path, "train")
-    x_train, y_train = load_batch(train_data_path, label_key=label_mode + "_labels")
+    x_train, y_train = _load_batch(train_data_path, label_key=label_mode + "_labels")
 
     eval_data_path = os.path.join(image_extracted_path, "test")
-    x_eval, y_eval = load_batch(eval_data_path, label_key=label_mode + "_labels")
+    x_eval, y_eval = _load_batch(eval_data_path, label_key=label_mode + "_labels")
 
     y_eval = np.array(y_eval)
 

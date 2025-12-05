@@ -47,28 +47,16 @@ conda update --force conda -y
 ```
 
 ```bash
-conda create -n FE16 python=3.8 -y
+conda create -n FE17 python=3.10 -y
 ```
 
 Use pyenv rather than conda to activate your virtual environment to ensure that both pip and conda will point to the same python environment:
 
 ```bash
-pyenv activate FE16
+pyenv activate FE17
 ```
 
 ## Step 4: Install python dependencies
-
-```bash
-conda install -c apple tensorflow-deps==2.15.0 -y
-```
-
-```bash
-python -m pip install tensorflow-macos==2.15.0
-```
-
-```bash
-python -m pip install tensorflow-metal==0.7.1
-```
 
 ```bash
 python -m pip install torch==2.3.1 torchvision==0.18.1 torchaudio==2.3.1

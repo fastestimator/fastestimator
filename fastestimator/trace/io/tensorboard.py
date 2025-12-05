@@ -20,7 +20,6 @@ import cv2
 import numpy as np
 import tensorboard as tb
 import torch
-from keras import backend
 from plotly.graph_objs import Figure
 from torch.utils.tensorboard import SummaryWriter
 
@@ -165,13 +164,13 @@ class _BaseWriter:
         method.
         """
         w_img = squeeze(weight)
-        shape = backend.int_shape(w_img)
+        shape = tuple(w_img.shape)
         if len(shape) == 1:  # Bias case
             w_img = reshape(w_img, [1, shape[0], 1, 1])
         elif len(shape) == 2:  # Dense layer kernel case
             if shape[0] > shape[1]:
                 w_img = permute(w_img, [0, 1])
-                shape = backend.int_shape(w_img)
+                shape = tuple(w_img.shape)
             w_img = reshape(w_img, [1, shape[0], shape[1], 1])
         elif len(shape) == 3:  # ConvNet case
             if kernel_channels_last:
@@ -184,7 +183,7 @@ class _BaseWriter:
                 w_img = permute(w_img, [3, 2, 0, 1])
             w_img = reduce_sum(abs(w_img), axis=1)  # Sum over the each channel within the kernel
             w_img = expand_dims(w_img, axis=-1)
-        shape = backend.int_shape(w_img)
+        shape = tuple(w_img.shape)
         # Not possible to handle 3D convnets etc.
         if len(shape) == 4 and shape[-1] in [1, 3, 4]:
             return w_img

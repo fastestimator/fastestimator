@@ -55,7 +55,7 @@ def is_equal(obj1: Any, obj2: Any, assert_type: bool = True, assert_dtype: bool 
 
         return True
 
-    elif type(obj1) == dict:
+    elif isinstance(obj1, dict):
         if len(obj1) != len(obj2):
             return False
 
@@ -68,7 +68,7 @@ def is_equal(obj1: Any, obj2: Any, assert_type: bool = True, assert_dtype: bool 
 
         return True
 
-    elif type(obj1) == np.ndarray:
+    elif isinstance(obj1, np.ndarray):
         if assert_dtype and obj1.dtype != obj2.dtype:
             return False
         return np.array_equal(obj1, obj2)

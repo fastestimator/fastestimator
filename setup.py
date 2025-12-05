@@ -55,7 +55,7 @@ def get_dependency():
         'requests==2.32.2',
         'tqdm==4.66.5',
         'numpy==1.26.4',
-        'pyfiglet==0.8.post1',
+        'pyfiglet==1.0.4',
         'opencv-python==4.7.0.72',
         'pandas==2.0.1',
         'wget==3.2',

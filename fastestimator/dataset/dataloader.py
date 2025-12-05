@@ -194,7 +194,7 @@ def _pre_collate(data: List[Union[FilteredData, Dict[str, Any]]],
     """
     try:
         collated = try_fn(data)
-    except:
+    except Exception:
         # The presence of filtered data instances could break the possibly-user-specified collate function for any
         # reason, so cast a broad net on this except clause.
         return False, data

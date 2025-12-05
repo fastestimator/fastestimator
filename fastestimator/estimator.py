@@ -559,16 +559,13 @@ class EarlyStop(Exception):
 def enable_deterministic(seed: int) -> None:
     """Invoke to set random seed for deterministic training.
 
-    The determinism only works for tensorflow >= 2.1 and pytorch >= 1.14, and some model layers don't support.
-
-    Known failing layers:
+    Note that determinism requires PyTorch >= 1.14, and some model layers may not support deterministic operations.
 
     Args:
         seed: The random seed to use for training.
     """
     fe.fe_deterministic_seed = seed
     os.environ['PYTHONHASHSEED'] = str(seed)
-    os.environ['TF_DETERMINISTIC_OPS'] = str(1)
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
