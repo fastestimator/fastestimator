@@ -32,48 +32,66 @@ For more information, please visit our [website](https://www.fastestimator.org/)
 
 ## Installation
 
-### 1. Install Dependencies
+We recommend using [UV](https://docs.astral.sh/uv/) for fast, reliable package management.
 
-* Install PyTorch
-  * CPU:
+### Quick Start with UV
 
-      ```bash
-      pip install --no-cache-dir torch==2.3.1+cpu torchvision==0.18.1+cpu torchaudio==2.3.1+cpu -f https://download.pytorch.org/whl/cpu/torch_stable.html
-      ```
-
-  * GPU:
-
-      ```bash
-      pip install --no-cache-dir torch==2.3.1+cu121 torchvision==0.18.1+cu121 torchaudio==2.3.1+cu121 -f https://download.pytorch.org/whl/cu121/torch_stable.html
-      ```
-
-* Extra Dependencies:
-  * Windows:
-    * Install Build Tools for Visual Studio 2019 [here](https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2019).
-
-    * Install latest Visual C++ redistributable [here](https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads) and choose x86 for 32 bit OS, x64 for 64 bit OS.
-
-  * Linux:
-
-      ``` bash
-      apt-get install libglib2.0-0 libsm6 libxrender1 libxext6
-      ```
-
-  * Mac:
-    * Please follow this [installation guide](https://github.com/fastestimator/fastestimator/blob/master/installation_docs/mac_installation.md)
-
-### 2. Install FastEstimator
-
-* Stable:
-
-    ``` bash
-    pip install fastestimator
+1. Install UV:
+    ```bash
+    curl -LsSf https://astral.sh/uv/install.sh | sh
     ```
 
-* Nightly (Linux/Mac):
+2. Install FastEstimator:
+    ```bash
+    uv pip install fastestimator
+    ```
 
-    ``` bash
+    PyTorch is included automatically:
+    - **macOS**: Standard PyTorch with MPS (Apple Silicon GPU) support
+    - **Linux/Windows**: CPU-optimized PyTorch build
+
+### For Developers
+
+```bash
+git clone https://github.com/fastestimator/fastestimator.git
+cd fastestimator
+uv sync                        # Install all dependencies
+uv sync --extra jupyter        # Include Jupyter notebook support
+uv sync --extra dev            # Include development tools
+```
+
+### System Dependencies
+
+* **Linux:**
+    ```bash
+    apt-get install libglib2.0-0 libsm6 libxrender1 libxext6 graphviz
+    ```
+
+* **macOS:** See the [Mac installation guide](https://github.com/fastestimator/fastestimator/blob/master/installation_docs/mac_installation.md)
+
+* **Windows:**
+    * Install [Build Tools for Visual Studio 2019](https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2019)
+    * Install [Visual C++ redistributable](https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads)
+
+* **Optional (for Traceability reports):** LaTeX (`texlive-latex-base`, `texlive-latex-extra`)
+
+### Alternative: pip install
+
+* Stable:
+    ```bash
+    pip install fastestimator
+    ```
+    Note: PyTorch is included in the base dependencies. On macOS you get MPS support; on Linux/Windows you get CPU builds.
+
+* Nightly:
+    ```bash
     pip install fastestimator-nightly
+    ```
+
+* For GPU with CUDA (Linux/Windows only):
+    ```bash
+    pip install fastestimator
+    pip install torch==2.3.1+cu121 torchvision==0.18.1+cu121 torchaudio==2.3.1+cu121 -f https://download.pytorch.org/whl/cu121
     ```
 
 ## Docker Hub
