@@ -22,13 +22,17 @@ import torch
 import fastestimator as fe
 from fastestimator.op.tensorop.loss import CrossEntropy
 from fastestimator.op.tensorop.model import ModelOp, UpdateOp
-from fastestimator.test.unittest_util import OneLayerTorchModel, sample_system_object_torch
+from fastestimator.test.unittest_util import (
+    OneLayerTorchModel,
+    sample_system_object_torch,
+)
 from fastestimator.trace.adapt import TerminateOnNaN
 from fastestimator.trace.metric import Accuracy, F1Score
 from fastestimator.util.data import Data
 
 
 class TestTerminateOnNaN(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.data_np = Data({'loss': np.NaN})
@@ -37,11 +41,11 @@ class TestTerminateOnNaN(unittest.TestCase):
         cls.expected_loss_keys = {"ce"}
         cls.expected_all_keys = {"ce", "accuracy", "f1_score"}
 
-        tf_model = fe.build(model_fn=OneLayerTorchModel, optimizer_fn='adam')
+        torch_model = fe.build(model_fn=OneLayerTorchModel, optimizer_fn='adam')
         cls.network = fe.Network(ops=[
-            ModelOp(model=tf_model, inputs="x", outputs="y"),
+            ModelOp(model=torch_model, inputs="x", outputs="y"),
             CrossEntropy(inputs=("y_pred", "y"), outputs="ce"),
-            UpdateOp(model=tf_model, loss_name="ce")
+            UpdateOp(model=torch_model, loss_name="ce")
         ])
         cls.traces = [
             Accuracy(true_key="y", pred_key="y_pred", output_name="accuracy"),

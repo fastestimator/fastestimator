@@ -15,13 +15,13 @@
 import unittest
 
 import numpy as np
-import torch
 
 from fastestimator.op.numpyop import LambdaOp
 from fastestimator.test.unittest_util import is_equal
 
 
 class TestLambdaOp(unittest.TestCase):
+
     def test_single_input(self):
         op = LambdaOp(fn=np.sum)
         data = op.forward(data=[[1, 2, 3]], state={})
