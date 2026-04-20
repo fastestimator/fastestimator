@@ -21,10 +21,8 @@ import torch
 def save_model(model: torch.nn.Module,
                save_dir: str,
                model_name: Optional[str] = None,
-               save_optimizer: bool = False,
-               save_architecture: bool = False) -> str:
+               save_optimizer: bool = False) -> str:
     """Save `model` weights to a specific directory.
-
 
     This method can be used with PyTorch models:
     ```python
@@ -42,7 +40,7 @@ def save_model(model: torch.nn.Module,
         The saved model path.
 
     Raises:
-        ValueError: If `model` is an unacceptable data type, if a user tries to save architecture of a PyTorch model.
+        ValueError: If `model` is an unacceptable data type.
     """
     assert hasattr(model, "fe_compiled") and model.fe_compiled, "model must be built by fe.build"
     if model_name is None:
@@ -55,8 +53,6 @@ def save_model(model: torch.nn.Module,
             torch.save(model.module.state_dict(), model_path)
         else:
             torch.save(model.state_dict(), model_path)
-        if save_architecture:
-            raise ValueError("Sorry, architecture saving is not currently enabled for PyTorch")
         if save_optimizer:
             assert model.current_optimizer, "optimizer does not exist"
             optimizer_path = os.path.join(save_dir, f"{model_name}_opt.pt")

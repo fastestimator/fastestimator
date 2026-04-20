@@ -19,7 +19,6 @@ from unittest.mock import patch
 
 import numpy as np
 import torch
-from tensorflow.python.client import device_lib
 
 import fastestimator as fe
 import fastestimator.util.cli_util
@@ -175,10 +174,9 @@ class TestSuppressor(unittest.TestCase):
 class TestTimer(unittest.TestCase):
     def test_timer_as_context_manager(self):
         with patch('sys.stdout', new=StringIO()) as fake_stdout:
-            with patch('tensorflow.print', new=print):
-                with fe.util.Timer():
-                    time.sleep(1)
-                context = fake_stdout.getvalue()  # Tasks took ? seconds
+            with fe.util.Timer():
+                time.sleep(1)
+            context = fake_stdout.getvalue()  # Tasks took ? seconds
         exec_time = float(context.split(' ')[2])
         self.assertTrue(abs(exec_time - 1) < 0.1)
 
@@ -188,9 +186,8 @@ class TestTimer(unittest.TestCase):
             time.sleep(1)
 
         with patch('sys.stdout', new=StringIO()) as fake_stdout:
-            with patch('tensorflow.print', new=print):
-                func()
-                context = fake_stdout.getvalue()  # T2 took ? seconds
+            func()
+            context = fake_stdout.getvalue()  # T2 took ? seconds
 
         with self.subTest("test the printed name"):
             task_name = context.split(" ")[0]
@@ -466,9 +463,9 @@ class TestDefaultKeyDict(unittest.TestCase):
 class TestGetNumDevices(unittest.TestCase):
     def test_get_num_devices(self):
         x = fe.util.get_num_devices()
-        local_device_protos = device_lib.list_local_devices()
-        gpu_list = [x.name for x in local_device_protos if x.device_type == 'GPU']
-        ans = max(1, len(gpu_list))
+        # Use PyTorch to count available GPUs
+        gpu_count = torch.cuda.device_count()
+        ans = max(1, gpu_count)
         self.assertEqual(x, ans)
 
 

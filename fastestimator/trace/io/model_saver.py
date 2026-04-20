@@ -13,7 +13,6 @@
 # limitations under the License.
 # ==============================================================================
 import os
-import shutil
 from collections import deque
 from typing import Optional, Union
 
@@ -35,13 +34,9 @@ class ModelSaver(Trace):
         frequency: Model saving frequency in epoch(s).
         max_to_keep: Maximum number of latest saved files to keep. If 0 or None, all models will be saved.
         weights_name: The prefix used for saving model weights. If None model.model_name will be used as a prefix.
-        save_architecture: Whether to save the full model architecture in addition to the model weights. This option is
-            only available for TensorFlow models at present, and will generate a folder containing several files. The
-            model can then be re-instantiated even without access to the original code by calling:
-            tf.keras.models.load_model(<path to model folder>).
 
     Raises:
-        ValueError: If `max_to_keep` is negative, or if save_architecture is used with a PyTorch model.
+        ValueError: If `max_to_keep` is negative.
     """
 
     def __init__(self,
@@ -49,8 +44,7 @@ class ModelSaver(Trace):
                  save_dir: str,
                  frequency: int = 1,
                  max_to_keep: Optional[int] = None,
-                 weights_name: Optional[str] = None,
-                 save_architecture: bool = False) -> None:
+                 weights_name: Optional[str] = None) -> None:
         super().__init__(mode="train")
         self.model = model
         self.save_dir = save_dir
@@ -61,9 +55,6 @@ class ModelSaver(Trace):
             else:
                 raise ValueError("Weights name provided to ModelSaver is not a string with atleast one character.")
         self.frequency = frequency
-        self.save_architecture = save_architecture
-        if save_architecture and isinstance(model, torch.nn.Module):
-            raise ValueError("Sorry, architecture saving is not currently enabled for PyTorch")
         if max_to_keep is not None and max_to_keep < 0:
             raise ValueError(f"max_to_keep should be a non-negative integer, but got {max_to_keep}")
         self.file_queue = deque([None] * (max_to_keep or 0), maxlen=max_to_keep or 0)
@@ -73,16 +64,11 @@ class ModelSaver(Trace):
         if self.save_dir and self.system.epoch_idx % self.frequency == 0:
             model_name_prefix = self.weights_name if self.weights_name is not None else self.model.model_name
             model_name = "{}_epoch_{}".format(model_name_prefix, self.system.epoch_idx)
-            model_path = save_model(model=self.model,
-                                    save_dir=self.save_dir,
-                                    model_name=model_name,
-                                    save_architecture=self.save_architecture)
+            model_path = save_model(model=self.model, save_dir=self.save_dir, model_name=model_name)
             print("FastEstimator-ModelSaver: Saved model to {}".format(model_path))
             rm_path = self.file_queue[self.file_queue.maxlen - 1] if self.file_queue.maxlen else None
             if rm_path:
                 os.remove(rm_path)
-                if self.save_architecture:
-                    shutil.rmtree(os.path.splitext(rm_path)[0])
                 print("FastEstimator-ModelSaver: Removed model {} due to file number exceeding max_to_keep".format(
                     rm_path))
             self.file_queue.appendleft(model_path)

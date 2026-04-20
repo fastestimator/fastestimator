@@ -1,4 +1,4 @@
-# Copyright 2019 The TensorFlow Authors. All Rights Reserved.
+# Copyright 2024 The FastEstimator Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,68 +17,82 @@ FROM ubuntu:22.04 as base
 ENV DEBIAN_FRONTEND=noninteractive
 ENV LANG C.UTF-8
 
-COPY setup.sources.sh /setup.sources.sh
-COPY setup.packages.sh /setup.packages.sh
-COPY cpu.packages.txt /cpu.packages.txt
+# Install system packages
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    pkg-config \
+    gnupg \
+    ca-certificates \
+    wget \
+    curl \
+    unzip \
+    software-properties-common \
+    && rm -rf /var/lib/apt/lists/*
 
-# Set up shared custom sources
-RUN apt-get update
-RUN apt-get install -y gnupg ca-certificates wget
+# Add deadsnakes PPA for Python 3.10
+RUN add-apt-repository ppa:deadsnakes/ppa
 
-RUN /setup.packages.sh /cpu.packages.txt
+# Install Python 3.10
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3.10 \
+    python3.10-venv \
+    python3.10-dev \
+    && rm -rf /var/lib/apt/lists/*
 
+# Set Python 3.10 as default
+RUN ln -sf /usr/bin/python3.10 /usr/bin/python3 && \
+    ln -sf /usr/bin/python3.10 /usr/bin/python
 
-ARG PYTHON_VERSION=python3.10
-COPY setup.python.sh /setup.python.sh
-COPY cpu.requirements.txt /cpu.requirements.txt
-RUN /setup.python.sh $PYTHON_VERSION /cpu.requirements.txt
-
-COPY bashrc /etc/bash.bashrc
-RUN chmod a+rwx /etc/bash.bashrc
-
-RUN apt-get update
+# Install UV
+ENV UV_INSTALL_DIR="/usr/local"
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+ENV PATH="/usr/local/bin:$PATH"
 
 # OpenCV dependencies
-RUN apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     libglib2.0-0 \
     libsm6 \
     libxrender1 \
     libxext6 \
-    git
+    git \
+    && rm -rf /var/lib/apt/lists/*
 
-# Traceability requirement
-ENV DEBIAN_FRONTEND noninteractive
-RUN apt-get install -y \
+# Traceability requirements
+RUN apt-get update && apt-get install -y --no-install-recommends \
     graphviz \
     texlive-latex-base \
-    texlive-latex-extra
+    texlive-latex-extra \
+    && rm -rf /var/lib/apt/lists/*
 
-# Resolve an issue encountered when doing pip install -e
-ENV SETUPTOOLS_USE_DISTUTILS stdlib
-# upgrade essential packages
-RUN pip install --upgrade pip setuptools
+# GPU cleaning requirement
+RUN apt-get update && apt-get install -y --no-install-recommends lsof && rm -rf /var/lib/apt/lists/*
 
-# nightly test related packages
-RUN pip install --no-cache-dir \
+# Create virtual environment with UV
+RUN uv venv /opt/venv --python 3.10
+ENV VIRTUAL_ENV=/opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Install PyTorch (CPU) using UV
+RUN uv pip install torch==2.3.1 torchvision==0.18.1 torchaudio==2.3.1 --index-url https://download.pytorch.org/whl/cpu
+
+# Install Jupyter and testing packages
+RUN uv pip install \
     ipython==8.18.1 \
     ipykernel==6.27.1 \
     ipywidgets==8.1.1 \
     papermill==2.4.0 \
-    traitlets==5.14.0
-
-RUN pip install jupyter-client notebook
+    traitlets==5.14.0 \
+    jupyter-client \
+    notebook
 
 RUN ipython kernel install --user --name nightly_build
 
-# GPU cleaning requirement
-RUN apt-get install -y lsof
-
-# backend dependencies
-RUN pip install torch==2.3.1 torchvision==0.18.1 torchaudio==2.3.1 --index-url https://download.pytorch.org/whl/cpu
-
-# install FastEstimator
+# Install FastEstimator
 ARG InstallFE=True
-RUN if [ $InstallFE = "True" ]; then pip install fastestimator; fi
+RUN if [ "$InstallFE" = "True" ]; then uv pip install fastestimator; fi
+
+COPY bashrc /etc/bash.bashrc
+RUN chmod a+rwx /etc/bash.bashrc
 
 WORKDIR /

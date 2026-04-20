@@ -148,11 +148,8 @@ class SuperLoss(LossOp):
         return self.tau[mode]
 
 
-def _read_variable(variable: Tensor) -> Tensor:
+def _read_variable(variable: torch.Tensor) -> torch.Tensor:
     """Read a variable.
-
-    For some unknown reason, tf.Variable(False) on a multi-gpu machine will evaluate as True during an if-check, so need
-    to invoke the read method manually.
 
     Args:
         variable: The variable to be read.
@@ -160,19 +157,14 @@ def _read_variable(variable: Tensor) -> Tensor:
     Returns:
         The `variable` value.
     """
-    if isinstance(variable, torch.Tensor):
-        return variable
-    return variable.read_value()
+    return variable
 
 
-def _assign(variable: Tensor, value: Tensor) -> None:
+def _assign(variable: torch.Tensor, value: torch.Tensor) -> None:
     """In place assignment of `value` to a `variable`.
 
     Args:
         variable: The tensor to be modified.
         value: The new value to be inserted into the `variable`.
     """
-    if isinstance(variable, torch.Tensor):
-        variable.copy_(value.detach())
-    else:
-        variable.assign(value)
+    variable.copy_(value.detach())

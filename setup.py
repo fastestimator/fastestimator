@@ -55,7 +55,7 @@ def get_dependency():
         'requests==2.32.2',
         'tqdm==4.66.5',
         'numpy==1.26.4',
-        'pyfiglet==0.8.post1',
+        'pyfiglet==1.0.4',
         'opencv-python==4.7.0.72',
         'pandas==2.0.1',
         'wget==3.2',
@@ -73,7 +73,8 @@ def get_dependency():
         'py-cpuinfo==9.0.0',
         'fastparquet==2024.2.0',
         'jax==0.4.33',
-        'jaxlib==0.4.33'
+        'jaxlib==0.4.33',
+        'tensorboard'
     ]
     return dependencies
 

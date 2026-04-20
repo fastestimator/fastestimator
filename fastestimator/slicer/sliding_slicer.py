@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Dict, Iterable, List, Optional, Sequence, Tuple, Union
+from typing import Iterable, List, Optional, Sequence, Tuple, Union
 
 import torch
 
@@ -24,7 +24,6 @@ from fastestimator.slicer.slicer import Slicer
 from fastestimator.types import Tensor, TensorT
 from fastestimator.util.base_util import to_list
 from fastestimator.util.traceability_util import traceable
-from fastestimator.util.util import get_num_gpus
 
 
 @traceable()
@@ -121,7 +120,6 @@ class SlidingSlicer(Slicer):
             for idx, size in enumerate(self.window_size):
                 if size == 1:
                     self.auto_squeeze.append(idx)
-        self.replica_batch_sizes: Dict[int, int] = {}
 
     def _slice_batch(self, batch: Tensor) -> List[Tensor]:
         shape = list(get_shape(batch))
@@ -131,13 +129,6 @@ class SlidingSlicer(Slicer):
         if self.unslice_inputs and not self.static_unslice_shape:
             # If we have to unslice things later, then need to remember the desired shape if the user didn't give us one
             self.unslice_shape = [int(x) for x in tuple(shape)]
-            if get_num_gpus() > 1:
-                # Unfortunately in tf multi-gpu the batches are split over multiple replicas, in which case we need to
-                # manually correct the desired batch dimension later
-                replica_context = tf.distribute.get_replica_context()
-                if replica_context is not None:
-                    replica_id = int(replica_context.replica_id_in_sync_group)
-                    self.replica_batch_sizes[replica_id] = int(shape[0])
         stride_template = [
             slice(None) if stride == 0 or stride >= dim else None for stride, dim in zip(self.strides, shape)
         ]
@@ -193,35 +184,24 @@ class SlidingSlicer(Slicer):
                         break
             paddings.append([0, axis_pad])
         if self.pad_mode == 'constant':
-            if isinstance(batch, torch.Tensor):
-                paddings.reverse()  # Torch padding reads from right-most dim to left-most dim
-                paddings = [elem for x in paddings for elem in x]
-                batch = torch.nn.functional.pad(batch, pad=paddings, mode='constant', value=self.pad_val)
-            else:
-                batch = tf.pad(batch,
-                               paddings=tf.constant(paddings),
-                               mode="CONSTANT",
-                               constant_values=tf.cast(self.pad_val, dtype=batch.dtype))
+            paddings.reverse()  # Torch padding reads from right-most dim to left-most dim
+            paddings = [elem for x in paddings for elem in x]
+            batch = torch.nn.functional.pad(batch, pad=paddings, mode='constant', value=self.pad_val)
         elif self.pad_mode == 'mirror':
-            if isinstance(batch, torch.Tensor):
-                paddings.reverse()  # Torch padding reads from right-most dim to left-most dim
-                paddings = [elem for x in paddings for elem in x]
-                axis_padding = paddings[:-4]  # reflect only works skipping batch and channel dim
-                if not torch.is_floating_point(batch):
-                    batch_dtype = batch.dtype
-                    batch = torch.nn.functional.pad(batch.float(), pad=axis_padding, mode='reflect').to(batch_dtype)
-                else:
-                    batch = torch.nn.functional.pad(batch, pad=axis_padding, mode='reflect')
+            paddings.reverse()  # Torch padding reads from right-most dim to left-most dim
+            paddings = [elem for x in paddings for elem in x]
+            axis_padding = paddings[:-4]  # reflect only works skipping batch and channel dim
+            if not torch.is_floating_point(batch):
+                batch_dtype = batch.dtype
+                batch = torch.nn.functional.pad(batch.float(), pad=axis_padding, mode='reflect').to(batch_dtype)
             else:
-                batch = tf.pad(batch, paddings=tf.constant(paddings), mode="reflect")
+                batch = torch.nn.functional.pad(batch, pad=axis_padding, mode='reflect')
 
         return batch
 
     def _unslice_batch(self, slices: Tuple[Tensor, ...], key: str) -> Tensor:
         target_shape = self.unslice_shape
         assert target_shape is not None, "Unit tests should run forward_slicers before running reverse_slicers"
-        if self.replica_batch_sizes:
-            target_shape[0] = sum(self.replica_batch_sizes.values())
 
         stride_template = [
             slice(None) if stride == 0 or stride >= dim else None for stride, dim in zip(self.strides, target_shape)
@@ -230,8 +210,6 @@ class SlidingSlicer(Slicer):
         assert len(cuts) == len(slices), f"SlidingSlicer could not unslice key: {key}. It received {len(slices)} " + \
             f"slices, but a target_shape of {target_shape} with strides of {self.strides} could not have produced this."
 
-        # TF doesn't support slice assignment, and np doesn't support indexing using list of slice, so we'll use torch
-        # for everything and then cast back to tf later if needed
         merged_dtype = torch.float32 if self.unslice_mode == 'avg' else to_tensor(slices[0], target_type='torch').dtype
         merged = torch.zeros(size=target_shape, dtype=merged_dtype)
         merged = self._solve_padding(batch=merged, batch_shape=target_shape)
@@ -252,4 +230,4 @@ class SlidingSlicer(Slicer):
         # Remove any border padding which may have been added
         merged = merged[[slice(target) for target in target_shape]]
 
-        return merged if isinstance(slices[0], torch.Tensor) else to_tensor(data=merged, target_type='tf')
+        return merged

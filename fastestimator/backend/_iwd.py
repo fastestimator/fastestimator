@@ -37,7 +37,7 @@ def iwd(tensor: Tensor,
 
     This can be used as an activation function for the final layer of a neural network instead of softmax. For example,
     instead of: model.add(layers.Dense(classes, activation='softmax')), you could use:
-    model.add(layers.Dense(classes, activation=lambda x: iwd(tf.nn.sigmoid(x))))
+    model.add(layers.Dense(classes, activation=lambda x: iwd(torch.sigmoid(x))))
 
     This method can be used with Numpy data:
     ```python

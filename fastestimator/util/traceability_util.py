@@ -1140,7 +1140,7 @@ def __setstate__(self, state: Dict[str, Any]) -> None:
     """
     for key, replacement_data in state.items():
         if key not in self.__dict__:
-            self.key = replacement_data
+            self.__dict__[key] = replacement_data
             continue
         current_data = self.__dict__[key]
         self.__dict__[key] = _setdata(current_data, replacement_data)
