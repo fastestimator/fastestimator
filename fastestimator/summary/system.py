@@ -17,18 +17,7 @@ import datetime
 import json
 import os
 import uuid
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Dict,
-    List,
-    Optional,
-    Sequence,
-    Tuple,
-    TypeVar,
-    Union,
-)
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Sequence, Tuple, TypeVar, Union
 
 import dill as pickle  # Need to use dill since tf.Variable is a weakref object on multi-gpu machines
 import torch
@@ -66,6 +55,8 @@ class System:
             to completion)
         eval_steps_per_epoch: Whether evaluation iterations will be cut short or extended to complete N steps (or use None if they will run
             to completion)
+        test_steps_per_epoch: Whether test iterations will be cut short or extended to complete N steps (or use None
+            if they will run to completion)
         eval_log_steps: The list of steps on which evaluation progress logs need to be printed.
         system_config: A description of the initialization parameters defining the associated estimator.
 
@@ -109,6 +100,7 @@ class System:
     traces: List[Union['Trace', Scheduler['Trace']]]
     train_steps_per_epoch: Optional[int]
     eval_steps_per_epoch: Optional[int]
+    test_steps_per_epoch: Optional[int]
     eval_log_steps_request: List[int]
     eval_log_steps: Tuple[List[int], int]
     summary: Summary
@@ -126,6 +118,7 @@ class System:
                  total_epochs: int = 0,
                  train_steps_per_epoch: Optional[int] = None,
                  eval_steps_per_epoch: Optional[int] = None,
+                 test_steps_per_epoch: Optional[int] = None,
                  eval_log_steps: Sequence[int] = (),
                  system_config: Optional[List[FeSummaryTable]] = None) -> None:
 
@@ -142,6 +135,7 @@ class System:
         self.batch_idx = None
         self.train_steps_per_epoch = train_steps_per_epoch
         self.eval_steps_per_epoch = eval_steps_per_epoch
+        self.test_steps_per_epoch = test_steps_per_epoch
         self.stop_training = False
         self.summary = Summary(None, system_config)
         self.experiment_time = ""
@@ -154,6 +148,8 @@ class System:
             return self.train_steps_per_epoch
         elif self.mode == 'eval':
             return self.eval_steps_per_epoch
+        elif self.mode == 'test':
+            return self.test_steps_per_epoch
         else:
             return None
 
@@ -206,6 +202,7 @@ class System:
         self.experiment_time = self.experiment_time or datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
         self.mode = "test"
         self.ds_id = ''
+        self.batch_idx = None
         if not self.stop_training:
             self.epoch_idx = self.total_epochs
         self.stop_training = False

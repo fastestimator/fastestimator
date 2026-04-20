@@ -69,6 +69,8 @@ class Estimator:
             exhausted. If None, all data will be used.
         eval_steps_per_epoch: Evaluation will be cut short or extended to complete N steps even if loader is not yet
             exhausted. If None, all data will be used.
+        test_steps_per_epoch: Testing will be cut short or extended to complete N steps even if loader is not yet
+            exhausted. If None, all data will be used.
         traces: What Traces to run during training. If None, only the system's default Traces will be included.
         log_steps: Frequency (in steps) for printing log messages. 0 to disable all step-based printing (though epoch
             information will still print). None to completely disable printing.
@@ -86,6 +88,7 @@ class Estimator:
                  epochs: int,
                  train_steps_per_epoch: Optional[int] = None,
                  eval_steps_per_epoch: Optional[int] = None,
+                 test_steps_per_epoch: Optional[int] = None,
                  traces: Union[None, Trace, Scheduler[Trace], Sequence[Union[None, Trace, Scheduler[Trace]]]] = None,
                  log_steps: Optional[int] = 100,
                  eval_log_steps: Sequence[int] = (),
@@ -102,6 +105,7 @@ class Estimator:
                              total_epochs=epochs,
                              train_steps_per_epoch=train_steps_per_epoch,
                              eval_steps_per_epoch=eval_steps_per_epoch,
+                             test_steps_per_epoch=test_steps_per_epoch,
                              eval_log_steps=eval_log_steps,
                              system_config=self.fe_summary())
 
@@ -207,8 +211,54 @@ class Estimator:
         _verify_dependency_versions()
         self.system.reset_for_test(summary)
         self._prepare_traces(run_modes={"test"})
+        self._warmup_test(eager=eager)
         self._start(run_modes={"test"}, eager=eager)
         return self.system.summary or None
+
+    def _warmup_test(self, eager: bool = True) -> None:
+        """Perform a lightweight validation for test mode to ensure the pipeline and network are compatible.
+
+        Args:
+            eager: Whether to run the training in eager mode. PyTorch runs in eager mode by default.
+        """
+        mode = "test"
+        if mode not in self.pipeline.get_modes():
+            return
+        epoch = self.system.epoch_idx
+        ds_ids = self.pipeline.get_ds_ids(epoch, mode)
+        for ds_id in ds_ids:
+            ds_traces = get_current_items(self.traces_in_use, run_modes=mode, epoch=epoch, ds_id=ds_id)
+            trace_input_keys = set()
+            trace_output_keys = {"*"}
+            for trace in ds_traces:
+                if not isinstance(trace, TestEssential):
+                    trace_input_keys.update(trace.inputs)
+                trace_output_keys.update(trace.get_outputs(ds_ids=ds_ids))
+
+            with self.network(mode=mode,
+                              epoch=epoch,
+                              ds_id=ds_id,
+                              desired_output_keys=trace_input_keys,
+                              warmup=True,
+                              eager=eager):
+                network_input_keys = self.network.ctx_inputs
+                network_output_keys = self.network.ctx_outputs
+
+                with self.pipeline(mode=mode,
+                                   epoch=epoch,
+                                   ds_id=ds_id,
+                                   steps_per_epoch=None,
+                                   output_keys=(trace_input_keys - network_output_keys)
+                                   | network_input_keys) as loader:
+                    loader = self._configure_loader(loader)
+                    batch = next(iter(loader))
+                    batch = self._configure_tensor(loader, batch)
+                assert isinstance(batch, dict), \
+                    f"please make sure data output format is dictionary (got {type(batch)})"
+                pipeline_output_keys = to_set(batch.keys())
+                unmet_requirements = trace_input_keys - (pipeline_output_keys | network_output_keys | trace_output_keys)
+                assert not unmet_requirements, \
+                    "found missing key(s) during test mode ds_id {}: {}".format(ds_id, unmet_requirements)
 
     def _warmup(self, eager: bool = True) -> None:
         """Perform a test run of each pipeline and network signature epoch to make sure that training won't fail later.
@@ -379,6 +429,15 @@ class Estimator:
                         ], log_steps_per_epoch) if not self.system.eval_log_steps_request else \
                             (self.system.eval_log_steps_request, log_steps_per_epoch)
 
+                    # Provide total step count to Logger for test progress reporting
+                    if self.system.mode == 'test':
+                        test_total_steps = math.ceil(
+                            len(loader) /
+                            loader.get_batch_size()) if not self.system.steps_per_epoch else self.system.steps_per_epoch
+                        for trace in get_current_items(self.traces_in_use, run_modes="test"):
+                            if isinstance(trace, Logger):
+                                trace.test_total_steps[self.system.ds_id] = test_total_steps
+
                     loader = self._configure_loader(loader)
                     iterator = iter(loader)
                     batch = next(iterator)
@@ -400,7 +459,9 @@ class Estimator:
                                           DataLoader) and ((self.system.batch_idx == self.system.train_steps_per_epoch
                                                             and self.system.mode == "train") or
                                                            (self.system.batch_idx == self.system.eval_steps_per_epoch
-                                                            and self.system.mode == "eval")):
+                                                            and self.system.mode == "eval") or
+                                                           (self.system.batch_idx == self.system.test_steps_per_epoch
+                                                            and self.system.mode == "test")):
                                 raise StopIteration
                             batch = next(iterator)
                         except StopIteration:

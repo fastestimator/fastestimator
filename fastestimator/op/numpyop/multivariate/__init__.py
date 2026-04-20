@@ -25,6 +25,7 @@ __getattr__, __dir__, __all__ = lazy.attach(__name__,
                                                           'crop': ['Crop'],
                                                           'crop_non_empty_mask_if_exists': ['CropNonEmptyMaskIfExists'],
                                                           'elastic_transform': ['ElasticTransform'],
+                                                          'elastic_transform_3d': ['ElasticTransform3D'],
                                                           'flip': ['Flip'],
                                                           'grid_distortion': ['GridDistortion'],
                                                           'horizontal_flip': ['HorizontalFlip'],
@@ -33,10 +34,14 @@ __getattr__, __dir__, __all__ = lazy.attach(__name__,
                                                           'optical_distortion': ['OpticalDistortion'],
                                                           'pad_if_needed': ['PadIfNeeded'],
                                                           'random_crop_from_borders': ['RandomCropFromBorders'],
+                                                          'random_affine_3d': ['RandomAffine3D'],
                                                           'random_crop': ['RandomCrop'],
+                                                          'random_crop_3d': ['RandomCrop3D'],
                                                           'random_crop_near_bbox': ['RandomCropNearBBox'],
                                                           'random_grid_shuffle': ['RandomGridShuffle'],
                                                           'random_resized_crop': ['RandomResizedCrop'],
+                                                          'random_flip_3d': ['RandomFlip3D'],
+                                                          'random_rotate_3d': ['RandomRotate3D'],
                                                           'random_rotate_90': ['RandomRotate90'],
                                                           'random_scale': ['RandomScale'],
                                                           'random_sized_bbox_safe_crop': ['RandomSizedBBoxSafeCrop'],
@@ -55,21 +60,26 @@ if TYPE_CHECKING:
     from fastestimator.op.numpyop.multivariate.bbox_safe_random_crop import BBoxSafeRandomCrop
     from fastestimator.op.numpyop.multivariate.center_crop import CenterCrop
     from fastestimator.op.numpyop.multivariate.crop import Crop
+    from fastestimator.op.numpyop.multivariate.crop_and_pad import CropAndPad
     from fastestimator.op.numpyop.multivariate.crop_non_empty_mask_if_exists import CropNonEmptyMaskIfExists
     from fastestimator.op.numpyop.multivariate.elastic_transform import ElasticTransform
+    from fastestimator.op.numpyop.multivariate.elastic_transform_3d import ElasticTransform3D
     from fastestimator.op.numpyop.multivariate.flip import Flip
     from fastestimator.op.numpyop.multivariate.grid_distortion import GridDistortion
     from fastestimator.op.numpyop.multivariate.horizontal_flip import HorizontalFlip
-    from fastestimator.op.numpyop.multivariate.crop_and_pad import CropAndPad
     from fastestimator.op.numpyop.multivariate.longest_max_size import LongestMaxSize
     from fastestimator.op.numpyop.multivariate.mask_dropout import MaskDropout
     from fastestimator.op.numpyop.multivariate.optical_distortion import OpticalDistortion
     from fastestimator.op.numpyop.multivariate.pad_if_needed import PadIfNeeded
-    from fastestimator.op.numpyop.multivariate.random_crop_from_borders import RandomCropFromBorders
+    from fastestimator.op.numpyop.multivariate.random_affine_3d import RandomAffine3D
     from fastestimator.op.numpyop.multivariate.random_crop import RandomCrop
+    from fastestimator.op.numpyop.multivariate.random_crop_3d import RandomCrop3D
+    from fastestimator.op.numpyop.multivariate.random_crop_from_borders import RandomCropFromBorders
     from fastestimator.op.numpyop.multivariate.random_crop_near_bbox import RandomCropNearBBox
+    from fastestimator.op.numpyop.multivariate.random_flip_3d import RandomFlip3D
     from fastestimator.op.numpyop.multivariate.random_grid_shuffle import RandomGridShuffle
     from fastestimator.op.numpyop.multivariate.random_resized_crop import RandomResizedCrop
+    from fastestimator.op.numpyop.multivariate.random_rotate_3d import RandomRotate3D
     from fastestimator.op.numpyop.multivariate.random_rotate_90 import RandomRotate90
     from fastestimator.op.numpyop.multivariate.random_scale import RandomScale
     from fastestimator.op.numpyop.multivariate.random_sized_bbox_safe_crop import RandomSizedBBoxSafeCrop
