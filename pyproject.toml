@@ -62,9 +62,9 @@ dependencies = [
     "torch==2.3.1 ; sys_platform == 'darwin'",
     "torchvision==0.18.1 ; sys_platform == 'darwin'",
     "torchaudio==2.3.1 ; sys_platform == 'darwin'",
-    "torch==2.3.1+cpu ; sys_platform != 'darwin'",
-    "torchvision==0.18.1+cpu ; sys_platform != 'darwin'",
-    "torchaudio==2.3.1+cpu ; sys_platform != 'darwin'",
+    "torch==2.3.1 ; sys_platform != 'darwin'",
+    "torchvision==0.18.1 ; sys_platform != 'darwin'",
+    "torchaudio==2.3.1 ; sys_platform != 'darwin'",
 ]
 
 [project.optional-dependencies]

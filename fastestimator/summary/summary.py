@@ -233,8 +233,7 @@ class Summary:
                 numeric_items.append((step, val))
         if not numeric_items:
             return None
-        best_step, best_val = max(numeric_items, key=lambda x: x[1]) if largest else min(
-            numeric_items, key=lambda x: x[1])
+        best_step, _ = max(numeric_items, key=lambda x: x[1]) if largest else min(numeric_items, key=lambda x: x[1])
         return (best_step, step_vals[best_step])
 
     def to_dict(self, mode: Optional[str] = None) -> Dict[str, Any]:
