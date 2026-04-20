@@ -213,13 +213,13 @@ class System:
                 graph.history.pop('test', None)
 
     def write_summary(self, key: str, value: Any) -> None:
-        """Write an entry into the `Summary` object (iff the experiment was named).
+        """Write an entry into the `Summary` object (iff the experiment was named and mode is set).
 
         Args:
             key: The key to write into the summary object.
             value: The value to write into the summary object.
         """
-        if self.summary:
+        if self.summary and self.mode:
             self.summary.history[self.mode][key][self.global_step or 0] = value
 
     def add_graph(self, graph_name: str, graph: Union[Summary, List[Summary]]) -> None:
@@ -237,43 +237,59 @@ class System:
             self.custom_graphs[graph_name] = list(graph)
 
     def save_state(self, save_dir: str) -> None:
-        """Load training state.
+        """Save training state.
 
         Args:
-            save_dir: The directory into which to save the state
+            save_dir: The directory into which to save the state.
+
+        Raises:
+            IOError: If the state cannot be saved to disk.
         """
         os.makedirs(save_dir, exist_ok=True)
         # Start with the high-level info. We could use pickle for this but having it human readable is nice.
         state = {key: value for key, value in self.__dict__.items() if is_restorable(value)[0]}
-        with open(os.path.join(save_dir, 'system.json'), 'w') as fp:
-            json.dump(state, fp, indent=4)
-        # Save all of the models / optimizer states
-        for model in self.network.models:
-            save_model(model, save_dir=save_dir, save_optimizer=hasattr(model, "optimizer") and model.optimizer)
-        # Save everything else
-
-        objects = {
-            'summary': self.summary,
-            'custom_graphs': self.custom_graphs,
-            'traces': [trace.__getstate__() if hasattr(trace, '__getstate__') else {} for trace in self.traces],
-            'tops': [op.__getstate__() if hasattr(op, '__getstate__') else {} for op in self.network.ops],
-            'slops': [sl.__getstate__() if hasattr(sl, '__getstate__') else {} for sl in self.network.slicers],
-            'pops': [op.__getstate__() if hasattr(op, '__getstate__') else {} for op in self.network.postprocessing],
-            'nops': [op.__getstate__() if hasattr(op, '__getstate__') else {} for op in self.pipeline.ops],
-            'ds': {
-                mode: {
-                    key: value.__getstate__()
-                    for key, value in ds.items() if hasattr(value, '__getstate__')
+        system_path = os.path.join(save_dir, 'system.json')
+        objects_path = os.path.join(save_dir, 'objects.pkl')
+        # Write to temp files first, then rename for atomicity
+        system_tmp = system_path + '.tmp'
+        objects_tmp = objects_path + '.tmp'
+        try:
+            with open(system_tmp, 'w') as fp:
+                json.dump(state, fp, indent=4)
+            # Save all of the models / optimizer states
+            for model in self.network.models:
+                save_model(model, save_dir=save_dir, save_optimizer=hasattr(model, "optimizer") and model.optimizer)
+            # Save everything else
+            objects = {
+                'summary': self.summary,
+                'custom_graphs': self.custom_graphs,
+                'traces': [trace.__getstate__() if hasattr(trace, '__getstate__') else {} for trace in self.traces],
+                'tops': [op.__getstate__() if hasattr(op, '__getstate__') else {} for op in self.network.ops],
+                'slops': [sl.__getstate__() if hasattr(sl, '__getstate__') else {} for sl in self.network.slicers],
+                'pops':
+                [op.__getstate__() if hasattr(op, '__getstate__') else {} for op in self.network.postprocessing],
+                'nops': [op.__getstate__() if hasattr(op, '__getstate__') else {} for op in self.pipeline.ops],
+                'ds': {
+                    mode: {
+                        key: value.__getstate__()
+                        for key, value in ds.items() if hasattr(value, '__getstate__')
+                    }
+                    for mode, ds in self.pipeline.data.items()
                 }
-                for mode, ds in self.pipeline.data.items()
             }
-        }
-        with open(os.path.join(save_dir, 'objects.pkl'), 'wb') as file:
-            # We need to use a custom pickler here to handle MirroredStrategy, which will show up inside of tf
-            # MirroredVariables in multi-gpu systems.
-            p = pickle.Pickler(file)
-            p.dispatch_table = copyreg.dispatch_table.copy()
-            p.dump(objects)
+            with open(objects_tmp, 'wb') as file:
+                p = pickle.Pickler(file)
+                p.dispatch_table = copyreg.dispatch_table.copy()
+                p.dump(objects)
+            # Atomic rename — prevents corruption if interrupted mid-write
+            os.replace(system_tmp, system_path)
+            os.replace(objects_tmp, objects_path)
+        except Exception:
+            # Clean up temp files on failure
+            for tmp in (system_tmp, objects_tmp):
+                if os.path.exists(tmp):
+                    os.remove(tmp)
+            raise
 
     def load_state(self, load_dir: str) -> None:
         """Load training state.
