@@ -61,7 +61,6 @@ class EigenCAM(Trace):
         ds_id: What dataset id(s) to execute this Trace in. To execute regardless of ds_id, pass None. To execute in all
             ds_ids except for a particular one, you can pass an argument like "!ds1".
     """
-
     def __init__(self,
                  images: str,
                  activations: str,
@@ -178,6 +177,10 @@ class EigenCAM(Trace):
         for component_idx in range(n_components):
             batch = []
             for base_image, component_image in zip(images, batch_component_image):
+                # Convert to numpy HWC for processing and display
+                base_image = to_number(base_image)
+                if base_image.ndim == 3 and base_image.shape[0] in (1, 3) and base_image.shape[2] not in (1, 3):
+                    base_image = np.moveaxis(base_image, 0, -1)
                 if len(component_image) > component_idx:
                     mask = component_image[component_idx]
                     mask = cv2.resize(mask, (width, height))
@@ -185,9 +188,6 @@ class EigenCAM(Trace):
                     mask = mask / np.max(mask)
                     mask = cv2.cvtColor(cv2.applyColorMap(np.uint8(255 * mask), cv2.COLORMAP_JET), cv2.COLOR_BGR2RGB)
                     mask = np.float32(mask) / 255
-                    # switch to channel first for pytorch
-                    if isinstance(base_image, torch.Tensor):
-                        mask = np.moveaxis(mask, source=-1, destination=1)
                     new_image = base_image + mask
                     new_image = new_image / reduce_max(new_image)
                 else:

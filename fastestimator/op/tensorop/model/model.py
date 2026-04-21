@@ -52,7 +52,6 @@ class ModelOp(TensorOp):
             so you must provide output key names for them within the `outputs` argument. Note that layer names may be
             different between single-gpu and multi-gpu environments, though we attempt to prevent this.
     """
-
     def __init__(self,
                  model: Model,
                  inputs: Union[None, str, Iterable[str]] = None,
@@ -164,5 +163,8 @@ def _unpack_output(output_dict: Dict[Union[str, torch.device], Tensor], device: 
         A stacked representation of the tensor(s) in the output_dict.
     """
     if isinstance(device, torch.device):
+        if len(output_dict) == 1:
+            # Single device: return tensor directly to preserve autograd graph
+            return next(iter(output_dict.values())).to(device)
         response = torch.vstack([t[1].to(device) for t in sorted(output_dict.items(), key=lambda x: x[0].index or 0)])
     return response

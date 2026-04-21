@@ -57,7 +57,6 @@ class Rotate(NumpyOp):
     Image types:
         uint8
     """
-
     def __init__(self,
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
@@ -112,7 +111,6 @@ class Identity(NumpyOp):
         ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
             ds_ids except for a particular one, you can pass an argument like "!ds1".
     """
-
     def __init__(self,
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
@@ -147,7 +145,6 @@ class Equalize(NumpyOp):
     Image types:
         uint8
     """
-
     def __init__(self,
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
@@ -175,9 +172,12 @@ class Equalize(NumpyOp):
         Returns:
             The image after applying equalize.
         """
+        original_dtype = data.dtype
+        if original_dtype != np.uint8:
+            data = np.clip(data, 0, 255).astype(np.uint8)
         im = Image.fromarray(data)
         im = ImageOps.equalize(im)
-        return np.array(im)
+        return np.array(im).astype(original_dtype)
 
 
 @traceable()
@@ -199,7 +199,6 @@ class Posterize(PosterizeAug):
     Image types:
         uint8
     """
-
     def __init__(self,
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
@@ -270,7 +269,6 @@ class Solarize(NumpyOp):
     Image types:
         uint8
     """
-
     def __init__(self,
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
@@ -328,7 +326,6 @@ class OneOfMultiVar(OneOf):
     Args:
         *numpy_ops: A list of ops to choose between with uniform probability.
     """
-
     def __init__(self, *numpy_ops: NumpyOp) -> None:
         inputs = to_set(numpy_ops[0].inputs)
         outputs = to_set(numpy_ops[0].outputs)
@@ -393,7 +390,6 @@ class RUA(NumpyOp):
     Image types:
         uint8
     """
-
     def __init__(self,
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],

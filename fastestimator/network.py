@@ -602,7 +602,7 @@ class TorchNetwork(BaseNetwork):
         self.ctx_state["tape"] = NonContext()
         mode = self.ctx_state.get("mode", "train")
         # Use inference_mode for eval/test (faster than no_grad) and no_grad as fallback for train without gradients
-        if mode in ("eval", "test"):
+        if mode in ("eval", "test") and not self.ctx_state["req_grad"]:
             grad_ctx = torch.inference_mode()
         elif not self.ctx_state["req_grad"]:
             grad_ctx = torch.no_grad()

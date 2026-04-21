@@ -40,7 +40,6 @@ class AutoContrast(NumpyOp):
     Image types:
         uint8
     """
-
     def __init__(self,
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
@@ -61,6 +60,9 @@ class AutoContrast(NumpyOp):
 
     @staticmethod
     def _apply_autocontrast(data: np.ndarray) -> np.ndarray:
+        original_dtype = data.dtype
+        if original_dtype != np.uint8:
+            data = np.clip(data, 0, 255).astype(np.uint8)
         im = Image.fromarray(data)
         im = ImageOps.autocontrast(im)
-        return np.array(im)
+        return np.array(im).astype(original_dtype)
