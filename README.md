@@ -15,7 +15,8 @@
 
 FastEstimator is a high-level deep learning library built on PyTorch. With the help of FastEstimator, you can easily build a high-performance deep learning model and run it anywhere. :wink:
 
-**FastEstimator 2.0** is a major release that streamlines the framework to be **PyTorch-only**, removes TensorFlow dependencies, migrates to [UV](https://docs.astral.sh/uv/) for modern dependency management, and includes updated ops, traces, and tutorials.
+**FastEstimator 2.0** is a major release that streamlines the framework to be **PyTorch-only**, removes TensorFlow dependencies, migrates to
+[UV](https://docs.astral.sh/uv/) for modern dependency management, and includes updated ops, traces, and tutorials.
 
 For more information, please visit our [website](https://www.fastestimator.org/).
 
