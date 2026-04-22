@@ -338,7 +338,7 @@ class System:
         if not os.path.exists(objects_path):
             raise FileNotFoundError(f"Could not find the objects summary file at {objects_path}")
         with open(objects_path, 'rb') as file:
-            objects = _RestrictedUnpickler(file).load()
+            objects = pickle.load(file)
         self.summary.__dict__.update(objects['summary'].__dict__)
         self.custom_graphs = objects['custom_graphs']
         self._load_list(objects, 'traces', self.traces)
