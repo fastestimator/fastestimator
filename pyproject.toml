@@ -1,7 +1,7 @@
 [project]
 name = "fastestimator"
 version = "2.0.0"
-description = "Deep learning framework"
+description = "A high-level deep learning library built on PyTorch"
 readme = "README.md"
 license = { text = "Apache-2.0" }
 authors = [{ name = "FastEstimator Dev" }]

@@ -83,16 +83,22 @@ setup(
     entry_points={"console_scripts": ["fastestimator = fastestimator.cli.main:main"]},
     name=get_name(),
     version=get_version(),
-    description="Deep learning framework",
+    description="A high-level deep learning library built on PyTorch",
     packages=find_packages(),
     package_dir={'': '.'},
-    long_description="FastEstimator is a high-level deep learning API. With the help of FastEstimator, you can easily \
-                    build a high-performance deep learning model and run it anywhere.",
+    long_description=
+    "FastEstimator is a high-level deep learning library built on PyTorch. With the help of FastEstimator, you can easily build a high-performance deep learning model and run it anywhere.",
     author="FastEstimator Dev",
     url='https://github.com/fastestimator/fastestimator',
     license="Apache License 2.0",
-    keywords="fastestimator pytorch",
-    classifiers=["License :: OSI Approved :: Apache Software License", "Programming Language :: Python :: 3"],
+    keywords="fastestimator pytorch deep-learning machine-learning",
+    classifiers=[
+        "License :: OSI Approved :: Apache Software License",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
+    ],
     # Declare minimal set for installation
     install_requires=get_dependency(),
     python_requires='>=3.10.0',
