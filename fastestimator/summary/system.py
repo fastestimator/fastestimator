@@ -19,7 +19,7 @@ import os
 import shutil
 import tempfile
 import uuid
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Sequence, Tuple, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Sequence, Tuple, TypeVar, Union
 
 import dill as pickle  # dill extends pickle to handle lambdas/closures in user-defined traces and ops
 import torch
@@ -338,7 +338,7 @@ class System:
         if not os.path.exists(objects_path):
             raise FileNotFoundError(f"Could not find the objects summary file at {objects_path}")
         with open(objects_path, 'rb') as file:
-            objects = pickle.load(file)
+            objects = _RestrictedUnpickler(file).load()
         self.summary.__dict__.update(objects['summary'].__dict__)
         self.custom_graphs = objects['custom_graphs']
         self._load_list(objects, 'traces', self.traces)
