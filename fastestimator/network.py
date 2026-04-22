@@ -40,8 +40,7 @@ from fastestimator.slicer.slicer import Slicer, forward_slicers, reverse_slicers
 from fastestimator.types import Array, Model
 from fastestimator.util.base_util import NonContext, filter_nones, to_list, warn
 from fastestimator.util.traceability_util import trace_model, traceable
-from fastestimator.util.util import Suppressor, detach_tensors, get_batch_size, get_device, get_num_gpus, \
-    move_tensors_to_device
+from fastestimator.util.util import detach_tensors, get_device, get_num_gpus, move_tensors_to_device
 
 T = TypeVar('T')
 
