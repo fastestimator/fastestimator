@@ -151,9 +151,10 @@ def download_file_from_google_drive(file_id: str, destination: str, max_retries:
     for attempt in range(max_retries):
         if is_valid_file(destination):
             return
-        # Exponential backoff with jitter; base of 30s gives Google throttling windows time to clear
-        wait = (2**attempt) * random.uniform(30, 60)
-        time.sleep(wait)
+        if attempt > 0:
+            # Exponential backoff with jitter; base of 30s gives Google throttling windows time to clear
+            wait = (2**(attempt - 1)) * random.uniform(30, 60)
+            time.sleep(wait)
         if is_valid_file(destination):
             # Check again in case some other thread came through and downloaded while you were sleeping
             return

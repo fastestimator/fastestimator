@@ -16,10 +16,12 @@ import copyreg
 import datetime
 import json
 import os
+import shutil
+import tempfile
 import uuid
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Sequence, Tuple, TypeVar, Union
 
-import dill as pickle  # Need to use dill since tf.Variable is a weakref object on multi-gpu machines
+import dill as pickle  # dill extends pickle to handle lambdas/closures in user-defined traces and ops
 import torch
 
 from fastestimator.backend._load_model import load_model
@@ -239,6 +241,13 @@ class System:
     def save_state(self, save_dir: str) -> None:
         """Save training state.
 
+        All artifacts (model weights, optimizer states, objects.pkl, system.json) are written
+        to a private staging directory first.  They are promoted into ``save_dir`` only after
+        every write succeeds, with ``system.json`` promoted last so that its presence acts as
+        a commit marker.  A crash during staging leaves ``save_dir`` untouched; a crash during
+        promotion may leave some model files updated but will not produce a ``system.json`` that
+        disagrees with them, because ``system.json`` is moved last.
+
         Args:
             save_dir: The directory into which to save the state.
 
@@ -246,20 +255,21 @@ class System:
             IOError: If the state cannot be saved to disk.
         """
         os.makedirs(save_dir, exist_ok=True)
-        # Start with the high-level info. We could use pickle for this but having it human readable is nice.
-        state = {key: value for key, value in self.__dict__.items() if is_restorable(value)[0]}
-        system_path = os.path.join(save_dir, 'system.json')
-        objects_path = os.path.join(save_dir, 'objects.pkl')
-        # Write to temp files first, then rename for atomicity
-        system_tmp = system_path + '.tmp'
-        objects_tmp = objects_path + '.tmp'
+        # Stage every artifact in a private temp directory so no partial write
+        # ever touches the live checkpoint.  system.json is promoted last; its
+        # presence in save_dir is the commit marker used by load_state.
+        staging_dir = tempfile.mkdtemp(dir=save_dir, prefix='.staging_')
         try:
-            with open(system_tmp, 'w') as fp:
+            # 1. High-level scalar state (human-readable).
+            state = {key: value for key, value in self.__dict__.items() if is_restorable(value)[0]}
+            with open(os.path.join(staging_dir, 'system.json'), 'w') as fp:
                 json.dump(state, fp, indent=4)
-            # Save all of the models / optimizer states
+
+            # 2. Model / optimizer weights — written into staging, not save_dir.
             for model in self.network.models:
-                save_model(model, save_dir=save_dir, save_optimizer=hasattr(model, "optimizer") and model.optimizer)
-            # Save everything else
+                save_model(model, save_dir=staging_dir, save_optimizer=hasattr(model, "optimizer") and model.optimizer)
+
+            # 3. Everything else that can't be JSON-serialised.
             objects = {
                 'summary': self.summary,
                 'custom_graphs': self.custom_graphs,
@@ -277,19 +287,32 @@ class System:
                     for mode, ds in self.pipeline.data.items()
                 }
             }
-            with open(objects_tmp, 'wb') as file:
+            with open(os.path.join(staging_dir, 'objects.pkl'), 'wb') as file:
                 p = pickle.Pickler(file)
                 p.dispatch_table = copyreg.dispatch_table.copy()
                 p.dump(objects)
-            # Atomic rename — prevents corruption if interrupted mid-write
-            os.replace(system_tmp, system_path)
-            os.replace(objects_tmp, objects_path)
+
+            # 4. Commit: promote every staged file into save_dir.
+            #    Model/optimizer files first, then objects.pkl, then system.json
+            #    last so that an interrupted promotion never leaves save_dir with
+            #    a system.json that disagrees with the other files.
+            staged_files = os.listdir(staging_dir)
+
+            def _commit_order(name: str) -> int:
+                if name == 'system.json':
+                    return 2
+                if name == 'objects.pkl':
+                    return 1
+                return 0  # model / optimizer weights
+
+            for name in sorted(staged_files, key=_commit_order):
+                os.replace(os.path.join(staging_dir, name), os.path.join(save_dir, name))
         except Exception:
-            # Clean up temp files on failure
-            for tmp in (system_tmp, objects_tmp):
-                if os.path.exists(tmp):
-                    os.remove(tmp)
+            shutil.rmtree(staging_dir, ignore_errors=True)
             raise
+        else:
+            # Staging dir should be empty after all replaces; remove it.
+            shutil.rmtree(staging_dir, ignore_errors=True)
 
     def load_state(self, load_dir: str) -> None:
         """Load training state.

@@ -19,7 +19,7 @@ from typing import Tuple
 import numpy as np
 
 from fastestimator.dataset.numpy_dataset import NumpyDataset
-from fastestimator.util.google_download_util import download_url_with_fallback
+from fastestimator.util.google_download_util import download_url, download_url_with_fallback
 
 # Official distribution: https://doi.org/10.5281/zenodo.10519652 (MedMNIST v2.2 / v3.0)
 _ZENODO_BASE = "https://zenodo.org/records/10519652/files"
@@ -34,7 +34,9 @@ dataset_sources = {
     "fracturemnist3d": (f"{_ZENODO_BASE}/fracturemnist3d.npz?download=1", "104OYiONKAsN2O-VeVGS7ReXZI4GtNsZk"),
     "nodulemnist3d": (f"{_ZENODO_BASE}/nodulemnist3d.npz?download=1", "1krf_Uv-bA5CEt_dCD6h8xJbzZk9ETWLU"),
     "octmnist": (f"{_ZENODO_BASE}/octmnist.npz?download=1", "1yRhEBDQwHu5jSnrzIm87Cazns3Eesv4b"),
-    "organamnist": (f"{_ZENODO_BASE}/organamnist.npz?download=1", "1yRhEBDQwHu5jSnrzIm87Cazns3Eesv4b"),
+    # NOTE: no verified Google Drive fallback ID exists for organamnist; None disables the fallback
+    # to prevent the silent data-corruption that occurred when it shared octmnist's Drive ID.
+    "organamnist": (f"{_ZENODO_BASE}/organamnist.npz?download=1", None),
     "organcmnist": (f"{_ZENODO_BASE}/organcmnist.npz?download=1", "1GqXyaV6arJq0O-3Fn2hvBw77MG9fHeoz"),
     "organmnist3d": (f"{_ZENODO_BASE}/organmnist3d.npz?download=1", "1RQiHLj35u3m6GCiBKJFnb9VH76u7yRi0"),
     "organsmnist": (f"{_ZENODO_BASE}/organsmnist.npz?download=1", "1spWIVxKaLvWAxLHGLSr0IJJBSm0MDBB4"),
@@ -108,7 +110,10 @@ def load_data(
 
     print("Downloading data to {}".format(root_dir))
     url, gdrive_id = dataset_sources[dataset_name]
-    download_url_with_fallback(url, gdrive_id, download_path)
+    if gdrive_id is not None:
+        download_url_with_fallback(url, gdrive_id, download_path)
+    else:
+        download_url(url, download_path)
 
     npz_file = np.load(download_path)
 
