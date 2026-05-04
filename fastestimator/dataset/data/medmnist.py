@@ -1,4 +1,4 @@
-# Copyright 2023 The FastEstimator Authors. All Rights Reserved.
+# Copyright 2026 The FastEstimator Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -34,9 +34,7 @@ dataset_sources = {
     "fracturemnist3d": (f"{_ZENODO_BASE}/fracturemnist3d.npz?download=1", "104OYiONKAsN2O-VeVGS7ReXZI4GtNsZk"),
     "nodulemnist3d": (f"{_ZENODO_BASE}/nodulemnist3d.npz?download=1", "1krf_Uv-bA5CEt_dCD6h8xJbzZk9ETWLU"),
     "octmnist": (f"{_ZENODO_BASE}/octmnist.npz?download=1", "1yRhEBDQwHu5jSnrzIm87Cazns3Eesv4b"),
-    # NOTE: no verified Google Drive fallback ID exists for organamnist; None disables the fallback
-    # to prevent the silent data-corruption that occurred when it shared octmnist's Drive ID.
-    "organamnist": (f"{_ZENODO_BASE}/organamnist.npz?download=1", None),
+    "organamnist": (f"{_ZENODO_BASE}/organamnist.npz?download=1", "17p6di3YeXgGFzMfpy_IOiBs-LAzdEbB0O"),
     "organcmnist": (f"{_ZENODO_BASE}/organcmnist.npz?download=1", "1GqXyaV6arJq0O-3Fn2hvBw77MG9fHeoz"),
     "organmnist3d": (f"{_ZENODO_BASE}/organmnist3d.npz?download=1", "1RQiHLj35u3m6GCiBKJFnb9VH76u7yRi0"),
     "organsmnist": (f"{_ZENODO_BASE}/organsmnist.npz?download=1", "1spWIVxKaLvWAxLHGLSr0IJJBSm0MDBB4"),
@@ -110,10 +108,7 @@ def load_data(
 
     print("Downloading data to {}".format(root_dir))
     url, gdrive_id = dataset_sources[dataset_name]
-    if gdrive_id is not None:
-        download_url_with_fallback(url, gdrive_id, download_path)
-    else:
-        download_url(url, download_path)
+    download_url_with_fallback(url, gdrive_id, download_path)
 
     npz_file = np.load(download_path)
 
