@@ -19,7 +19,7 @@ from typing import Tuple
 import numpy as np
 
 from fastestimator.dataset.numpy_dataset import NumpyDataset
-from fastestimator.util.google_download_util import download_url, download_url_with_fallback
+from fastestimator.util.google_download_util import download_url_with_fallback
 
 # Official distribution: https://doi.org/10.5281/zenodo.10519652 (MedMNIST v2.2 / v3.0)
 _ZENODO_BASE = "https://zenodo.org/records/10519652/files"
