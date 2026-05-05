@@ -20,7 +20,6 @@ from fastestimator.op.numpyop.univariate import Color
 
 
 class TestColor(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         cls.single_input = [np.random.randint(0, 256, size=(28, 28, 3)).astype(np.uint8)]
@@ -49,3 +48,9 @@ class TestColor(unittest.TestCase):
         for img_output in output:
             with self.subTest('Check output image shape'):
                 self.assertEqual(img_output.shape, self.multi_output_shape)
+
+    def test_invalid_dtype(self):
+        color = Color(inputs='x', outputs='x')
+        invalid_input = [np.random.rand(28, 28, 3).astype(np.float32)]
+        with self.assertRaises(ValueError):
+            color.forward(data=invalid_input, state={})

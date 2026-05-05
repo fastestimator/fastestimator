@@ -72,9 +72,8 @@ class Color(NumpyOp):
 
     @staticmethod
     def _apply_color(data: np.ndarray, factor: float) -> np.ndarray:
-        original_dtype = data.dtype
-        if original_dtype != np.uint8:
-            data = np.clip(data, 0, 255).astype(np.uint8)
+        if data.dtype != np.uint8:
+            raise ValueError(f"Color requires uint8 input, got {data.dtype}")
         im = Image.fromarray(data)
         im = ImageEnhance.Color(im).enhance(factor)
-        return np.array(im).astype(original_dtype)
+        return np.array(im)
