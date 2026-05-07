@@ -14,6 +14,7 @@
 # ==============================================================================
 import os
 import random
+import tempfile
 import time
 
 import gdown
@@ -28,7 +29,12 @@ from fastestimator.util.util import is_valid_file
 # certs). Env vars like REQUESTS_CA_BUNDLE are intentionally NOT honoured here
 # because they are often set to a single  cert file, which replaces the
 # full public CA chain and causes verification failures for external hosts.
-_SYSTEM_CA_BUNDLE = "/etc/ssl/certs/ca-certificates.crt"  # Debian/Ubuntu path
+# Common OS-managed CA bundle locations, in order of preference.
+_SYSTEM_CA_BUNDLES = (
+    "/etc/ssl/certs/ca-certificates.crt",  # Debian/Ubuntu
+    "/etc/pki/tls/certs/ca-bundle.crt",  # RHEL/CentOS/Fedora
+    "/etc/ssl/cert.pem",  # Alpine, some BSDs
+)
 
 
 def _get_ca_bundle() -> str:
@@ -43,8 +49,9 @@ def _get_ca_bundle() -> str:
       2. certifi default — fallback for systems without a system bundle (e.g. macOS
          without the system bundle at the expected path).
     """
-    if os.path.isfile(_SYSTEM_CA_BUNDLE):
-        return _SYSTEM_CA_BUNDLE
+    for bundle in _SYSTEM_CA_BUNDLES:
+        if os.path.isfile(bundle):
+            return bundle
     import certifi
     return certifi.where()
 
@@ -68,9 +75,9 @@ def download_url(url: str, destination: str, max_retries: int = 3) -> None:
         print(f"File {destination} already exists, skipping download.")
         return
 
-    tmp_path = destination + ".tmp"
     ca_bundle = _get_ca_bundle()
     for attempt in range(max_retries):
+        tmp_path = None
         if is_valid_file(destination):
             return
         if attempt > 0:
@@ -80,16 +87,24 @@ def download_url(url: str, destination: str, max_retries: int = 3) -> None:
             response = requests.get(url, stream=True, timeout=60, verify=ca_bundle)
             response.raise_for_status()
             total = int(response.headers.get('Content-Length', 0))
-            with open(tmp_path, 'wb') as f, tqdm(total=total, unit='B', unit_scale=True,
-                                                  desc=os.path.basename(destination)) as bar:
+            destination_dir = os.path.dirname(os.path.abspath(destination)) or "."
+            with tempfile.NamedTemporaryFile('wb',
+                                             delete=False,
+                                             dir=destination_dir,
+                                             prefix=f".{os.path.basename(destination)}.",
+                                             suffix=".tmp") as f, tqdm(total=total,
+                                                                       unit='B',
+                                                                       unit_scale=True,
+                                                                       desc=os.path.basename(destination)) as bar:
+                tmp_path = f.name
                 for chunk in response.iter_content(chunk_size=65536):
                     f.write(chunk)
                     bar.update(len(chunk))
-            os.rename(tmp_path, destination)
+            os.replace(tmp_path, destination)
             return
         except Exception as e:
             print(f"\nException occurred while downloading {destination} (attempt {attempt + 1}/{max_retries}): {e}")
-            if os.path.exists(tmp_path):
+            if tmp_path and os.path.exists(tmp_path):
                 os.remove(tmp_path)
     raise ValueError(f"Couldn't download {destination} after {max_retries} retries.")
 
@@ -131,7 +146,9 @@ def _download_file_from_google_drive(file_id: str, destination: str) -> None:
         file_id: File ID of Google drive URL.
         destination: Destination path where the data needs to be stored.
     """
-    gdown.download(id=file_id, output=destination, quiet=False, resume=True, fuzzy=True)
+    output = gdown.download(id=file_id, output=destination, quiet=False, resume=True, fuzzy=True)
+    if output is None or not os.path.exists(destination):
+        raise ValueError(f"Google Drive download failed for {destination}")
 
 
 def download_file_from_google_drive(file_id: str, destination: str, max_retries: int = 3) -> None:
@@ -148,6 +165,7 @@ def download_file_from_google_drive(file_id: str, destination: str, max_retries:
         print(f"File {destination} already exists, skipping download.")
         return
 
+    tmp_path = destination + ".tmp"
     for attempt in range(max_retries):
         if is_valid_file(destination):
             return
@@ -159,8 +177,11 @@ def download_file_from_google_drive(file_id: str, destination: str, max_retries:
             # Check again in case some other thread came through and downloaded while you were sleeping
             return
         try:
-            _download_file_from_google_drive(file_id=file_id, destination=destination)
+            _download_file_from_google_drive(file_id=file_id, destination=tmp_path)
+            os.replace(tmp_path, destination)
             return
         except Exception as e:
             print(f"Exception occurred while downloading {destination} (attempt {attempt + 1}/{max_retries}): {e}")
+            if tmp_path and os.path.exists(tmp_path):
+                os.remove(tmp_path)
     raise ValueError(f"Couldn't download {destination} after {max_retries} retries.")
