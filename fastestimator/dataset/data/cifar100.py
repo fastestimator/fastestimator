@@ -22,7 +22,10 @@ import numpy as np
 
 from fastestimator.dataset.numpy_dataset import NumpyDataset
 from fastestimator.util.base_util import warn
-from fastestimator.util.google_download_util import download_file_from_google_drive
+from fastestimator.util.google_download_util import download_url_with_fallback
+
+_CIFAR100_URL = "https://www.cs.toronto.edu/~kriz/cifar-100-python.tar.gz"
+_CIFAR100_GDRIVE_ID = "1J6G3ND0-aSd1whNlrHvbAArAYhCQfeQ3"
 
 
 def _load_batch(fpath: str, label_key: str = "labels") -> Tuple[np.ndarray, np.ndarray]:
@@ -87,7 +90,7 @@ def load_data(root_dir: str = None,
 
     if not os.path.exists(image_extracted_path):
         print("Downloading data to {}".format(root_dir))
-        download_file_from_google_drive('1J6G3ND0-aSd1whNlrHvbAArAYhCQfeQ3', image_compressed_path)
+        download_url_with_fallback(_CIFAR100_URL, _CIFAR100_GDRIVE_ID, image_compressed_path)
 
         print("Extracting data to {}".format(root_dir))
         with tarfile.open(image_compressed_path) as img_tar:

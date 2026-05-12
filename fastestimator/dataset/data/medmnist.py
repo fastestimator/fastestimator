@@ -1,4 +1,4 @@
-# Copyright 2023 The FastEstimator Authors. All Rights Reserved.
+# Copyright 2026 The FastEstimator Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,28 +19,35 @@ from typing import Tuple
 import numpy as np
 
 from fastestimator.dataset.numpy_dataset import NumpyDataset
-from fastestimator.util.google_download_util import download_file_from_google_drive
+from fastestimator.util.google_download_util import download_url_with_fallback
 
-dataset_ids = {
-    "chestmnist": "1lGZtFjlviRf_vwmxB4NgApjCdfDuh8pk",
-    "adrenalmnist3d": "1E__zT_PqXlaiyW3r6Ii98UVVv5-nDZ_q",
-    "bloodmnist": "17r9NENUnUoqnWZ-zJaveLU40R746A-ul",
-    "breastmnist": "1E3fWybVlOXSIjg_kFSQ-nwOikLgrbsJc",
-    "dermamnist": "1k-vw5otV5rCQLVQKyxmo1mhI3KqDbwU5",
-    "fracturemnist3d": "104OYiONKAsN2O-VeVGS7ReXZI4GtNsZk",
-    "nodulemnist3d": "1krf_Uv-bA5CEt_dCD6h8xJbzZk9ETWLU",
-    "octmnist": "1yRhEBDQwHu5jSnrzIm87Cazns3Eesv4b",
-    "organamnist": "1yRhEBDQwHu5jSnrzIm87Cazns3Eesv4b",
-    "organcmnist": "1GqXyaV6arJq0O-3Fn2hvBw77MG9fHeoz",
-    "organmnist3d": "1RQiHLj35u3m6GCiBKJFnb9VH76u7yRi0",
-    "organsmnist": "1spWIVxKaLvWAxLHGLSr0IJJBSm0MDBB4",
-    "pathmnist": "12He-AovBA5ReIg1snhA6Jm2jQCvKKYp7",
-    "pneumoniamnist": "1ObI6UzRYZby9YCmk53m1WCXo747wzNqT",
-    "retinamnist": "1dugDJx_Z9nvtbD9SidxkVjgvysA93IG7",
-    "synapsemnist3d": "1JCBppD-bCYQhjwufJ63OS8XgMaT3sRv5",
-    "tissuemnist": "1M5wec6b-iiLPjVs3MrCrAlKCxwjuEL2z",
-    "vesselmnist3d": "1orrps7d-SKB4kFPV0jaN3r_jfYpDtGpP",
+# Official distribution: https://doi.org/10.5281/zenodo.10519652 (MedMNIST v2.2 / v3.0)
+_ZENODO_BASE = "https://zenodo.org/records/10519652/files"
+
+# Mapping of dataset_name -> (zenodo_url, gdrive_fallback_id)
+dataset_sources = {
+    "adrenalmnist3d": (f"{_ZENODO_BASE}/adrenalmnist3d.npz?download=1", "1E__zT_PqXlaiyW3r6Ii98UVVv5-nDZ_q"),
+    "bloodmnist": (f"{_ZENODO_BASE}/bloodmnist.npz?download=1", "17r9NENUnUoqnWZ-zJaveLU40R746A-ul"),
+    "breastmnist": (f"{_ZENODO_BASE}/breastmnist.npz?download=1", "1E3fWybVlOXSIjg_kFSQ-nwOikLgrbsJc"),
+    "chestmnist": (f"{_ZENODO_BASE}/chestmnist.npz?download=1", "1lGZtFjlviRf_vwmxB4NgApjCdfDuh8pk"),
+    "dermamnist": (f"{_ZENODO_BASE}/dermamnist.npz?download=1", "1k-vw5otV5rCQLVQKyxmo1mhI3KqDbwU5"),
+    "fracturemnist3d": (f"{_ZENODO_BASE}/fracturemnist3d.npz?download=1", "104OYiONKAsN2O-VeVGS7ReXZI4GtNsZk"),
+    "nodulemnist3d": (f"{_ZENODO_BASE}/nodulemnist3d.npz?download=1", "1krf_Uv-bA5CEt_dCD6h8xJbzZk9ETWLU"),
+    "octmnist": (f"{_ZENODO_BASE}/octmnist.npz?download=1", "1yRhEBDQwHu5jSnrzIm87Cazns3Eesv4b"),
+    "organamnist": (f"{_ZENODO_BASE}/organamnist.npz?download=1", "17p6di3YeXgGFzMfpy_IOiBs-LAzdEbB0O"),
+    "organcmnist": (f"{_ZENODO_BASE}/organcmnist.npz?download=1", "1GqXyaV6arJq0O-3Fn2hvBw77MG9fHeoz"),
+    "organmnist3d": (f"{_ZENODO_BASE}/organmnist3d.npz?download=1", "1RQiHLj35u3m6GCiBKJFnb9VH76u7yRi0"),
+    "organsmnist": (f"{_ZENODO_BASE}/organsmnist.npz?download=1", "1spWIVxKaLvWAxLHGLSr0IJJBSm0MDBB4"),
+    "pathmnist": (f"{_ZENODO_BASE}/pathmnist.npz?download=1", "12He-AovBA5ReIg1snhA6Jm2jQCvKKYp7"),
+    "pneumoniamnist": (f"{_ZENODO_BASE}/pneumoniamnist.npz?download=1", "1ObI6UzRYZby9YCmk53m1WCXo747wzNqT"),
+    "retinamnist": (f"{_ZENODO_BASE}/retinamnist.npz?download=1", "1dugDJx_Z9nvtbD9SidxkVjgvysA93IG7"),
+    "synapsemnist3d": (f"{_ZENODO_BASE}/synapsemnist3d.npz?download=1", "1JCBppD-bCYQhjwufJ63OS8XgMaT3sRv5"),
+    "tissuemnist": (f"{_ZENODO_BASE}/tissuemnist.npz?download=1", "1M5wec6b-iiLPjVs3MrCrAlKCxwjuEL2z"),
+    "vesselmnist3d": (f"{_ZENODO_BASE}/vesselmnist3d.npz?download=1", "1orrps7d-SKB4kFPV0jaN3r_jfYpDtGpP"),
 }
+
+# Keep a URL-only view for the dataset name validation check
+dataset_urls = {name: url for name, (url, _) in dataset_sources.items()}
 
 
 def load_data(
@@ -86,7 +93,7 @@ def load_data(
     Returns:
         Tuple[NumpyDataset, NumpyDataset, NumpyDataset]: returns a tuple of traing, val and test data.
     """
-    if dataset_name not in dataset_ids:
+    if dataset_name not in dataset_urls:
         raise ValueError("Invalid value for dataset_name.")
 
     if root_dir is None:
@@ -100,7 +107,8 @@ def load_data(
     download_path = os.path.join(root_dir, f"{dataset_name}.npz")
 
     print("Downloading data to {}".format(root_dir))
-    download_file_from_google_drive(dataset_ids[dataset_name], download_path)
+    url, gdrive_id = dataset_sources[dataset_name]
+    download_url_with_fallback(url, gdrive_id, download_path)
 
     npz_file = np.load(download_path)
 
