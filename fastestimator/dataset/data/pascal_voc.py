@@ -24,9 +24,12 @@ import wget
 from defusedxml.ElementTree import parse as ET_parse
 
 from fastestimator.dataset.dataset import FEDataset
-from fastestimator.util.google_download_util import download_file_from_google_drive
+from fastestimator.util.google_download_util import download_url_with_fallback
 from fastestimator.util.traceability_util import traceable
 from fastestimator.util.wget_util import callback_progress
+
+_PASCAL_VOC_URL = "http://host.robots.ox.ac.uk/pascal/VOC/voc2012/VOCtrainval_11-May-2012.tar"
+_PASCAL_VOC_GDRIVE_ID = "1jeGqQUNxClNoQgp7HxbRvOvkVWvkQCKl"
 
 wget.callback_progress = callback_progress
 
@@ -267,7 +270,7 @@ def load_data(root_dir: Optional[str] = None, load_bboxes: bool = False,
 
     if not os.path.exists(data_folder):
         print("Downloading data to {}".format(root_dir))
-        download_file_from_google_drive('1jeGqQUNxClNoQgp7HxbRvOvkVWvkQCKl', compressed_image_location)
+        download_url_with_fallback(_PASCAL_VOC_URL, _PASCAL_VOC_GDRIVE_ID, compressed_image_location)
 
         print("Extracting data to {}".format(root_dir))
         shutil.unpack_archive(compressed_image_location, root_dir)

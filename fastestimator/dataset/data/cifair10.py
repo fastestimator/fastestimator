@@ -21,7 +21,10 @@ from typing import List, Tuple
 import numpy as np
 
 from fastestimator.dataset.numpy_dataset import NumpyDataset
-from fastestimator.util.google_download_util import download_file_from_google_drive
+from fastestimator.util.google_download_util import download_url_with_fallback
+
+_CIFAIR10_URL = "https://github.com/cvjena/cifair/releases/download/v1.0/ciFAIR-10.zip"
+_CIFAIR10_GDRIVE_ID = "1dqTgqMVvgx_FZNAC7TqzoA0hYX1ttOUq"
 
 
 def load_data(root_dir: str = None, image_key: str = "x", label_key: str = "y") -> Tuple[NumpyDataset, NumpyDataset]:
@@ -53,7 +56,7 @@ def load_data(root_dir: str = None, image_key: str = "x", label_key: str = "y") 
 
     if not os.path.exists(image_extracted_path):
         print("Downloading data to {}".format(root_dir))
-        download_file_from_google_drive('1dqTgqMVvgx_FZNAC7TqzoA0hYX1ttOUq', image_compressed_path)
+        download_url_with_fallback(_CIFAIR10_URL, _CIFAIR10_GDRIVE_ID, image_compressed_path)
 
         print("Extracting data to {}".format(root_dir))
         shutil.unpack_archive(image_compressed_path, root_dir)
