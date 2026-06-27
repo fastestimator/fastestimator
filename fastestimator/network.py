@@ -18,22 +18,8 @@ import sys
 import tempfile
 from collections import ChainMap
 from threading import Lock
-from typing import (
-    Any,
-    Callable,
-    Dict,
-    Iterable,
-    List,
-    MutableMapping,
-    Optional,
-    Sequence,
-    Set,
-    Tuple,
-    Type,
-    TypeVar,
-    Union,
-    overload,
-)
+from typing import Any, Callable, Dict, Iterable, List, MutableMapping, Optional, Sequence, Set, Tuple, Type, TypeVar, \
+    Union, overload
 
 import gdown
 import torch
@@ -42,35 +28,19 @@ from typing_extensions import Self
 import fastestimator as fe
 from fastestimator.backend._load_model import load_model
 from fastestimator.backend._to_tensor import to_tensor
-from fastestimator.op.numpyop import Batch, NumpyOp, RemoveIf, forward_numpyop
+from fastestimator.op.numpyop import Batch
 from fastestimator.op.numpyop import Delete as DeleteNP
+from fastestimator.op.numpyop import NumpyOp, RemoveIf, forward_numpyop
 from fastestimator.op.op import get_inputs_by_op, write_outputs_by_op
 from fastestimator.op.tensorop.model.update import UpdateOp
 from fastestimator.op.tensorop.tensorop import Delete, TensorOp
 from fastestimator.pipeline import Pipeline
-from fastestimator.schedule.schedule import (
-    EpochScheduler,
-    RepeatScheduler,
-    Scheduler,
-    get_current_items,
-)
-from fastestimator.slicer.slicer import (
-    Slicer,
-    forward_slicers,
-    reverse_slicers,
-    sanity_assert_slicers,
-)
+from fastestimator.schedule.schedule import EpochScheduler, RepeatScheduler, Scheduler, get_current_items
+from fastestimator.slicer.slicer import Slicer, forward_slicers, reverse_slicers, sanity_assert_slicers
 from fastestimator.types import Array, Model
 from fastestimator.util.base_util import NonContext, filter_nones, to_list, warn
 from fastestimator.util.traceability_util import trace_model, traceable
-from fastestimator.util.util import (
-    Suppressor,
-    detach_tensors,
-    get_batch_size,
-    get_device,
-    get_num_gpus,
-    move_tensors_to_device,
-)
+from fastestimator.util.util import detach_tensors, get_device, get_num_gpus, move_tensors_to_device
 
 T = TypeVar('T')
 
@@ -97,7 +67,6 @@ class BaseNetwork:
     Raises:
         ValueError: Mixed precision settings for all models are not the same.
     """
-
     def __init__(
         self,
         target_type: str,
@@ -538,11 +507,18 @@ class TorchNetwork(BaseNetwork):
                          eager=eager)
         if self.device.type != "cpu":
             for model in self.ctx_models:
-                # move model variables to gpu
-                model.to(self.device)
+                # Only move model to GPU if it's not already there
+                if next(model.parameters(), torch.tensor(0)).device != self.device:
+                    model.to(self.device)
                 if model.current_optimizer and mode == "train":
                     # move optimizer variables to gpu
                     self._move_optimizer_between_device(model.current_optimizer.state, self.device)
+        # Set model to eval mode for eval/test for proper behavior of dropout, batchnorm, etc.
+        for model in self.ctx_models:
+            if mode in ("eval", "test"):
+                model.eval()
+            else:
+                model.train()
         # Set all of the contiguous final updates to defer their updates by default to enable things like CycleGan
         # This is not necessary for TF because overriding tf weights does not confuse the gradient tape computation
         for op in reversed(self.ctx_ops):
@@ -572,15 +548,12 @@ class TorchNetwork(BaseNetwork):
     def __exit__(self, *exc: Tuple[Optional[Type], Optional[Exception], Optional[Any]]) -> None:
         """Clean up the network after running an epoch.
 
-        In this case we move all of the models from the GPU(s) back to the CPU.
+        Models are kept on GPU to avoid expensive CPU<->GPU transfers between epochs.
+        Models are only moved back to CPU when explicitly needed (e.g., for checkpointing via save_model).
         """
-        if self.device.type != "cpu":
-            for model in self.ctx_models:
-                # move model variables to cpu
-                model.to("cpu")
-                if model.current_optimizer and self.ctx_state["mode"] == "train":
-                    # move optimizer variables to cpu
-                    self._move_optimizer_between_device(model.current_optimizer.state, "cpu")
+        # Restore model training mode
+        for model in self.ctx_models:
+            model.train()
         # Set the final update ops back to their original defer status
         for op in reversed(self.ctx_ops):
             if isinstance(op, UpdateOp):
@@ -593,7 +566,7 @@ class TorchNetwork(BaseNetwork):
         """Copy input data from the the CPU onto the GPU(s).
 
         This method will filter inputs from the batch so that only data required by the network during execution will be
-        copied to the GPU.
+        copied to the GPU. Uses non_blocking transfers when possible for better overlap with computation.
 
         Args:
             batch: The input data to be moved.
@@ -603,7 +576,7 @@ class TorchNetwork(BaseNetwork):
         """
         if self.device.type != "cpu":
             new_batch = {
-                key: move_tensors_to_device(batch[key], self.device)
+                key: move_tensors_to_device(batch[key], self.device, non_blocking=True)
                 for key in self.ctx_gpu_inputs if key in batch
             }
         else:
@@ -616,6 +589,8 @@ class TorchNetwork(BaseNetwork):
         Implementations of this method within derived classes should handle bringing the prediction data back from the
         (multi-)GPU environment to the CPU. This method expects that Network.load_epoch() has already been invoked.
 
+        Uses torch.inference_mode() for eval/test for better performance than no_grad alone.
+
         Args:
             batch: The batch of data serving as input to the Network.
 
@@ -624,15 +599,23 @@ class TorchNetwork(BaseNetwork):
         """
         batch_in = self._get_effective_batch_input(batch)
         self.ctx_state["tape"] = NonContext()
+        mode = self.ctx_state.get("mode", "train")
+        # Use inference_mode for eval/test (faster than no_grad) and no_grad as fallback for train without gradients
+        if mode in ("eval", "test") and not self.ctx_state["req_grad"]:
+            grad_ctx = torch.inference_mode()
+        elif not self.ctx_state["req_grad"]:
+            grad_ctx = torch.no_grad()
+        else:
+            grad_ctx = NonContext()
         # gpu operation
-        with torch.no_grad() if not self.ctx_state["req_grad"] else NonContext():
+        with grad_ctx:
             with torch.autocast(device_type=self.device.type) if self.mixed_precision else NonContext():
                 self._forward_batch(batch_in, self.ctx_state, self.ctx_ops)
 
         # copy data to cpu
         if self.device.type != "cpu":
             prediction = {
-                key: move_tensors_to_device(detach_tensors(batch_in[key]), "cpu")
+                key: move_tensors_to_device(detach_tensors(batch_in[key]), "cpu", non_blocking=True)
                 for key in self.ctx_outputs if key in batch_in
             }
         else:
@@ -686,7 +669,6 @@ def build(model_fn: Callable[[], Union[Model, Sequence[Model]]],
     Returns:
         models: The model(s) built by FastEstimator.
     """
-
     def _generate_model_names(num_names):
         names = [
             "model" if i + fe.fe_build_count == 0 else "model{}".format(i + fe.fe_build_count) for i in range(num_names)

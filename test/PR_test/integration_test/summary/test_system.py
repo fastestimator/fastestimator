@@ -226,3 +226,50 @@ class TestSystem(unittest.TestCase):
             self.assertEqual('class2', system.custom_graphs['sample_list_graph'][1].name)
             self.assertEqual(0.34, system.custom_graphs['sample_list_graph'][0].history['eval']['dice'][15])
             self.assertEqual(0.21, system.custom_graphs['sample_list_graph'][1].history['eval']['dice'][15])
+
+
+class TestSystemWriteSummary(unittest.TestCase):
+    def test_write_summary_records_value(self):
+        system = sample_system_object_torch()
+        system.summary = Summary('test_exp')
+        system.mode = 'train'
+        system.global_step = 10
+        system.write_summary('loss', 0.5)
+        self.assertEqual(system.summary.history['train']['loss'][10], 0.5)
+
+    def test_write_summary_ignores_none_mode(self):
+        system = sample_system_object_torch()
+        system.summary = Summary('test_exp')
+        system.mode = None
+        system.global_step = 10
+        system.write_summary('loss', 0.5)
+        self.assertEqual(len(system.summary), 0)
+
+    def test_write_summary_ignores_unnamed_summary(self):
+        system = sample_system_object_torch()
+        system.summary = Summary(None)
+        system.mode = 'train'
+        system.global_step = 10
+        system.write_summary('loss', 0.5)
+        self.assertEqual(len(system.summary), 0)
+
+    def test_summary_get_best_after_write(self):
+        system = sample_system_object_torch()
+        system.summary = Summary('test_exp')
+        system.mode = 'eval'
+        for step, val in [(10, 0.5), (20, 0.9), (30, 0.7)]:
+            system.global_step = step
+            system.write_summary('acc', val)
+        best = system.summary.get_best('acc', mode='eval', largest=True)
+        self.assertEqual(best, (20, 0.9))
+
+    def test_summary_to_dict_after_write(self):
+        system = sample_system_object_torch()
+        system.summary = Summary('test_exp')
+        system.mode = 'train'
+        system.global_step = 5
+        system.write_summary('loss', 0.8)
+        system.global_step = 10
+        system.write_summary('loss', 0.3)
+        d = system.summary.to_dict(mode='train')
+        self.assertEqual(d['loss'], {5: 0.8, 10: 0.3})

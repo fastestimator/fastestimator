@@ -44,7 +44,6 @@ class Brightness(NumpyOp):
     Image types:
         uint8
     """
-
     def __init__(self,
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
@@ -73,6 +72,8 @@ class Brightness(NumpyOp):
 
     @staticmethod
     def _apply_brightness(data: np.ndarray, factor: float) -> np.ndarray:
+        if data.dtype != np.uint8:
+            raise ValueError(f"Brightness requires uint8 input, got {data.dtype}")
         im = Image.fromarray(data)
         im = ImageEnhance.Brightness(im).enhance(factor)
         return np.array(im)

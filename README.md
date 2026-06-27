@@ -13,7 +13,14 @@
 [![PyPI stable Download](https://img.shields.io/pypi/dm/fastestimator?label=stable%20downloads&color=16D1B4)](https://pypistats.org/packages/fastestimator)
 [![PyPI stable Download](https://img.shields.io/pypi/dm/fastestimator-nightly?label=nightly%20downloads&color=16D1B4)](https://pypistats.org/packages/fastestimator-nightly)
 
-FastEstimator is a high-level deep learning library built on PyTorch. With the help of FastEstimator, you can easily build a high-performance deep learning model and run it anywhere. :wink:
+FastEstimator is a high-level deep learning library built on PyTorch. With the
+help of FastEstimator, you can easily build a high-performance deep learning
+model and run it anywhere. :wink:
+
+**FastEstimator 2.0** is a major release that streamlines the framework to be
+**PyTorch-only**, removes TensorFlow dependencies, migrates to
+[UV](https://docs.astral.sh/uv/) for modern dependency management, and includes
+updated ops, traces, and tutorials.
 
 For more information, please visit our [website](https://www.fastestimator.org/).
 
@@ -22,7 +29,8 @@ For more information, please visit our [website](https://www.fastestimator.org/)
 | FastEstimator  | Python | PyTorch | CUDA |  Installation Instruction |
 | -------------  | ------  | ------- | ---- | ----------- |
 | Nightly  | 3.10-3.12  | 2.3.1 | 12.2.2 | master branch |
-| 1.7 (recent stable) | 3.10-3.12  | 2.3.1 | 12.2 | [r1.7 branch](https://github.com/fastestimator/fastestimator/tree/r1.7) |
+| 2.0 (latest stable) | 3.10-3.12  | 2.3.1 | 12.2.2 | [r2.0 branch](https://github.com/fastestimator/fastestimator/tree/r2.0) |
+| 1.7 | 3.10-3.12  | 2.3.1 | 12.2 | [r1.7 branch](https://github.com/fastestimator/fastestimator/tree/r1.7) |
 | 1.6  | 3.8-3.10  | 2.0.1 | 11.8 | [r1.6 branch](https://github.com/fastestimator/fastestimator/tree/r1.6) |
 | 1.5  | 3.7-3.9  | 1.10.2 | 11.0 | [r1.5 branch](https://github.com/fastestimator/fastestimator/tree/r1.5) |
 | 1.4  | 3.6-3.8  | 1.7.1 | 11.0 | [r1.4 branch](https://github.com/fastestimator/fastestimator/tree/r1.4) |
@@ -111,7 +119,7 @@ Docker containers create isolated virtual environments that share resources with
       docker pull fastestimator/fastestimator:latest-cpu
       ```
 
-* Nighly:
+* Nightly:
   * GPU:
 
       ``` bash

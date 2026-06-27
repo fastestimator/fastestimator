@@ -1,4 +1,4 @@
-# Copyright 2021 The FastEstimator Authors. All Rights Reserved.
+# Copyright 2026 The FastEstimator Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,31 +16,28 @@ import unittest
 
 import numpy as np
 
-from fastestimator.op.numpyop.univariate import Brightness
+from fastestimator.op.numpyop.univariate import GridMask
 
 
-class TestBrightness(unittest.TestCase):
+class TestGridMask(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.single_input = [np.random.randint(0, 256, size=(28, 28, 3)).astype(np.uint8)]
-        cls.single_output_shape = (28, 28, 3)
-        cls.multi_input = [
-            np.random.randint(0, 256, size=(28, 28, 3)).astype(np.uint8),
-            np.random.randint(0, 256, size=(28, 28, 3)).astype(np.uint8)
-        ]
+        cls.single_input = [np.random.rand(28, 28).astype(np.float32)]
+        cls.single_output_shape = (28, 28)
+        cls.multi_input = [np.random.rand(28, 28, 3).astype(np.float32), np.random.rand(28, 28, 3).astype(np.float32)]
         cls.multi_output_shape = (28, 28, 3)
 
     def test_single_input(self):
-        brightness = Brightness(inputs='x', outputs='x')
-        output = brightness.forward(data=self.single_input, state={})
+        op = GridMask(inputs='x', outputs='x')
+        output = op.forward(data=self.single_input, state={})
         with self.subTest('Check output type'):
             self.assertEqual(type(output), list)
         with self.subTest('Check output image shape'):
             self.assertEqual(output[0].shape, self.single_output_shape)
 
     def test_multi_input(self):
-        brightness = Brightness(inputs='x', outputs='x')
-        output = brightness.forward(data=self.multi_input, state={})
+        op = GridMask(inputs='x', outputs='x')
+        output = op.forward(data=self.multi_input, state={})
         with self.subTest('Check output type'):
             self.assertEqual(type(output), list)
         with self.subTest('Check output list length'):
@@ -49,8 +46,13 @@ class TestBrightness(unittest.TestCase):
             with self.subTest('Check output image shape'):
                 self.assertEqual(img_output.shape, self.multi_output_shape)
 
-    def test_invalid_dtype(self):
-        brightness = Brightness(inputs='x', outputs='x')
-        invalid_input = [np.random.rand(28, 28, 3).astype(np.float32)]
-        with self.assertRaises(ValueError):
-            brightness.forward(data=invalid_input, state={})
+    def test_output_dtype(self):
+        op = GridMask(inputs='x', outputs='x')
+        output = op.forward(data=self.single_input, state={})
+        self.assertEqual(output[0].dtype, np.float32)
+
+    def test_masking_occurs(self):
+        data = [np.ones((64, 64), dtype=np.float32)]
+        op = GridMask(inputs='x', outputs='x', d_range=(8, 16), ratio=0.5, fill_value=0.0)
+        output = op.forward(data=data, state={})
+        self.assertTrue(np.any(output[0] == 0.0), "GridMask should zero out some pixels")

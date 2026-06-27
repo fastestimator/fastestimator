@@ -16,21 +16,12 @@ import copyreg
 import datetime
 import json
 import os
+import shutil
+import tempfile
 import uuid
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Dict,
-    List,
-    Optional,
-    Sequence,
-    Tuple,
-    TypeVar,
-    Union,
-)
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Sequence, Tuple, TypeVar, Union
 
-import dill as pickle  # Need to use dill since tf.Variable is a weakref object on multi-gpu machines
+import dill as pickle  # dill extends pickle to handle lambdas/closures in user-defined traces and ops
 import torch
 
 from fastestimator.backend._load_model import load_model
@@ -66,6 +57,8 @@ class System:
             to completion)
         eval_steps_per_epoch: Whether evaluation iterations will be cut short or extended to complete N steps (or use None if they will run
             to completion)
+        test_steps_per_epoch: Whether test iterations will be cut short or extended to complete N steps (or use None
+            if they will run to completion)
         eval_log_steps: The list of steps on which evaluation progress logs need to be printed.
         system_config: A description of the initialization parameters defining the associated estimator.
 
@@ -109,6 +102,7 @@ class System:
     traces: List[Union['Trace', Scheduler['Trace']]]
     train_steps_per_epoch: Optional[int]
     eval_steps_per_epoch: Optional[int]
+    test_steps_per_epoch: Optional[int]
     eval_log_steps_request: List[int]
     eval_log_steps: Tuple[List[int], int]
     summary: Summary
@@ -126,6 +120,7 @@ class System:
                  total_epochs: int = 0,
                  train_steps_per_epoch: Optional[int] = None,
                  eval_steps_per_epoch: Optional[int] = None,
+                 test_steps_per_epoch: Optional[int] = None,
                  eval_log_steps: Sequence[int] = (),
                  system_config: Optional[List[FeSummaryTable]] = None) -> None:
 
@@ -142,6 +137,7 @@ class System:
         self.batch_idx = None
         self.train_steps_per_epoch = train_steps_per_epoch
         self.eval_steps_per_epoch = eval_steps_per_epoch
+        self.test_steps_per_epoch = test_steps_per_epoch
         self.stop_training = False
         self.summary = Summary(None, system_config)
         self.experiment_time = ""
@@ -154,6 +150,8 @@ class System:
             return self.train_steps_per_epoch
         elif self.mode == 'eval':
             return self.eval_steps_per_epoch
+        elif self.mode == 'test':
+            return self.test_steps_per_epoch
         else:
             return None
 
@@ -206,6 +204,7 @@ class System:
         self.experiment_time = self.experiment_time or datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
         self.mode = "test"
         self.ds_id = ''
+        self.batch_idx = None
         if not self.stop_training:
             self.epoch_idx = self.total_epochs
         self.stop_training = False
@@ -216,13 +215,13 @@ class System:
                 graph.history.pop('test', None)
 
     def write_summary(self, key: str, value: Any) -> None:
-        """Write an entry into the `Summary` object (iff the experiment was named).
+        """Write an entry into the `Summary` object (iff the experiment was named and mode is set).
 
         Args:
             key: The key to write into the summary object.
             value: The value to write into the summary object.
         """
-        if self.summary:
+        if self.summary and self.mode:
             self.summary.history[self.mode][key][self.global_step or 0] = value
 
     def add_graph(self, graph_name: str, graph: Union[Summary, List[Summary]]) -> None:
@@ -240,43 +239,80 @@ class System:
             self.custom_graphs[graph_name] = list(graph)
 
     def save_state(self, save_dir: str) -> None:
-        """Load training state.
+        """Save training state.
+
+        All artifacts (model weights, optimizer states, objects.pkl, system.json) are written
+        to a private staging directory first.  They are promoted into ``save_dir`` only after
+        every write succeeds, with ``system.json`` promoted last so that its presence acts as
+        a commit marker.  A crash during staging leaves ``save_dir`` untouched; a crash during
+        promotion may leave some model files updated but will not produce a ``system.json`` that
+        disagrees with them, because ``system.json`` is moved last.
 
         Args:
-            save_dir: The directory into which to save the state
+            save_dir: The directory into which to save the state.
+
+        Raises:
+            IOError: If the state cannot be saved to disk.
         """
         os.makedirs(save_dir, exist_ok=True)
-        # Start with the high-level info. We could use pickle for this but having it human readable is nice.
-        state = {key: value for key, value in self.__dict__.items() if is_restorable(value)[0]}
-        with open(os.path.join(save_dir, 'system.json'), 'w') as fp:
-            json.dump(state, fp, indent=4)
-        # Save all of the models / optimizer states
-        for model in self.network.models:
-            save_model(model, save_dir=save_dir, save_optimizer=hasattr(model, "optimizer") and model.optimizer)
-        # Save everything else
+        # Stage every artifact in a private temp directory so no partial write
+        # ever touches the live checkpoint.  system.json is promoted last; its
+        # presence in save_dir is the commit marker used by load_state.
+        staging_dir = tempfile.mkdtemp(dir=save_dir, prefix='.staging_')
+        try:
+            # 1. High-level scalar state (human-readable).
+            state = {key: value for key, value in self.__dict__.items() if is_restorable(value)[0]}
+            with open(os.path.join(staging_dir, 'system.json'), 'w') as fp:
+                json.dump(state, fp, indent=4)
 
-        objects = {
-            'summary': self.summary,
-            'custom_graphs': self.custom_graphs,
-            'traces': [trace.__getstate__() if hasattr(trace, '__getstate__') else {} for trace in self.traces],
-            'tops': [op.__getstate__() if hasattr(op, '__getstate__') else {} for op in self.network.ops],
-            'slops': [sl.__getstate__() if hasattr(sl, '__getstate__') else {} for sl in self.network.slicers],
-            'pops': [op.__getstate__() if hasattr(op, '__getstate__') else {} for op in self.network.postprocessing],
-            'nops': [op.__getstate__() if hasattr(op, '__getstate__') else {} for op in self.pipeline.ops],
-            'ds': {
-                mode: {
-                    key: value.__getstate__()
-                    for key, value in ds.items() if hasattr(value, '__getstate__')
+            # 2. Model / optimizer weights — written into staging, not save_dir.
+            for model in self.network.models:
+                save_model(model, save_dir=staging_dir, save_optimizer=hasattr(model, "optimizer") and model.optimizer)
+
+            # 3. Everything else that can't be JSON-serialised.
+            objects = {
+                'summary': self.summary,
+                'custom_graphs': self.custom_graphs,
+                'traces': [trace.__getstate__() if hasattr(trace, '__getstate__') else {} for trace in self.traces],
+                'tops': [op.__getstate__() if hasattr(op, '__getstate__') else {} for op in self.network.ops],
+                'slops': [sl.__getstate__() if hasattr(sl, '__getstate__') else {} for sl in self.network.slicers],
+                'pops':
+                [op.__getstate__() if hasattr(op, '__getstate__') else {} for op in self.network.postprocessing],
+                'nops': [op.__getstate__() if hasattr(op, '__getstate__') else {} for op in self.pipeline.ops],
+                'ds': {
+                    mode: {
+                        key: value.__getstate__()
+                        for key, value in ds.items() if hasattr(value, '__getstate__')
+                    }
+                    for mode, ds in self.pipeline.data.items()
                 }
-                for mode, ds in self.pipeline.data.items()
             }
-        }
-        with open(os.path.join(save_dir, 'objects.pkl'), 'wb') as file:
-            # We need to use a custom pickler here to handle MirroredStrategy, which will show up inside of tf
-            # MirroredVariables in multi-gpu systems.
-            p = pickle.Pickler(file)
-            p.dispatch_table = copyreg.dispatch_table.copy()
-            p.dump(objects)
+            with open(os.path.join(staging_dir, 'objects.pkl'), 'wb') as file:
+                p = pickle.Pickler(file)
+                p.dispatch_table = copyreg.dispatch_table.copy()
+                p.dump(objects)
+
+            # 4. Commit: promote every staged file into save_dir.
+            #    Model/optimizer files first, then objects.pkl, then system.json
+            #    last so that an interrupted promotion never leaves save_dir with
+            #    a system.json that disagrees with the other files.
+            staged_files = os.listdir(staging_dir)
+
+            def _commit_order(name: str) -> int:
+                if name == 'system.json':
+                    return 2
+                if name == 'objects.pkl':
+                    return 1
+                return 0  # model / optimizer weights
+
+            for name in sorted(staged_files, key=_commit_order):
+                os.replace(os.path.join(staging_dir, name), os.path.join(save_dir, name))
+        except Exception:
+            shutil.rmtree(staging_dir, ignore_errors=True)
+            raise
+        else:
+            # Staging dir should be empty after all replaces; remove it.
+            shutil.rmtree(staging_dir, ignore_errors=True)
 
     def load_state(self, load_dir: str) -> None:
         """Load training state.

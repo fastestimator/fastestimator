@@ -45,7 +45,6 @@ class Sharpness(NumpyOp):
     Image types:
         uint8
     """
-
     def __init__(self,
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
@@ -74,6 +73,8 @@ class Sharpness(NumpyOp):
 
     @staticmethod
     def _apply_sharpness(data: np.ndarray, factor: float) -> np.ndarray:
+        if data.dtype != np.uint8:
+            raise ValueError(f"Sharpness requires uint8 input, got {data.dtype}")
         im = Image.fromarray(data)
         im = ImageEnhance.Sharpness(im).enhance(factor)
         return np.array(im)

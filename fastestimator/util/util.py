@@ -332,26 +332,28 @@ def pad_data(data: np.ndarray, target_shape: Tuple[int, ...], pad_value: Union[f
     return np.pad(data, padded_shape, 'constant', constant_values=pad_value)
 
 
-def move_tensors_to_device(data: T, device: Union[str, torch.device]) -> T:
+def move_tensors_to_device(data: T, device: Union[str, torch.device], non_blocking: bool = False) -> T:
     """Move torch tensor (collections) between gpu and cpu recursively.
 
     Args:
         data: The input data to be moved.
         device: The target device.
+        non_blocking: Whether to perform the transfer asynchronously. When True and the source data is in pinned
+            memory, the transfer to GPU can overlap with computation.
 
     Returns:
         Output data.
     """
     if isinstance(data, dict):
-        return {key: move_tensors_to_device(value, device) for (key, value) in data.items()}
+        return {key: move_tensors_to_device(value, device, non_blocking) for (key, value) in data.items()}
     elif isinstance(data, list):
-        return [move_tensors_to_device(val, device) for val in data]
+        return [move_tensors_to_device(val, device, non_blocking) for val in data]
     elif isinstance(data, tuple):
-        return tuple([move_tensors_to_device(val, device) for val in data])
+        return tuple([move_tensors_to_device(val, device, non_blocking) for val in data])
     elif isinstance(data, set):
-        return set([move_tensors_to_device(val, device) for val in data])
+        return set([move_tensors_to_device(val, device, non_blocking) for val in data])
     elif isinstance(data, torch.Tensor):
-        return data.to(device)
+        return data.to(device, non_blocking=non_blocking)
     else:
         return data
 

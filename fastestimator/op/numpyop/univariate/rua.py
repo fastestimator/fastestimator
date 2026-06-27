@@ -57,7 +57,6 @@ class Rotate(NumpyOp):
     Image types:
         uint8
     """
-
     def __init__(self,
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
@@ -112,7 +111,6 @@ class Identity(NumpyOp):
         ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
             ds_ids except for a particular one, you can pass an argument like "!ds1".
     """
-
     def __init__(self,
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
@@ -147,7 +145,6 @@ class Equalize(NumpyOp):
     Image types:
         uint8
     """
-
     def __init__(self,
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
@@ -175,6 +172,8 @@ class Equalize(NumpyOp):
         Returns:
             The image after applying equalize.
         """
+        if data.dtype != np.uint8:
+            raise ValueError(f"Equalize requires uint8 input, got {data.dtype}")
         im = Image.fromarray(data)
         im = ImageOps.equalize(im)
         return np.array(im)
@@ -199,7 +198,6 @@ class Posterize(PosterizeAug):
     Image types:
         uint8
     """
-
     def __init__(self,
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
@@ -270,7 +268,6 @@ class Solarize(NumpyOp):
     Image types:
         uint8
     """
-
     def __init__(self,
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
@@ -328,7 +325,6 @@ class OneOfMultiVar(OneOf):
     Args:
         *numpy_ops: A list of ops to choose between with uniform probability.
     """
-
     def __init__(self, *numpy_ops: NumpyOp) -> None:
         inputs = to_set(numpy_ops[0].inputs)
         outputs = to_set(numpy_ops[0].outputs)
@@ -393,7 +389,6 @@ class RUA(NumpyOp):
     Image types:
         uint8
     """
-
     def __init__(self,
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],

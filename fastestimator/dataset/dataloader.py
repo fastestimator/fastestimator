@@ -22,11 +22,8 @@ from torch import Tensor
 from torch.utils.data import DataLoader, Sampler, _DatasetKind
 from torch.utils.data._utils.collate import default_collate, default_convert
 from torch.utils.data._utils.fetch import _MapDatasetFetcher
-from torch.utils.data.dataloader import (
-    _BaseDataLoaderIter,
-    _MultiProcessingDataLoaderIter,
-    _SingleProcessDataLoaderIter,
-)
+from torch.utils.data.dataloader import _BaseDataLoaderIter, _MultiProcessingDataLoaderIter, \
+    _SingleProcessDataLoaderIter
 
 from fastestimator.dataset.extend_dataset import ExtendDataset
 from fastestimator.dataset.interleave_dataset import InterleaveDataset
@@ -36,7 +33,6 @@ from fastestimator.util.util import Suppressor
 
 
 class PostProcessFunction(Protocol):
-
     def __call__(self, data: Dict[str, Any], shared: bool = True) -> Union[Dict[str, Any], FilteredData]:
         ...
 
@@ -66,6 +62,8 @@ class FEDataLoader(DataLoader):
         drop_last: Whether to drop the last batch of data if that batch is incomplete. Note that this is meaningless for
             batched datasets, as well as when `steps_per_epoch` is set - in which case the dataset will be re-sampled as
             necessary until the specified number of steps has been completed in full.
+        pin_memory: Whether to copy tensors into pinned memory before returning them. When True, this enables faster
+            data transfer to CUDA-enabled GPUs via non-blocking (asynchronous) transfers.
     """
     _current_threads = []
     FE_LOADER_KIND = 7
@@ -81,7 +79,8 @@ class FEDataLoader(DataLoader):
                  shuffle: bool = False,
                  num_workers: int = 0,
                  collate_fn: Optional[Callable] = None,
-                 drop_last: bool = False):
+                 drop_last: bool = False,
+                 pin_memory: bool = False):
         reset_fn = dataset.fe_reset_ds if hasattr(dataset, 'fe_reset_ds') else None
         convert_fn = dataset.fe_batch_indices if hasattr(dataset, 'fe_batch_indices') else None
         sampler = InfiniteSampler(data_source=dataset, shuffle=shuffle, reset_fn=reset_fn, convert_fn=convert_fn)
@@ -128,6 +127,7 @@ class FEDataLoader(DataLoader):
             sampler=sampler,
             num_workers=num_workers,
             persistent_workers=False,
+            pin_memory=pin_memory,
             collate_fn=functools.partial(_pre_collate, try_fn=self.fe_collate_fn, postprocess_fn=postprocess_fn),
             worker_init_fn=lambda _: np.random.seed(random.randint(0, 2**32 - 1)))
         if self.batch_size is not None:
@@ -213,7 +213,6 @@ class _BaseFELoaderIter(_BaseDataLoaderIter, ABC):
     Args:
         loader: The parent loader object that will own this iterator.
     """
-
     def __init__(self, loader: FEDataLoader):
         super().__init__(loader)
         self.fe_batch_size = loader.fe_batch_size
@@ -387,7 +386,6 @@ class InfiniteSampler(Sampler):
         convert_fn: A function to be invoked (using the current index) every sample in order to convert an integer index
             into some arbitrary alternative index representation.
     """
-
     def __init__(self,
                  data_source: Sized,
                  shuffle: bool = True,
@@ -439,7 +437,6 @@ class InfiniteSampler(Sampler):
 
 
 class _IdxMapDatasetFetcher(_MapDatasetFetcher):
-
     def fetch(self, possibly_batched_index):
         if self.auto_collation:
             data = [self.dataset[idx] for idx in possibly_batched_index]

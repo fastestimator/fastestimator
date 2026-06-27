@@ -58,11 +58,11 @@ def get_torch_lenet_model_weight(model):
         model = model.module
 
     weight = []
-    weight.append(deepcopy(model.conv1.weight.data.numpy()))
-    weight.append(deepcopy(model.conv2.weight.data.numpy()))
-    weight.append(deepcopy(model.conv3.weight.data.numpy()))
-    weight.append(deepcopy(model.fc1.weight.data.numpy()))
-    weight.append(deepcopy(model.fc1.weight.data.numpy()))
+    weight.append(deepcopy(model.conv1.weight.data.cpu().numpy()))
+    weight.append(deepcopy(model.conv2.weight.data.cpu().numpy()))
+    weight.append(deepcopy(model.conv3.weight.data.cpu().numpy()))
+    weight.append(deepcopy(model.fc1.weight.data.cpu().numpy()))
+    weight.append(deepcopy(model.fc1.weight.data.cpu().numpy()))
 
     return weight
 
@@ -72,7 +72,7 @@ def get_torch_one_layer_model_weight(model):
         model = model.module
 
     weight = []
-    weight.append(deepcopy(model.fc1.weight.data.numpy()))
+    weight.append(deepcopy(model.fc1.weight.data.cpu().numpy()))
 
     return weight
 

@@ -39,7 +39,7 @@ from fastestimator.schedule.schedule import EpochScheduler, RepeatScheduler, Sch
 from fastestimator.types import FilteredData
 from fastestimator.util.base_util import filter_nones, to_list, to_set, warn
 from fastestimator.util.traceability_util import traceable
-from fastestimator.util.util import cpu_count, get_num_devices
+from fastestimator.util.util import cpu_count, get_num_devices, get_num_gpus
 
 DataSource = TypeVar('DataSource', Dataset, DataLoader)
 
@@ -718,6 +718,7 @@ class Pipeline:
                                                    ops=self.ctx_batch_ops,
                                                    output_keys=self.ctx_output_keys,
                                                    mode=self.ctx_mode)
+            _use_pin_memory = get_num_gpus() > 0
             try:
                 data = FEDataLoader(self.ctx_dataset,
                                     postprocess_fn=postprocess_fn,
@@ -726,7 +727,8 @@ class Pipeline:
                                     steps_per_epoch=self.ctx_steps_per_epoch,
                                     num_workers=self.num_process,
                                     drop_last=self.ctx_batch_info.drop_last,
-                                    collate_fn=self.ctx_batch_info.collate_fn)
+                                    collate_fn=self.ctx_batch_info.collate_fn,
+                                    pin_memory=_use_pin_memory)
             except ValueError as err:
                 self.ctx_lock.release()
                 raise err
@@ -747,6 +749,7 @@ class Pipeline:
                                                    ops=self.ctx_batch_ops,
                                                    output_keys=self.ctx_output_keys,
                                                    mode=self.ctx_mode)
+            _use_pin_memory = get_num_gpus() > 0
             try:
                 data = FEDataLoader(op_dataset,
                                     postprocess_fn=postprocess_fn,
@@ -755,7 +758,8 @@ class Pipeline:
                                     steps_per_epoch=self.ctx_steps_per_epoch,
                                     num_workers=self.num_process,
                                     drop_last=self.ctx_batch_info.drop_last,
-                                    collate_fn=self.ctx_batch_info.collate_fn)
+                                    collate_fn=self.ctx_batch_info.collate_fn,
+                                    pin_memory=_use_pin_memory)
             except ValueError as err:
                 self.ctx_lock.release()
                 raise err

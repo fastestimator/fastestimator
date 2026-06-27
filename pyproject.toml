@@ -1,7 +1,7 @@
 [project]
 name = "fastestimator"
 version = "2.0.0"
-description = "Deep learning framework"
+description = "A high-level deep learning library built on PyTorch"
 readme = "README.md"
 license = { text = "Apache-2.0" }
 authors = [{ name = "FastEstimator Dev" }]
@@ -62,9 +62,9 @@ dependencies = [
     "torch==2.3.1 ; sys_platform == 'darwin'",
     "torchvision==0.18.1 ; sys_platform == 'darwin'",
     "torchaudio==2.3.1 ; sys_platform == 'darwin'",
-    "torch==2.3.1+cpu ; sys_platform != 'darwin'",
-    "torchvision==0.18.1+cpu ; sys_platform != 'darwin'",
-    "torchaudio==2.3.1+cpu ; sys_platform != 'darwin'",
+    "torch==2.3.1 ; sys_platform != 'darwin'",
+    "torchvision==0.18.1 ; sys_platform != 'darwin'",
+    "torchaudio==2.3.1 ; sys_platform != 'darwin'",
 ]
 
 [project.optional-dependencies]
