@@ -15,12 +15,11 @@
 from typing import TypeVar, Union
 
 import numpy as np
-import tensorflow as tf
 import torch
 
 from fastestimator.backend._cast import cast
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
+Tensor = TypeVar('Tensor', torch.Tensor, np.ndarray)
 
 
 def where(condition: Tensor, yes: Union[Tensor, int, float], no: Union[Tensor, int, float]) -> Tensor:
@@ -30,12 +29,6 @@ def where(condition: Tensor, yes: Union[Tensor, int, float], no: Union[Tensor, i
     ```python
     n = np.array([[0,1,2],[3,4,5],[6,7,8]])
     b = fe.backend.where(n > 4, n, -1)  # [[-1,-1,-1],[-1,-1,5],[6,7,8]]
-    ```
-
-    This method can be used with TensorFlow tensors:
-    ```python
-    t = tf.constant([[0,1,2],[3,4,5],[6,7,8]])
-    b = fe.backend.where(t > 4, t, -1)  # [[-1,-1,-1],[-1,-1,5],[6,7,8]]
     ```
 
     This method can be used with PyTorch tensors:
@@ -55,9 +48,7 @@ def where(condition: Tensor, yes: Union[Tensor, int, float], no: Union[Tensor, i
     Raises:
         ValueError: If `tensor` is an unacceptable data type.
     """
-    if tf.is_tensor(condition):
-        return tf.where(condition, yes, no)
-    elif isinstance(condition, torch.Tensor):
+    if isinstance(condition, torch.Tensor):
         if isinstance(yes, torch.Tensor):
             no = cast(no, yes)
         elif isinstance(no, torch.Tensor):

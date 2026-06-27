@@ -15,7 +15,7 @@
 import re
 import statistics
 from collections import defaultdict
-from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
 if TYPE_CHECKING:
     from fastestimator.util.traceability_util import FeSummaryTable
@@ -54,6 +54,20 @@ class ValWithError:
 
     def __str__(self):
         return f"({self.y_min}, {self.y}, {self.y_max})"
+
+    def __repr__(self):
+        return f"ValWithError(y_min={self.y_min}, y={self.y}, y_max={self.y_max})"
+
+    def __hash__(self):
+        return hash((self.y_min, self.y, self.y_max))
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __format__(self, format_spec):
+        if format_spec:
+            return f"({format(self.y_min, format_spec)}, {format(self.y, format_spec)}, {format(self.y_max, format_spec)})"
+        return str(self)
 
     def __lt__(self, other):
         if isinstance(other, ValWithError):
@@ -129,6 +143,15 @@ class Summary:
         self.system_config = system_config
         self.history = defaultdict(lambda: defaultdict(dict))  # {mode: {key: {step: value}}}
 
+    def __repr__(self) -> str:
+        modes = list(self.history.keys())
+        keys_per_mode = {mode: list(self.history[mode].keys()) for mode in modes}
+        return f"Summary(name='{self.name}', modes={modes}, keys={keys_per_mode})"
+
+    def __len__(self) -> int:
+        """Return the total number of recorded data points across all modes and keys."""
+        return sum(len(v) for sub in self.history.values() for v in sub.values())
+
     def merge(self, other: 'Summary'):
         """Merge another `Summary` into this one.
 
@@ -173,6 +196,61 @@ class Summary:
         state['history'] = history
         self.__dict__.update(state)
 
+    def get_keys(self, mode: Optional[str] = None) -> List[str]:
+        """Get all metric keys recorded in the history.
+
+        Args:
+            mode: If provided, only return keys for this mode. Otherwise return keys across all modes.
+
+        Returns:
+            A sorted list of unique metric key names.
+        """
+        if mode is not None:
+            return sorted(self.history[mode].keys()) if mode in self.history else []
+        return sorted({key for sub in self.history.values() for key in sub.keys()})
+
+    def get_best(self, key: str, mode: str = 'eval', largest: bool = True) -> Optional[Tuple[int, Any]]:
+        """Get the best (max or min) value for a given metric key.
+
+        Args:
+            key: The metric key to search for.
+            mode: The mode to search in (default 'eval').
+            largest: If True, return the maximum value. If False, return the minimum.
+
+        Returns:
+            A tuple of (step, value) for the best metric, or None if key not found.
+        """
+        if mode not in self.history or key not in self.history[mode]:
+            return None
+        step_vals = self.history[mode][key]
+        if not step_vals:
+            return None
+        numeric_items = []
+        for step, val in step_vals.items():
+            if isinstance(val, ValWithError):
+                numeric_items.append((step, val.y))
+            elif isinstance(val, (int, float)):
+                numeric_items.append((step, val))
+        if not numeric_items:
+            return None
+        best_step, _ = max(numeric_items, key=lambda x: x[1]) if largest else min(numeric_items, key=lambda x: x[1])
+        return (best_step, step_vals[best_step])
+
+    def to_dict(self, mode: Optional[str] = None) -> Dict[str, Any]:
+        """Export the summary history as a plain nested dictionary.
+
+        Args:
+            mode: If provided, only export history for this mode.
+
+        Returns:
+            A dictionary of {mode: {key: {step: value}}} or {key: {step: value}} if mode is specified.
+        """
+        if mode is not None:
+            if mode not in self.history:
+                return {}
+            return {key: dict(step_vals) for key, step_vals in self.history[mode].items()}
+        return {m: {key: dict(step_vals) for key, step_vals in sub.items()} for m, sub in self.history.items()}
+
 
 def average_summaries(name: str, summaries: List[Summary]) -> Summary:
     """Average multiple summaries together, storing their metric means +- stdevs.
@@ -196,7 +274,9 @@ def average_summaries(name: str, summaries: List[Summary]) -> Summary:
     keys = {key for summary in summaries for key_pairs in summary.history.values() for key in key_pairs.keys()}
     steps = {
         step
-        for summary in summaries for key_pairs in summary.history.values() for val_pair in key_pairs.values()
+        for summary in summaries
+        for key_pairs in summary.history.values()
+        for val_pair in key_pairs.values()
         for step in val_pair.keys()
     }
     # Average everything

@@ -15,7 +15,6 @@
 import unittest
 
 import numpy as np
-import tensorflow as tf
 import torch
 
 from fastestimator.test.unittest_util import TraceRun, is_equal
@@ -23,6 +22,7 @@ from fastestimator.trace.metric import ConfusionMatrix
 
 
 class TestConfusionMatrix(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.cm_key = "confusion_matrix"
@@ -45,8 +45,8 @@ class TestConfusionMatrix(unittest.TestCase):
                                         num_classes=2,
                                         output_name=self.cm_key,
                                         **kwargs)
-                batch = {"label": tf.constant([0, 1, 0, 1])}
-                pred = {"pred": tf.constant([[0.2], [0.6], [0.8], [0.1]])}  # [[0], [1], [1], [0]]
+                batch = {"label": torch.Tensor([0, 1, 0, 1])}
+                pred = {"pred": torch.Tensor([[0.2], [0.6], [0.8], [0.1]])}  # [[0], [1], [1], [0]]
                 run = TraceRun(trace=trace, batch=batch, prediction=pred)
                 run.run_trace()
 
@@ -54,25 +54,6 @@ class TestConfusionMatrix(unittest.TestCase):
             for key, val in kwargs.items():
                 self.assertTrue(key in fake_kwargs)
                 self.assertEqual(val, fake_kwargs[key])
-
-    def test_tf_binary_class(self):
-        with self.subTest("ordinal label"):
-            trace = ConfusionMatrix(true_key="label", pred_key="pred", num_classes=2, output_name=self.cm_key)
-            batch = {"label": tf.constant([0, 1, 0, 1])}
-            pred = {"pred": tf.constant([[0.2], [0.6], [0.8], [0.1]])}  # [[0], [1], [1], [0]]
-            run = TraceRun(trace=trace, batch=batch, prediction=pred)
-            run.run_trace()
-            ans = np.array([[1, 1], [1, 1]])
-            self.assertTrue(is_equal(run.data_on_epoch_end[self.cm_key], ans))
-
-        with self.subTest("one-hot label"):
-            trace = ConfusionMatrix(true_key="label", pred_key="pred", num_classes=2, output_name=self.cm_key)
-            batch = {"label": tf.constant([[1, 0], [0, 1], [0, 1], [0, 1]])}  #  [0, 1, 1, 1]
-            pred = {"pred": tf.constant([[0.2], [0.6], [0.8], [0.1]])}  #  [[0], [1], [1], [0]]
-            run = TraceRun(trace=trace, batch=batch, prediction=pred)
-            run.run_trace()
-            ans = np.array([[1, 0], [1, 2]])  # col is pred, row is label
-            self.assertTrue(is_equal(run.data_on_epoch_end[self.cm_key], ans))
 
     def test_torch_binary_class(self):
         with self.subTest("ordinal label"):
@@ -91,35 +72,6 @@ class TestConfusionMatrix(unittest.TestCase):
             run = TraceRun(trace=trace, batch=batch, prediction=pred)
             run.run_trace()
             ans = np.array([[1, 0], [1, 2]])  # col is pred, row is label
-            self.assertTrue(is_equal(run.data_on_epoch_end[self.cm_key], ans))
-
-    def test_tf_multi_class(self):
-        with self.subTest("ordinal label"):
-            trace = ConfusionMatrix(true_key="label", pred_key="pred", num_classes=3, output_name=self.cm_key)
-            batch = {"label": tf.constant([0, 0, 0, 1, 1, 2])}
-            pred = {
-                "pred":
-                tf.constant([[0.2, 0.1, -0.6], [0.6, 2.0, 0.1], [0.1, 0.1, 0.8], [0.4, 0.1, -0.3], [0.2, 0.7, 0.1],
-                             [0.3, 0.6, 1.5]])  # [[0], [1], [2], [0], [1], [2]]
-            }
-            run = TraceRun(trace=trace, batch=batch, prediction=pred)
-            run.run_trace()
-            ans = np.array([[1, 1, 1], [1, 1, 0], [0, 0, 1]])  # col is pred, row is label
-            self.assertTrue(is_equal(run.data_on_epoch_end[self.cm_key], ans))
-
-        with self.subTest("one-hot label"):
-            trace = ConfusionMatrix(true_key="label", pred_key="pred", num_classes=3, output_name=self.cm_key)
-            batch = {
-                "label": tf.constant([[1, 0, 0], [1, 0, 0], [1, 0, 0], [0, 1, 0], [0, 1, 0], [0, 0, 1]])
-            }  # [0, 0, 0, 1, 1, 2]
-            pred = {
-                "pred":
-                tf.constant([[0.2, 0.1, -0.6], [0.6, 2.0, 0.1], [0.1, 0.1, 0.8], [0.4, 0.1, -0.3], [0.2, 0.7, 0.1],
-                             [0.3, 0.6, 1.5]])  # [[0], [1], [2], [0], [1], [2]]
-            }
-            run = TraceRun(trace=trace, batch=batch, prediction=pred)
-            run.run_trace()
-            ans = np.array([[1, 1, 1], [1, 1, 0], [0, 0, 1]])  # col is pred, row is label
             self.assertTrue(is_equal(run.data_on_epoch_end[self.cm_key], ans))
 
     def test_torch_multi_class(self):

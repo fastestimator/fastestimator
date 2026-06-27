@@ -54,6 +54,7 @@ class RandomSizedCrop(MultiVariateAlbumentation):
     Image types:
         uint8, float32
     """
+
     def __init__(self,
                  min_max_height: Tuple[int, int],
                  height: int,

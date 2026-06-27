@@ -15,7 +15,8 @@
 from typing import Iterable, List, Optional, Tuple, Union
 
 import cv2
-from albumentations.augmentations.geometric.transforms import GridDistortion as GridDistortionAlb
+from albumentations.augmentations.geometric.transforms import (
+    GridDistortion as GridDistortionAlb, )
 
 from fastestimator.op.numpyop.multivariate.multivariate import MultiVariateAlbumentation
 from fastestimator.util.traceability_util import traceable
@@ -49,6 +50,7 @@ class GridDistortion(MultiVariateAlbumentation):
     Image types:
         uint8, float32
     """
+
     def __init__(self,
                  num_steps: int = 5,
                  distort_limit: Union[float, Tuple[float, float]] = 0.3,

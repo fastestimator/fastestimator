@@ -15,7 +15,8 @@
 from typing import Iterable, List, Optional, Union
 
 from albumentations import BboxParams, KeypointParams
-from albumentations.augmentations import CropNonEmptyMaskIfExists as CropNonEmptyMaskIfExistsAlb
+from albumentations.augmentations import (
+    CropNonEmptyMaskIfExists as CropNonEmptyMaskIfExistsAlb, )
 
 from fastestimator.op.numpyop.multivariate.multivariate import MultiVariateAlbumentation
 from fastestimator.util.traceability_util import traceable
@@ -53,6 +54,7 @@ class CropNonEmptyMaskIfExists(MultiVariateAlbumentation):
     Image types:
         uint8, float32
     """
+
     def __init__(self,
                  height: int,
                  width: int,

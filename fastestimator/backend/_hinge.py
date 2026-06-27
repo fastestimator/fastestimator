@@ -14,25 +14,17 @@
 # ==============================================================================
 from typing import TypeVar
 
-import tensorflow as tf
 import torch
 
 from fastestimator.backend._cast import cast
 from fastestimator.backend._clip_by_value import clip_by_value
 from fastestimator.backend._reduce_mean import reduce_mean
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
+Tensor = TypeVar('Tensor', bound=torch.Tensor)
 
 
 def hinge(y_true: Tensor, y_pred: Tensor) -> Tensor:
     """Calculate the hinge loss between two tensors.
-
-    This method can be used with TensorFlow tensors:
-    ```python
-    true = tf.constant([[-1,1,1,-1], [1,1,1,1], [-1,-1,1,-1], [1,-1,-1,-1]])
-    pred = tf.constant([[0.1,0.9,0.05,0.05], [0.1,-0.2,0.0,-0.7], [0.0,0.15,0.8,0.05], [1.0,-1.0,-1.0,-1.0]])
-    b = fe.backend.hinge(y_pred=pred, y_true=true)  # [0.8  1.2  0.85 0.  ]
-    ```
 
     This method can be used with PyTorch tensors:
     ```python

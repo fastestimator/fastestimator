@@ -21,6 +21,7 @@ from fastestimator.trace.metric.auc import AUCScore
 
 
 class TestAUCScore(unittest.TestCase):
+
     @classmethod
     def setUpClass(self):
         self.auc_score = AUCScore(true_key="target_real",

@@ -16,7 +16,7 @@ import unittest
 
 import numpy as np
 
-from fastestimator.test.unittest_util import sample_system_object
+from fastestimator.test.unittest_util import sample_system_object_torch
 from fastestimator.trace.metric import Dice
 from fastestimator.util import Data
 
@@ -24,16 +24,16 @@ from fastestimator.util import Data
 class TestDice(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.x = np.array([[[[0, 1, 1], [1, 0, 1], [1, 0, 1]],
-                           [[0, 0, 1], [1, 1, 1], [1, 0, 1]],
-                           [[0, 1, 1], [1, 0, 1], [1, 0, 1]]]], dtype=np.float32)
+        cls.x = np.array(
+            [[[[0, 1, 1], [1, 0, 1], [1, 0, 1]], [[0, 0, 1], [1, 1, 1], [1, 0, 1]], [[0, 1, 1], [1, 0, 1], [1, 0, 1]]]],
+            dtype=np.float32)
 
-        cls.x_pred = np.array([[[[0, 1, 0], [1, 0, 0], [1, 0, 1]],
-                                [[1, 0, 1], [1, 0, 1], [0, 1, 0]],
-                                [[0, 0, 1], [1, 0, 1], [1, 0, 1]]]], dtype=np.float32)
+        cls.x_pred = np.array(
+            [[[[0, 1, 0], [1, 0, 0], [1, 0, 1]], [[1, 0, 1], [1, 0, 1], [0, 1, 0]], [[0, 0, 1], [1, 0, 1], [1, 0, 1]]]],
+            dtype=np.float32)
         cls.dice_output = 0.67777777
         cls.dice = Dice(true_key='x', pred_key='x_pred')
-        cls.dice.system = sample_system_object()
+        cls.dice.system = sample_system_object_torch()
 
     def test_sanity(self):
         data = Data()

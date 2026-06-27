@@ -20,6 +20,7 @@ from fastestimator.op.numpyop.multivariate import CropAndPad
 
 
 class TestCropAndPad(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.single_input = [np.random.rand(28, 28, 3)]
@@ -28,7 +29,7 @@ class TestCropAndPad(unittest.TestCase):
         cls.image_and_mask_output_shape = (28, 28, 3)
 
     def test_crop(self):
-        croppad = CropAndPad(image_in='x',percent=-0.1)
+        croppad = CropAndPad(image_in='x', percent=-0.1)
         output = croppad.forward(data=self.single_input, state={})
         with self.subTest('Check output type'):
             self.assertEqual(type(output), list)
@@ -36,7 +37,7 @@ class TestCropAndPad(unittest.TestCase):
             self.assertEqual(output[0].shape, self.single_output_shape)
 
     def test_pad_image_and_mask(self):
-        croppad = CropAndPad(image_in='x', mask_in='x_mask',percent=0.1)
+        croppad = CropAndPad(image_in='x', mask_in='x_mask', percent=0.1)
         output = croppad.forward(data=self.input_image_and_mask, state={})
         with self.subTest('Check output type'):
             self.assertEqual(type(output), list)

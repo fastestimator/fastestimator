@@ -87,6 +87,7 @@ class AUCScore(Trace):
             ValueError: Expected values of 'multi_class' are ['raise', 'ovr' or 'ovo'].
             ValueError: Expected values of 'average' should be either None or ['micro', 'macro', 'samples', 'weighted'].
     """
+
     def __init__(self,
                  true_key: str,
                  pred_key: str,

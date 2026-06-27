@@ -5,7 +5,7 @@ import numpy as np
 
 import fastestimator as fe
 from fastestimator.dataset import NumpyDataset
-from fastestimator.test.unittest_util import sample_system_object, sample_system_object_torch
+from fastestimator.test.unittest_util import sample_system_object_torch
 
 
 class TestDataset(NumpyDataset):
@@ -17,7 +17,7 @@ class TestDataset(NumpyDataset):
 class TestBatchDataset(unittest.TestCase):
     def test_save_and_load_state_with_batch_dataset_tf(self):
         def instantiate_system():
-            system = sample_system_object()
+            system = sample_system_object_torch()
             x_train = np.ones((2, 28, 28, 3))
             y_train = np.ones((2, ))
             ds = TestDataset(data={'x': x_train, 'y': y_train}, var=1)

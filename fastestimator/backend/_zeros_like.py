@@ -15,12 +15,11 @@
 from typing import TypeVar, Union
 
 import numpy as np
-import tensorflow as tf
 import torch
 
 from fastestimator.util.util import STRING_TO_TORCH_DTYPE
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
+Tensor = TypeVar('Tensor', torch.Tensor, np.ndarray)
 
 
 def zeros_like(tensor: Tensor, dtype: Union[None, str] = None) -> Tensor:
@@ -31,13 +30,6 @@ def zeros_like(tensor: Tensor, dtype: Union[None, str] = None) -> Tensor:
     n = np.array([[0,1],[2,3]])
     b = fe.backend.zeros_like(n)  # [[0, 0], [0, 0]]
     b = fe.backend.zeros_like(n, dtype="float32")  # [[0.0, 0.0], [0.0, 0.0]]
-    ```
-
-    This method can be used with TensorFlow tensors:
-    ```python
-    t = tf.constant([[0,1],[2,3]])
-    b = fe.backend.zeros_like(t)  # [[0, 0], [0, 0]]
-    b = fe.backend.zeros_like(t, dtype="float32")  # [[0.0, 0.0], [0.0, 0.0]]
     ```
 
     This method can be used with PyTorch tensors:
@@ -57,9 +49,7 @@ def zeros_like(tensor: Tensor, dtype: Union[None, str] = None) -> Tensor:
     Raises:
         ValueError: If `tensor` is an unacceptable data type.
     """
-    if tf.is_tensor(tensor):
-        return tf.zeros_like(tensor, dtype=dtype)
-    elif isinstance(tensor, torch.Tensor):
+    if isinstance(tensor, torch.Tensor):
         return torch.zeros_like(tensor, dtype=STRING_TO_TORCH_DTYPE[dtype])
     elif isinstance(tensor, np.ndarray):
         return np.zeros_like(tensor, dtype=dtype)

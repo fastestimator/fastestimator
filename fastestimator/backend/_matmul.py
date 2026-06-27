@@ -15,10 +15,9 @@
 from typing import TypeVar
 
 import numpy as np
-import tensorflow as tf
 import torch
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
+Tensor = TypeVar('Tensor', torch.Tensor, np.ndarray)
 
 
 def matmul(a: Tensor, b: Tensor) -> Tensor:
@@ -28,13 +27,6 @@ def matmul(a: Tensor, b: Tensor) -> Tensor:
     ```python
     a = np.array([[0,1,2],[3,4,5]])
     b = np.array([[1],[2],[3]])
-    c = fe.backend.matmul(a, b)  # [[8], [26]]
-    ```
-
-    This method can be used with TensorFlow tensors:
-    ```python
-    a = tf.constant([[0,1,2],[3,4,5]])
-    b = tf.constant([[1],[2],[3]])
     c = fe.backend.matmul(a, b)  # [[8], [26]]
     ```
 
@@ -55,9 +47,7 @@ def matmul(a: Tensor, b: Tensor) -> Tensor:
     Raises:
         ValueError: If either `a` or `b` are unacceptable or non-matching data types.
     """
-    if tf.is_tensor(a) and tf.is_tensor(b):
-        return tf.matmul(a, b)
-    elif isinstance(a, torch.Tensor) and isinstance(b, torch.Tensor):
+    if isinstance(a, torch.Tensor) and isinstance(b, torch.Tensor):
         return a.matmul(b)
     elif isinstance(a, np.ndarray) and isinstance(b, np.ndarray):
         return np.matmul(a, b)

@@ -32,8 +32,8 @@ from fastestimator.op.numpyop.univariate.shear_x import ShearX
 from fastestimator.op.numpyop.univariate.shear_y import ShearY
 from fastestimator.op.numpyop.univariate.translate_x import TranslateX
 from fastestimator.op.numpyop.univariate.translate_y import TranslateY
+from fastestimator.util.base_util import param_to_range, to_list, to_set
 from fastestimator.util.traceability_util import traceable
-from fastestimator.util.base_util import to_set, to_list, param_to_range
 
 
 @traceable()
@@ -172,6 +172,8 @@ class Equalize(NumpyOp):
         Returns:
             The image after applying equalize.
         """
+        if data.dtype != np.uint8:
+            raise ValueError(f"Equalize requires uint8 input, got {data.dtype}")
         im = Image.fromarray(data)
         im = ImageOps.equalize(im)
         return np.array(im)
@@ -241,11 +243,11 @@ class Posterize(PosterizeAug):
             The range of high bits after adjusting augmentation intensity.
         """
         if isinstance(num_bits, tuple):
-            param_mid = (num_bits[0] + num_bits[1])/2
-            param_extent = magnitude_coef * ((num_bits[1] - num_bits[0])/2)
+            param_mid = (num_bits[0] + num_bits[1]) / 2
+            param_extent = magnitude_coef * ((num_bits[1] - num_bits[0]) / 2)
             bits_range = (round(param_mid - param_extent), round(param_mid + param_extent))
         else:
-            bits_range = (round(8-(magnitude_coef*num_bits)), 8)
+            bits_range = (round(8 - (magnitude_coef * num_bits)), 8)
         return bits_range
 
 
@@ -395,20 +397,20 @@ class RUA(NumpyOp):
                  choices: Union[str, NumpyOp, List[Union[str, NumpyOp]]] = "defaults",
                  level: Union[int, float] = 18):
         self.default_aug_dict = {
-            "Rotate": Rotate(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id,limit=90),
+            "Rotate": Rotate(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id, limit=90),
             "Identity": Identity(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id),
             "AutoContrast": AutoContrast(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id),
             "Equalize": Equalize(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id),
-            "Posterize": Posterize(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id,num_bits=7),
-            "Solarize": Solarize(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id,threshold=256),
-            "Sharpness": Sharpness(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id,limit=0.9),
-            "Contrast": Contrast(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id,limit=0.9),
-            "Color": Color(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id,limit=0.9),
-            "Brightness": Brightness(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id,limit=0.9),
-            "ShearX": ShearX(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id,shear_coef=0.5),
-            "ShearY": ShearY(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id,shear_coef=0.5),
-            "TranslateX": TranslateX(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id,shift_limit=0.33),
-            "TranslateY": TranslateY(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id,shift_limit=0.33)
+            "Posterize": Posterize(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id, num_bits=7),
+            "Solarize": Solarize(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id, threshold=256),
+            "Sharpness": Sharpness(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id, limit=0.9),
+            "Contrast": Contrast(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id, limit=0.9),
+            "Color": Color(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id, limit=0.9),
+            "Brightness": Brightness(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id, limit=0.9),
+            "ShearX": ShearX(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id, shear_coef=0.5),
+            "ShearY": ShearY(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id, shear_coef=0.5),
+            "TranslateX": TranslateX(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id, shift_limit=0.33),
+            "TranslateY": TranslateY(inputs=inputs, outputs=outputs, mode=mode, ds_id=ds_id, shift_limit=0.33)
         }
         aug_options = self._parse_aug_choices(magnitude_coef=(level / 30.), choices=to_list(choices))
 

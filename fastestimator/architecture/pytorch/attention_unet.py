@@ -29,6 +29,7 @@ class UNetEncoderBlock(nn.Module):
         in_channels: How many channels enter the encoder.
         out_channels: How many channels leave the encoder.
     """
+
     def __init__(self, in_channels: int, out_channels: int) -> None:
         super().__init__()
         self.layers = nn.Sequential(nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1),
@@ -56,6 +57,7 @@ class UNetDecoderBlock(nn.Module):
         mid_channels: How many channels are used for the decoder's intermediate layer.
         out_channels: How many channels leave the decoder.
     """
+
     def __init__(self, in_channels: int, mid_channels: int, out_channels: int) -> None:
         super().__init__()
         self.layers = nn.Sequential(nn.Conv2d(in_channels, mid_channels, 3, padding=1),
@@ -84,6 +86,7 @@ class AttentionBlock(nn.Module):
         in_channels: How many channels enter the attention block.
         out_channels: How many channels leave the attention block.
     """
+
     def __init__(self, in_channels: int, out_channels: int) -> None:
         super().__init__()
         self.dec_layers = nn.Sequential(nn.Conv2d(in_channels, out_channels, 1), nn.BatchNorm2d(out_channels))
@@ -111,6 +114,7 @@ class AttentionUNet(nn.Module):
         ValueError: Length of `input_size` is not 3.
         ValueError: `input_size`[1] or `input_size`[2] is not a multiple of 16.
     """
+
     def __init__(self, input_size: Tuple[int, int, int] = (1, 128, 128)) -> None:
         AttentionUNet._check_input_size(input_size)
         super().__init__()

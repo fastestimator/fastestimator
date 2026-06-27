@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Union, Dict, Any, Iterable
+from typing import Any, Dict, Iterable, Union
 
 import numpy as np
 from sklearn.metrics import f1_score
@@ -48,6 +48,7 @@ class F1Score(Trace):
     Raises:
         ValueError: One of ["y_pred", "y_true", "average"] argument exists in `kwargs`.
     """
+
     def __init__(self,
                  true_key: str,
                  pred_key: str,

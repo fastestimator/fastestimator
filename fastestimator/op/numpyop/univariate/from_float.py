@@ -39,6 +39,7 @@ class FromFloat(ImageOnlyAlbumentation):
     Image types:
         float32
     """
+
     def __init__(self,
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],

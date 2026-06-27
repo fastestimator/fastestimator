@@ -203,7 +203,7 @@ class LossNet(nn.Module):
     """
     def __init__(self) -> None:
         super().__init__()
-        vgg16 = models.vgg16(pretrained=True)
+        vgg16 = models.vgg16(weights=models.VGG16_Weights.IMAGENET1K_V1)
 
         self.layer1 = nn.Sequential(*list(vgg16.features.children())[:4])
         self.layer2 = nn.Sequential(*list(vgg16.features.children())[4:9])

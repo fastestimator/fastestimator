@@ -14,7 +14,8 @@
 # ==============================================================================
 from typing import Iterable, Optional, Tuple, Union
 
-from albumentations.augmentations.transforms import RandomGridShuffle as RandomGridShuffleAlb
+from albumentations.augmentations.transforms import (
+    RandomGridShuffle as RandomGridShuffleAlb, )
 
 from fastestimator.op.numpyop.multivariate.multivariate import MultiVariateAlbumentation
 from fastestimator.util.traceability_util import traceable
@@ -41,6 +42,7 @@ class RandomGridShuffle(MultiVariateAlbumentation):
     Image types:
         uint8, float32
     """
+
     def __init__(self,
                  grid: Tuple[int, int] = (3, 3),
                  mode: Union[None, str, Iterable[str]] = None,

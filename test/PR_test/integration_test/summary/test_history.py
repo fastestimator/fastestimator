@@ -21,7 +21,7 @@ import unittest
 from contextlib import closing
 
 from fastestimator.summary.history import HistoryReader, HistoryRecorder, connect, update_settings
-from fastestimator.test.unittest_util import sample_system_object
+from fastestimator.test.unittest_util import sample_system_object_torch
 
 
 class TestHistoryRecorder(unittest.TestCase):
@@ -33,8 +33,8 @@ class TestHistoryRecorder(unittest.TestCase):
         shutil.rmtree(self.db_dir)
 
     def test_happy_path(self):
-        system = sample_system_object()
-        recorder = HistoryRecorder(system=system, est_path="test.py", db_path=self.db_path)
+        system = sample_system_object_torch()
+        recorder = HistoryRecorder(system=system, est_path='test.py', db_path=self.db_path)
         with recorder:
             print("Test Log Capture")
             print("Line 2")
@@ -61,8 +61,8 @@ class TestHistoryRecorder(unittest.TestCase):
         db.close()
 
     def test_error_raised(self):
-        system = sample_system_object()
-        recorder = HistoryRecorder(system=system, est_path="test.py", db_path=self.db_path)
+        system = sample_system_object_torch()
+        recorder = HistoryRecorder(system=system, est_path='test.py', db_path=self.db_path)
         try:
             with recorder:
                 print("Test Log Capture")
@@ -102,7 +102,7 @@ class TestHistoryRecorder(unittest.TestCase):
         db.close()
 
     def test_restore_training(self):
-        system1 = sample_system_object()
+        system1 = sample_system_object_torch()
         recorder1 = HistoryRecorder(system=system1, est_path="test.py", db_path=self.db_path)
         try:
             with recorder1:
@@ -111,7 +111,7 @@ class TestHistoryRecorder(unittest.TestCase):
                 raise RuntimeError("Training Died")
         except RuntimeError:
             pass
-        system2 = sample_system_object()
+        system2 = sample_system_object_torch()
         recorder2 = HistoryRecorder(system=system2, est_path="test.py", db_path=self.db_path)
         with recorder2:
             # Fake a restore wizard
@@ -145,7 +145,7 @@ class TestHistoryRecorder(unittest.TestCase):
         db.close()
 
     def test_restore_training_old_missing(self):
-        system1 = sample_system_object()
+        system1 = sample_system_object_torch()
         recorder1 = HistoryRecorder(system=system1, est_path="test.py", db_path=self.db_path)
         try:
             with recorder1:
@@ -157,7 +157,7 @@ class TestHistoryRecorder(unittest.TestCase):
         db = connect(self.db_path)
         db.execute("DELETE FROM history WHERE pk = (?)", [system1.exp_id])
         db.commit()
-        system2 = sample_system_object()
+        system2 = sample_system_object_torch()
         recorder2 = HistoryRecorder(system=system2, est_path="test.py", db_path=self.db_path)
         with recorder2:
             # Fake a restore wizard
@@ -193,7 +193,7 @@ class TestHistoryRecorder(unittest.TestCase):
         update_settings(n_keep=5, db_path=self.db_path)
 
         for i in range(7):
-            system = sample_system_object()
+            system = sample_system_object_torch()
             recorder = HistoryRecorder(system=system, est_path=f"{i}", db_path=self.db_path)
             with recorder:
                 print(f"Run {i}")
@@ -222,7 +222,7 @@ class TestHistoryReader(unittest.TestCase):
 
     def test_read_basic_with_data(self):
         for i in range(10):
-            system = sample_system_object()
+            system = sample_system_object_torch()
             recorder = HistoryRecorder(system=system, est_path=f"{i}", db_path=self.db_path)
             with recorder:
                 print("Test Log Capture")

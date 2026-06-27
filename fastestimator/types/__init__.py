@@ -12,8 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import TYPE_CHECKING, Any, Callable, Collection, Dict, List, Optional, Protocol, Sequence, Sized, TypeVar, \
-    Union, runtime_checkable
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Collection,
+    Dict,
+    List,
+    Optional,
+    Protocol,
+    Sequence,
+    Sized,
+    TypeVar,
+    Union,
+    runtime_checkable,
+)
 
 
 class FilteredData:
@@ -29,6 +42,7 @@ class FilteredData:
             repeated until all of the given epoch's data has been traversed (except for at most 1 batch of data which
             might not appear until after the re-shuffle has occurred).
     """
+
     def __init__(self, replacement: bool = True):
         self.replacement = replacement
 
@@ -38,6 +52,7 @@ class FilteredData:
 
 @runtime_checkable
 class MapDataset(Sized, Protocol):
+
     def __getitem__(self, index: int) -> Union[Dict[str, Any], List[Dict[str, Any]], FilteredData]:
         ...
 
@@ -51,18 +66,17 @@ CollectionT = TypeVar('CollectionT', bound=Collection)
 if TYPE_CHECKING:
     # Hide these imports for speed
     import numpy as np
-    import tensorflow as tf
     import torch
 
-    Tensor = Union[torch.Tensor, tf.Tensor, tf.Variable]
+    Tensor = torch.Tensor
     Array = Union[np.ndarray, Tensor]
     DataSequence = Union[Sequence, Array]
-    Model = Union[tf.keras.Model, torch.nn.Module]
+    Model = torch.nn.Module
 
     # Use these when you want to indicate that you will return the same class that was input
-    TensorT = TypeVar('TensorT', torch.Tensor, tf.Tensor, tf.Variable)
-    ArrayT = TypeVar('ArrayT', torch.Tensor, tf.Tensor, tf.Variable, np.ndarray)
-    ModelT = TypeVar('ModelT', tf.keras.Model, torch.nn.Module)
+    TensorT = TypeVar('TensorT', bound=torch.Tensor)
+    ArrayT = TypeVar('ArrayT', torch.Tensor, np.ndarray)
+    ModelT = TypeVar('ModelT', bound=torch.nn.Module)
 
 else:
     TensorT = TypeVar('TensorT')
@@ -77,20 +91,20 @@ else:
 
 
     class _MetaTensor(type):
+
         def __instancecheck__(self, __instance: Any) -> bool:
-            import tensorflow as tf
             import torch
-            return isinstance(__instance, torch.Tensor) or tf.is_tensor(__instance)
+            return isinstance(__instance, torch.Tensor)
 
         def __subclasscheck__(self, __subclass: type) -> bool:
-            import tensorflow as tf
             import torch
-            return issubclass(__subclass, (tf.Tensor, torch.Tensor))
+            return issubclass(__subclass, torch.Tensor)
 
     class Tensor(metaclass=_MetaTensor):
         ...
 
     class _MetaArray(type):
+
         def __instancecheck__(self, __instance: Any) -> bool:
             import numpy as np
             return isinstance(__instance, (np.ndarray, Tensor))
@@ -103,6 +117,7 @@ else:
         ...
 
     class _MetaDataSequence(type):
+
         def __instancecheck__(self, __instance: Any) -> bool:
             return isinstance(__instance, (Sequence, Array))
 
@@ -114,15 +129,14 @@ else:
         ...
 
     class _MetaModel(type):
+
         def __instancecheck__(self, __instance: Any) -> bool:
-            import tensorflow as tf
             import torch
-            return isinstance(__instance, (tf.keras.Model, torch.nn.Module))
+            return isinstance(__instance, torch.nn.Module)
 
         def __subclasscheck__(self, __subclass: type) -> bool:
-            import tensorflow as tf
             import torch
-            return issubclass(__subclass, (tf.keras.Model, torch.nn.Module))
+            return issubclass(__subclass, torch.nn.Module)
 
     class Model(metaclass=_MetaModel):
         ...

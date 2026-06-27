@@ -13,7 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 import os
-from typing import Sequence, Union, Iterable
+from typing import Iterable, Sequence, Union
 
 from fastestimator.summary.logs.log_plot import visualize_logs
 from fastestimator.summary.summary import Summary
@@ -35,10 +35,12 @@ class ImageSaver(Trace):
             like "!infer" or "!train".
     """
 
-    def __init__(self,
-                 inputs: Union[str, Sequence[str]],
-                 save_dir: str = os.getcwd(),
-                 mode: Union[None, str, Iterable[str]] = ("eval", "test")) -> None:
+    def __init__(
+        self,
+        inputs: Union[str, Sequence[str]],
+        save_dir: str = os.getcwd(),
+        mode: Union[None, str, Iterable[str]] = ("eval", "test")
+    ) -> None:
         super().__init__(inputs=inputs, mode=mode)
         self.save_dir = save_dir
 

@@ -12,11 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from operator import lt, gt
+from operator import gt, lt
 from typing import Optional, Union
 
 import numpy as np
-import tensorflow as tf
 import torch
 
 from fastestimator.backend._get_lr import get_lr
@@ -45,7 +44,7 @@ class ReduceLROnPlateau(Trace):
     system: System
 
     def __init__(self,
-                 model: Union[tf.keras.Model, torch.nn.Module],
+                 model: torch.nn.Module,
                  metric: Optional[str] = None,
                  patience: int = 10,
                  factor: float = 0.1,

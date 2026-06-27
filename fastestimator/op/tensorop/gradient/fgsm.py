@@ -14,7 +14,6 @@
 # ==============================================================================
 from typing import Any, Dict, Iterable, List, Optional, TypeVar, Union
 
-import tensorflow as tf
 import torch
 
 from fastestimator.backend._clip_by_value import clip_by_value
@@ -25,7 +24,7 @@ from fastestimator.backend._sign import sign
 from fastestimator.op.tensorop.tensorop import TensorOp
 from fastestimator.util.traceability_util import traceable
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
+Tensor = TypeVar('Tensor', bound=torch.Tensor)
 
 
 @traceable()
@@ -47,6 +46,7 @@ class FGSM(TensorOp):
         ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
             ds_ids except for a particular one, you can pass an argument like "!ds1".
     """
+
     def __init__(self,
                  data: str,
                  loss: str,
@@ -69,7 +69,7 @@ class FGSM(TensorOp):
 
     def forward(self, data: List[Tensor], state: Dict[str, Any]) -> Tensor:
         data, loss = data
-        grad = get_gradient(target=loss, sources=data, tape=state['tape'], retain_graph=self.retain_graph)
+        grad = get_gradient(target=loss, sources=data, retain_graph=self.retain_graph)
         adverse_data = clip_by_value(data + self.epsilon * sign(grad),
                                      min_value=self.clip_low or reduce_min(data),
                                      max_value=self.clip_high or reduce_max(data))

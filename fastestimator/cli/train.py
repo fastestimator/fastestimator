@@ -17,7 +17,7 @@ import json
 import os
 import sys
 from ast import literal_eval
-from typing import Any, Dict, List, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from fastestimator.util.cli_util import parse_cli_to_dictionary
 

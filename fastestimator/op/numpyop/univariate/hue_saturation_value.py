@@ -14,7 +14,8 @@
 # ==============================================================================
 from typing import Iterable, Tuple, Union
 
-from albumentations.augmentations.transforms import HueSaturationValue as HueSaturationValueAlb
+from albumentations.augmentations.transforms import (
+    HueSaturationValue as HueSaturationValueAlb, )
 
 from fastestimator.op.numpyop.univariate.univariate import ImageOnlyAlbumentation
 from fastestimator.util.traceability_util import traceable
@@ -42,6 +43,7 @@ class HueSaturationValue(ImageOnlyAlbumentation):
     Image types:
         uint8, float32
     """
+
     def __init__(self,
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],

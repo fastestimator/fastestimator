@@ -20,6 +20,7 @@ import fastestimator as fe
 
 
 class TestDirDataset(unittest.TestCase):
+
     def test_dataset(self):
         tmpdirname = tempfile.mkdtemp()
 

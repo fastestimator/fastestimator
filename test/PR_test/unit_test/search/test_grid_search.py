@@ -18,6 +18,7 @@ from fastestimator.search.grid_search import GridSearch
 
 
 class TestSearch(unittest.TestCase):
+
     def test_non_dict_params(self):
         with self.assertRaises(AssertionError):
             GridSearch(eval_fn=lambda search_idx, x: x, params=False)

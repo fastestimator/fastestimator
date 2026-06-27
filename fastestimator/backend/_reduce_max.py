@@ -15,12 +15,11 @@
 from typing import Sequence, TypeVar, Union
 
 import numpy as np
-import tensorflow as tf
 import torch
 
 from fastestimator.util.base_util import to_list
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
+Tensor = TypeVar('Tensor', torch.Tensor, np.ndarray)
 
 
 def reduce_max(tensor: Tensor, axis: Union[None, int, Sequence[int]] = None, keepdims: bool = False) -> Tensor:
@@ -33,15 +32,6 @@ def reduce_max(tensor: Tensor, axis: Union[None, int, Sequence[int]] = None, kee
     b = fe.backend.reduce_max(n, axis=0)  # [[5, 6], [7, 8]]
     b = fe.backend.reduce_max(n, axis=1)  # [[3, 4], [7, 8]]
     b = fe.backend.reduce_max(n, axis=[0,2])  # [6, 8]
-    ```
-
-    This method can be used with TensorFlow tensors:
-    ```python
-    t = tf.constant([[[1, 2], [3, 4]], [[5, 6], [7, 8]]])
-    b = fe.backend.reduce_max(t)  # 8
-    b = fe.backend.reduce_max(t, axis=0)  # [[5, 6], [7, 8]]
-    b = fe.backend.reduce_max(t, axis=1)  # [[3, 4], [7, 8]]
-    b = fe.backend.reduce_max(t, axis=[0,2])  # [6, 8]
     ```
 
     This method can be used with PyTorch tensors:
@@ -64,9 +54,7 @@ def reduce_max(tensor: Tensor, axis: Union[None, int, Sequence[int]] = None, kee
     Raises:
         ValueError: If `tensor` is an unacceptable data type.
     """
-    if tf.is_tensor(tensor):
-        return tf.reduce_max(tensor, axis=axis, keepdims=keepdims)
-    elif isinstance(tensor, torch.Tensor):
+    if isinstance(tensor, torch.Tensor):
         if axis is None:
             axis = list(range(len(tensor.shape)))
         axis = to_list(axis)

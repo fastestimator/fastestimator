@@ -20,6 +20,7 @@ from fastestimator.op.numpyop.univariate import Blur
 
 
 class TestBlur(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.single_input = [np.random.rand(28, 28, 3)]
@@ -36,13 +37,14 @@ class TestBlur(unittest.TestCase):
             self.assertEqual(output[0].shape, self.single_output_shape)
 
     def test_single_input_advanced(self):
-        blur = Blur(inputs='x', outputs='x',
-                    advanced = True,
-                    sigmaX_limit = (0.5,1),
-                    sigmaY_limit = 1,
-                    rotate_limit = 45,
-                    beta_limit = (0.5, 8.0),
-                    noise_limit = (0.5, 1.0))
+        blur = Blur(inputs='x',
+                    outputs='x',
+                    advanced=True,
+                    sigmaX_limit=(0.5, 1),
+                    sigmaY_limit=1,
+                    rotate_limit=45,
+                    beta_limit=(0.5, 8.0),
+                    noise_limit=(0.5, 1.0))
         output = blur.forward(data=self.single_input, state={})
         with self.subTest('Check output type'):
             self.assertEqual(type(output), list)
@@ -61,13 +63,14 @@ class TestBlur(unittest.TestCase):
                 self.assertEqual(img_output.shape, self.multi_output_shape)
 
     def test_input_image_and_mask_advanced(self):
-        blur = Blur(inputs='x', outputs='x',
-                    advanced = True,
-                    sigmaX_limit = (0.5,1),
-                    sigmaY_limit = 1,
-                    rotate_limit = 45,
-                    beta_limit = (0.5, 8.0),
-                    noise_limit = (0.5, 1.0))
+        blur = Blur(inputs='x',
+                    outputs='x',
+                    advanced=True,
+                    sigmaX_limit=(0.5, 1),
+                    sigmaY_limit=1,
+                    rotate_limit=45,
+                    beta_limit=(0.5, 8.0),
+                    noise_limit=(0.5, 1.0))
         output = blur.forward(data=self.multi_input, state={})
         with self.subTest('Check output type'):
             self.assertEqual(type(output), list)

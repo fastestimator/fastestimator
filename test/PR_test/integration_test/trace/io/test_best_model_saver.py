@@ -16,21 +16,13 @@ import os
 import tempfile
 import unittest
 
-import tensorflow as tf
 import torch
 
 import fastestimator as fe
 from fastestimator.op.tensorop.model import UpdateOp
-from fastestimator.test.unittest_util import MultiLayerTorchModel, is_equal, one_layer_tf_model
+from fastestimator.test.unittest_util import MultiLayerTorchModel, is_equal
 from fastestimator.trace.io import BestModelSaver
 from fastestimator.util.data import Data
-
-
-def one_layer_model_without_weights():
-    input = tf.keras.layers.Input([3])
-    x = tf.keras.layers.Dense(units=1, use_bias=False)(input)
-    model = tf.keras.models.Model(inputs=input, outputs=x)
-    return model
 
 
 class MultiLayerTorchModelWithoutWeights(torch.nn.Module):
@@ -49,35 +41,11 @@ class TestBestModelSaver(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.save_dir = tempfile.mkdtemp()
-        cls.tf_model = fe.build(model_fn=one_layer_tf_model, optimizer_fn='adam', model_name='tf')
         cls.torch_model = fe.build(model_fn=MultiLayerTorchModel, optimizer_fn='adam', model_name='torch')
         cls.data = Data({'loss': 0.5})
         cls.state = {'mode': 'train', 'epoch': 1, 'warmup': False, 'deferred': {}, "scaler": None, "tape": None}
-        cls.tf_input_data = tf.Variable([[2.0, 1.5, 1.0], [1.0, -1.0, -0.5]])
-        cls.tf_y = tf.constant([[-6], [1]])
         cls.torch_input_data = torch.tensor([[1.0, 1.0, 1.0, -0.5], [0.5, 1.0, -1.0, -0.5]], dtype=torch.float32)
         cls.torch_y = torch.tensor([[5], [7]], dtype=torch.float32)
-
-    def test_tf_model(self):
-        def update():
-            with tf.GradientTape(persistent=True) as tape:
-                self.state['tape'] = tape
-                pred = fe.backend.feed_forward(self.tf_model, self.tf_input_data)
-                loss = fe.backend.mean_squared_error(y_pred=pred, y_true=self.tf_y)
-                op.forward(data=loss, state=self.state)
-
-        op = UpdateOp(model=self.tf_model, loss_name='loss')
-        op.build("tf")
-        strategy = tf.distribute.get_strategy()
-        if isinstance(strategy, tf.distribute.MirroredStrategy):
-            strategy.run(update, args=())
-        else:
-            update()
-        bms = BestModelSaver(model=self.tf_model, save_dir=self.save_dir)
-        bms.on_epoch_end(data=self.data)
-        m2 = fe.build(model_fn=one_layer_model_without_weights, optimizer_fn='adam')
-        fe.backend.load_model(m2, os.path.join(self.save_dir, 'tf_best_loss.h5'))
-        self.assertTrue(is_equal(m2.trainable_variables, self.tf_model.trainable_variables))
 
     def test_torch_model(self):
         op = UpdateOp(model=self.torch_model, loss_name='loss')

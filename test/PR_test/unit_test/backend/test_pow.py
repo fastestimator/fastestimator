@@ -15,7 +15,6 @@
 import unittest
 
 import numpy as np
-import tensorflow as tf
 import torch
 
 import fastestimator as fe
@@ -23,16 +22,11 @@ from fastestimator.test.unittest_util import is_equal
 
 
 class TestPow(unittest.TestCase):
+
     def test_pow_np_input(self):
         n = np.array([-2, 7, -19])
         obj1 = fe.backend.pow(n, 2)
         obj2 = np.array([4, 49, 361])
-        self.assertTrue(is_equal(obj1, obj2))
-
-    def test_pow_tf_input(self):
-        t = tf.constant([-2, 7, -19])
-        obj1 = fe.backend.pow(t, 2)
-        obj2 = tf.constant([4, 49, 361])
         self.assertTrue(is_equal(obj1, obj2))
 
     def test_pow_torch_input(self):

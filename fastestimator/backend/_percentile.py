@@ -16,13 +16,11 @@ import math
 from typing import List, TypeVar, Union
 
 import numpy as np
-import tensorflow as tf
 import torch
-from tensorflow_probability.python.stats import percentile as tf_percentile
 
 from fastestimator.util.base_util import to_list
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
+Tensor = TypeVar('Tensor', torch.Tensor, np.ndarray)
 
 
 def percentile(tensor: Tensor,
@@ -42,22 +40,6 @@ def percentile(tensor: Tensor,
     b = fe.backend.percentile(n, percentiles=[66], axis=1)  # [[[2], [5], [8]]]
     ```
 
-    This method can be used with TensorFlow tensors:
-    ```python
-    t = tf.constant([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
-    b = fe.backend.percentile(t, percentiles=[66])  # [[[6]]]
-    b = fe.backend.percentile(t, percentiles=[66], axis=0)  # [[[4, 5, 6]]]
-    b = fe.backend.percentile(t, percentiles=[66], axis=1)  # [[[2], [5], [8]]]
-    ```
-
-    This method can be used with PyTorch tensors:
-    ```python
-    p = tf.constant([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
-    b = fe.backend.percentile(p, percentiles=[66])  # [[[6]]]
-    b = fe.backend.percentile(p, percentiles=[66], axis=0)  # [[[4, 5, 6]]]
-    b = fe.backend.percentile(p, percentiles=[66], axis=1)  # [[[2], [5], [8]]]
-    ```
-
     Args:
         tensor: The tensor from which to extract percentiles.
         percentiles: One or more percentile values to be computed.
@@ -70,11 +52,7 @@ def percentile(tensor: Tensor,
     Raises:
         ValueError: If `tensor` is an unacceptable data type.
     """
-    if tf.is_tensor(tensor):
-        if isinstance(percentiles, List):
-            percentiles = tf.convert_to_tensor(percentiles)
-        return tf_percentile(tensor, percentiles, axis=axis, keepdims=keepdims, interpolation='lower')
-    elif isinstance(tensor, torch.Tensor):
+    if isinstance(tensor, torch.Tensor):
         n_dims = len(tensor.shape)
         if axis is None:
             # Default behavior in tf without axis is to compress all dimensions

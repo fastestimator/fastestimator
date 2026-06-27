@@ -15,10 +15,9 @@
 from typing import TypeVar
 
 import numpy as np
-import tensorflow as tf
 import torch
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
+Tensor = TypeVar('Tensor', torch.Tensor, np.ndarray)
 
 
 def maximum(tensor1: Tensor, tensor2: Tensor) -> Tensor:
@@ -29,13 +28,6 @@ def maximum(tensor1: Tensor, tensor2: Tensor) -> Tensor:
     n1 = np.array([[2, 7, 6]])
     n2 = np.array([[2, 7, 5]])
     res = fe.backend.maximum(n1, n2) # [[2, 7, 6]]
-    ```
-
-    This method can be used with TensorFlow tensors:
-    ```python
-    t1 = tf.constant([[2, 7, 6]])
-    t2 = tf.constant([[2, 7, 5]])
-    res = fe.backend.maximum(t1, t2) # [[2, 7, 6]]
     ```
 
     This method can be used with PyTorch tensors:
@@ -55,9 +47,7 @@ def maximum(tensor1: Tensor, tensor2: Tensor) -> Tensor:
     Raises:
         ValueError: If `tensor` is an unacceptable data type.
     """
-    if tf.is_tensor(tensor1) and tf.is_tensor(tensor2):
-        return tf.maximum(tensor1, tensor2)
-    elif isinstance(tensor1, torch.Tensor) and isinstance(tensor2, torch.Tensor):
+    if isinstance(tensor1, torch.Tensor) and isinstance(tensor2, torch.Tensor):
         return torch.max(tensor1, tensor2)
     elif isinstance(tensor1, np.ndarray) and isinstance(tensor2, np.ndarray):
         return np.maximum(tensor1, tensor2)

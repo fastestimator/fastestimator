@@ -162,7 +162,6 @@ class TrainEssential(Trace):
     Args:
         monitor_names: Which keys from the data dictionary to monitor during training.
     """
-
     def __init__(self, monitor_names: Set[str]) -> None:
         super().__init__(inputs=monitor_names, mode="train", outputs=["steps/sec", "epoch_time", "total_time"])
         self.elapse_times = []
@@ -216,7 +215,6 @@ class EvalEssential(Trace):
     Args:
         monitor_names: Any keys which should be collected over the course of an eval epoch.
     """
-
     def __init__(self, monitor_names: Set[str]) -> None:
         super().__init__(mode="eval", inputs=monitor_names, outputs=["steps/sec"])
         self.step_start = time.perf_counter()
@@ -255,25 +253,35 @@ class EvalEssential(Trace):
 
 @traceable()
 class TestEssential(Trace):
-    """A trace to collect important information during evaluation.
+    """A trace to collect important information during testing.
 
     Please don't add this trace into an estimator manually. FastEstimator will add it automatically.
 
     Args:
-        monitor_names: Any keys which should be collected over the course of an test epoch.
+        monitor_names: Any keys which should be collected over the course of a test epoch.
     """
-
     def __init__(self, monitor_names: Set[str]) -> None:
-        super().__init__(mode="test", inputs=monitor_names)
+        super().__init__(mode="test", inputs=monitor_names, outputs=["steps/sec", "test_time"])
         self.test_results = defaultdict(lambda: defaultdict(list))
+        self.test_start = None
+        self.step_start = None
+        self.test_steps = defaultdict(lambda: 0)
+        self.elapsed_step = 0
+
+    def on_begin(self, data: Data) -> None:
+        self.test_start = time.perf_counter()
 
     def on_epoch_begin(self, data: Data) -> None:
         self.test_results = defaultdict(lambda: defaultdict(list))
+        self.test_steps.clear()
+        self.elapsed_step = 0
+        self.step_start = time.perf_counter()
 
     def on_batch_end(self, data: Data) -> None:
         for key in self.inputs:
             if key in data:
                 self.test_results[key][self.system.ds_id].append(data[key])
+        self.test_steps[self.system.ds_id] += 1
 
     def on_epoch_end(self, data: Data) -> None:
         for key, ds_vals in self.test_results.items():
@@ -282,6 +290,12 @@ class TestEssential(Trace):
                     d = DSData(ds_id, data)
                     d.write_with_log(key, np.mean(np.array(vals), axis=0))
             data.write_with_log(key, np.mean(np.array([e for x in ds_vals.values() for e in x]), axis=0))
+        if self.test_start is not None:
+            elapsed = time.perf_counter() - self.test_start
+            total_steps = sum(self.test_steps.values())
+            if total_steps > 0 and elapsed > 0:
+                data.write_with_log("steps/sec", round(total_steps / elapsed, 2))
+            data.write_with_log("test_time(sec)", "{}".format(round(elapsed, 2)))
 
 
 @traceable()
@@ -293,6 +307,8 @@ class Logger(Trace):
     def __init__(self) -> None:
         super().__init__(inputs="*")
         self.eval_steps = defaultdict(lambda: 0)
+        self.test_steps = defaultdict(lambda: 0)
+        self.test_total_steps = defaultdict(lambda: 0)
 
     def on_begin(self, data: Data) -> None:
         if not self.system.mode == "test":
@@ -309,8 +325,16 @@ class Logger(Trace):
             step = self.eval_steps[self.system.ds_id]
             if step in self.system.eval_log_steps[0]:
                 ds_str = f" ({self.system.ds_id})" if self.system.ds_id else ''
-                self._print_message(f"Eval Progress{ds_str}: {step}/{self.system.eval_log_steps[1]}; ",
-                                    data)
+                self._print_message(f"Eval Progress{ds_str}: {step}/{self.system.eval_log_steps[1]}; ", data)
+
+        if self.system.mode == "test":
+            self.test_steps[self.system.ds_id] += 1
+            step = self.test_steps[self.system.ds_id]
+            total = self.test_total_steps.get(self.system.ds_id, 0)
+            # Log test progress at 25%, 50%, 75%, and 100% intervals
+            if total > 0 and step in (1, total // 4, total // 2, 3 * total // 4, total):
+                ds_str = f" ({self.system.ds_id})" if self.system.ds_id else ''
+                self._print_message(f"Test Progress{ds_str}: {step}/{total}; ", data)
 
     def on_epoch_end(self, data: Data) -> None:
         if self.system.mode == "train":
@@ -319,6 +343,8 @@ class Logger(Trace):
             self.eval_steps.clear()
             self._print_message("FastEstimator-Eval: step: {}; ".format(self.system.global_step), data, True)
         elif self.system.mode == "test":
+            self.test_steps.clear()
+            self.test_total_steps.clear()
             self._print_message("FastEstimator-Test: step: {}; ".format(self.system.global_step), data, True)
 
     def on_end(self, data: Data) -> None:
@@ -430,7 +456,6 @@ def sort_traces(traces: List[Trace], ds_ids: List[str], available_outputs: Union
 
 
 class PerDSTrace(Trace):
-
     def on_ds_begin(self, data: Data) -> None:
         """Runs at the beginning of each dataset.
 

@@ -20,23 +20,23 @@ FastEstimator comes with a set of CLI commands that can help users train and tes
 
 <a id='t10usage'></a>
 ## CLI Usage
-In this section we will show the actual commands that we can use to train and test our models. We will use [mnist_tf.py](https://github.com/fastestimator/fastestimator/blob/master/apphub/image_classification/mnist/mnist_tf.py) for illustration.
+In this section we will show the actual commands that we can use to train and test our models. We will use [mnist_torch.py](https://github.com/fastestimator/fastestimator/blob/master/apphub/image_classification/mnist/mnist_torch.py) for illustration.
 
 To call `estimator.fit()` and start the training on terminal:
 
 ``` bash
-$ fastestimator train mnist_tf.py
+$ fastestimator train mnist_torch.py
 ```
 
 To call `estimator.test()` and start testing on terminal:
 
 ``` bash
-$ fastestimator test mnist_tf.py
+$ fastestimator test mnist_torch.py
 ```
 
 To first call `estimator.fit()` then `estimator.test()`, you can use:
 ``` bash
-$ fastestimator run mnist_tf.py
+$ fastestimator run mnist_torch.py
 ```
 
 <a id='t10args'></a>
@@ -54,7 +54,7 @@ Next, we try to change these arguments in two ways:
 To pass the arguments directly from the CLI we can use the `--arg` format. The following shows an example of how we can set the number of epochs to 3 and batch_size to 64:
 
 ``` bash
-$ fastestimator train mnist_tf.py --epochs 3 --batch_size 64
+$ fastestimator train mnist_torch.py --epochs 3 --batch_size 64
 ```
 
 <a id='t10json'></a>
@@ -67,12 +67,11 @@ The other way we can send arguments is by using the `--hyperparameters` argument
 }
 ```
 ``` bash
-$ fastestimator train mnist_tf.py --hyperparameters hp.json
+$ fastestimator train mnist_torch.py --hyperparameters hp.json
 ```
 <a id='t10system'></a>
 ### System argument
 There are some default system arguments in the `fastestimator train`, `fastestimator test`, and `fastestimator run` commands. Here are a list of them:
 
 * __warmup__:   Available in `train` and `run`, it controls whether to perform warmup checking before the actual training starts. Default is True. Users can disable warmup by `--warmup False`. Disabling it can reduce the initialization time needed to start the training.
-* __eager__: Available in `train`, `test`, and `run`. This argument is only relevant if using tensorflow backend. Enabling eager execution will allow user to access the value of the tf tensor at run time. The default is False, user can enable it by `--eager True`. The eager mode is useful in tensorflow debugging workflows. However, there are several downsides of eager execution such as less speed and more memory usage.
 * __summary__: Available in `train`, `test`, and `run`. This is the same `summary` argument used in `estimator.fit(summary=...)` or `estimator.test(summary=...)`. It allows users to specify experiment name when generating reports. For example, Users can set experiment name by `--summary exp_name`.

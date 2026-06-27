@@ -18,9 +18,9 @@ from typing import List, Union
 
 import fastestimator as fe
 from fastestimator.trace.trace import Trace
+from fastestimator.util.base_util import to_list
 from fastestimator.util.data import Data
 from fastestimator.util.traceability_util import traceable
-from fastestimator.util.base_util import to_list
 
 
 @traceable()
@@ -31,6 +31,7 @@ class RestoreWizard(Trace):
         directory: Directory to save and load the training status.
         frequency: Saving frequency in epoch(s).
     """
+
     def __init__(self, directory: str, frequency: int = 1) -> None:
         super().__init__(inputs="*", mode="train")  # inputs to cause this trace to sort to the end of the list
         self.directory = os.path.abspath(os.path.normpath(directory))

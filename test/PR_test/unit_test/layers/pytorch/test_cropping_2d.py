@@ -21,6 +21,7 @@ import fastestimator.test.unittest_util as fet
 
 
 class TestCropping2D(unittest.TestCase):
+
     def setUp(self):
         self.x = torch.tensor(list(range(100))).view((1, 1, 10, 10))
 

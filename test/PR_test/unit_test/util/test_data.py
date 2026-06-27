@@ -18,6 +18,7 @@ import fastestimator as fe
 
 
 class TestData(unittest.TestCase):
+
     def setUp(self):
         self.d = fe.util.Data({"a": 0, "b": 1, "c": 2})
 

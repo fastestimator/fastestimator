@@ -15,10 +15,9 @@
 from typing import TypeVar, Union
 
 import numpy as np
-import tensorflow as tf
 import torch
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
+Tensor = TypeVar('Tensor', torch.Tensor, np.ndarray)
 
 
 def tensor_pow(tensor: Tensor, power: Union[int, float]) -> Tensor:
@@ -29,13 +28,6 @@ def tensor_pow(tensor: Tensor, power: Union[int, float]) -> Tensor:
     n = np.array([[1, 4, 6], [2.3, 0.5, 0]])
     b = fe.backend.tensor_pow(n, 3.2)  # [[1.0, 84.449, 309.089], [14.372, 0.109, 0]]
     b = fe.backend.tensor_pow(n, 0.21)  # [[1.0, 1.338, 1.457], [1.191, 0.865, 0]]
-    ```
-
-    This method can be used with TensorFlow tensors:
-    ```python
-    t = tf.constant([[1, 4, 6], [2.3, 0.5, 0]])
-    b = fe.backend.tensor_pow(t, 3.2)  # [[1.0, 84.449, 309.089], [14.372, 0.109, 0]]
-    b = fe.backend.tensor_pow(t, 0.21)  # [[1.0, 1.338, 1.457], [1.191, 0.865, 0]]
     ```
 
     This method can be used with PyTorch tensors:
@@ -55,9 +47,7 @@ def tensor_pow(tensor: Tensor, power: Union[int, float]) -> Tensor:
     Raises:
         ValueError: If `tensor` is an unacceptable data type.
     """
-    if tf.is_tensor(tensor):
-        return tf.pow(tensor, power)
-    elif isinstance(tensor, torch.Tensor):
+    if isinstance(tensor, torch.Tensor):
         return torch.pow(tensor, power)
     elif isinstance(tensor, np.ndarray):
         return np.power(tensor, power)

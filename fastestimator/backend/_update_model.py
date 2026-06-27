@@ -12,9 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Callable, Dict, List, Optional, Union
+from typing import Callable, Dict, List, Optional
 
-import tensorflow as tf
 import torch
 
 from fastestimator.util.base_util import warn
@@ -22,23 +21,11 @@ from fastestimator.util.base_util import warn
 _ALREADY_GAVE_FE_GRAD_WARNING = False
 
 
-def update_model(model: Union[tf.keras.Model, torch.nn.Module],
-                 gradients: List[Union[tf.Tensor, torch.Tensor]],
+def update_model(model: torch.nn.Module,
+                 gradients: List[torch.Tensor],
                  defer: bool = False,
                  deferred: Optional[Dict[str, List[Callable[[], None]]]] = None) -> None:
     """Update `model` weights based on a given `gradients`.
-
-    This method can be used with TensorFlow models:
-    ```python
-    m = fe.build(fe.architecture.tensorflow.LeNet, optimizer_fn="adam")
-    x = tf.ones((3, 28, 28, 1))  # (batch, height, width, channels)
-    y = tf.constant((1, 0, 1))
-    with tf.GradientTape(persistent=True) as tape:
-        pred = fe.backend.feed_forward(m, x)  # [[~0.5, ~0.5], [~0.5, ~0.5], [~0.5, ~0.5]]
-        loss = fe.backend.sparse_categorical_crossentropy(y_pred=pred, y_true=y)  # ~2.3
-        gradients = fe.backend.get_gradient(target=loss, sources=m.trainable_variables, tape=tape)
-        fe.backend.update_model(m, gradients=gradients)
-    ```
 
     This method can be used with PyTorch models:
     ```python
@@ -68,15 +55,7 @@ def update_model(model: Union[tf.keras.Model, torch.nn.Module],
     assert hasattr(model, "current_optimizer"), ("The model needs to have 'current_optimizer' attribute. Please "
                                                  "instantiate the model with fe.build")
 
-    if isinstance(model, tf.keras.Model):
-        variables = model.trainable_variables
-        if defer:
-            deferred.setdefault(model.model_name,
-                                []).append(lambda: model.current_optimizer.apply_gradients(zip(gradients, variables)))
-        else:
-            model.current_optimizer.apply_gradients(zip(gradients, variables))
-
-    elif isinstance(model, torch.nn.Module):
+    if isinstance(model, torch.nn.Module):
         trainable_params = [p for p in model.parameters() if p.requires_grad]
         for gradient, parameter in zip(gradients, trainable_params):
             if gradient is None:

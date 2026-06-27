@@ -15,10 +15,9 @@
 from typing import TypeVar
 
 import numpy as np
-import tensorflow as tf
 import torch
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
+Tensor = TypeVar('Tensor', torch.Tensor, np.ndarray)
 
 
 def exp(tensor: Tensor) -> Tensor:
@@ -28,12 +27,6 @@ def exp(tensor: Tensor) -> Tensor:
     ```python
     n = np.array([-2, 2, 1])
     b = fe.backend.exp(n)  # [0.1353, 7.3891, 2.7183]
-    ```
-
-    This method can be used with TensorFlow tensors:
-    ```python
-    t = tf.constant([-2.0, 2, 1])
-    b = fe.backend.exp(t)  # [0.1353, 7.3891, 2.7183]
     ```
 
     This method can be used with PyTorch tensors:
@@ -51,9 +44,7 @@ def exp(tensor: Tensor) -> Tensor:
     Raises:
         ValueError: If `tensor` is an unacceptable data type.
     """
-    if tf.is_tensor(tensor):
-        return tf.exp(tensor)
-    elif isinstance(tensor, torch.Tensor):
+    if isinstance(tensor, torch.Tensor):
         return torch.exp(tensor)
     elif isinstance(tensor, np.ndarray):
         return np.exp(tensor)

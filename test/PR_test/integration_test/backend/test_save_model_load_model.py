@@ -17,20 +17,10 @@ import tempfile
 import unittest
 
 import numpy as np
-import tensorflow as tf
 import torch
-from tensorflow.keras.optimizers import SGD
 
 import fastestimator as fe
 from fastestimator.test.unittest_util import is_equal
-
-
-def get_model_weight_tf(model):
-    weight = []
-    for layer in model.layers:
-        weight.append(layer.get_weights())
-
-    return weight
 
 
 def get_model_weight_lenet_torch(model):
@@ -48,31 +38,6 @@ def get_model_weight_lenet_torch(model):
 
 
 class TestLoadModelAndSaveModel(unittest.TestCase):
-
-    def test_save_model_and_load_model_tf(self):
-        m1 = fe.build(fe.architecture.tensorflow.LeNet, optimizer_fn="adam")
-        weight1 = get_model_weight_tf(m1)
-        temp_folder = tempfile.mkdtemp()
-        fe.backend.save_model(m1, save_dir=temp_folder, model_name="test")
-
-        m2 = fe.build(fe.architecture.tensorflow.LeNet, optimizer_fn="adam")
-        weight2 = get_model_weight_tf(m2)
-        self.assertFalse(is_equal(weight1, weight2))
-
-        fe.backend.load_model(m2, weights_path=os.path.join(temp_folder, "test.h5"))
-        weight3 = get_model_weight_tf(m2)
-
-        self.assertTrue(is_equal(weight1, weight3))
-
-    def test_save_model_and_load_model_tf_optimizer(self):
-        m1 = fe.build(fe.architecture.tensorflow.LeNet, optimizer_fn=lambda: SGD(weight_decay=2e-5, learning_rate=2e-4))
-        temp_folder = tempfile.mkdtemp()
-        fe.backend.save_model(m1, save_dir=temp_folder, model_name="test", save_optimizer=True)
-
-        m2 = fe.build(fe.architecture.tensorflow.LeNet, optimizer_fn=lambda: SGD(weight_decay=1e-5, learning_rate=1e-4))
-        fe.backend.load_model(m2, weights_path=os.path.join(temp_folder, "test.h5"), load_optimizer=True)
-        self.assertTrue(np.allclose(fe.backend.get_lr(model=m2), 2e-4))
-        self.assertTrue(np.allclose(tf.keras.backend.get_value(m2.current_optimizer.weight_decay), 2e-5))
 
     def test_save_model_and_load_model_torch(self):
         m1 = fe.build(fe.architecture.pytorch.LeNet, optimizer_fn="adam")

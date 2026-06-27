@@ -15,10 +15,9 @@
 from typing import List, Optional, TypeVar
 
 import numpy as np
-import tensorflow as tf
 import torch
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
+Tensor = TypeVar('Tensor', torch.Tensor, np.ndarray)
 
 
 def concat(tensors: List[Tensor], axis: int = 0) -> Optional[Tensor]:
@@ -29,13 +28,6 @@ def concat(tensors: List[Tensor], axis: int = 0) -> Optional[Tensor]:
     n = [np.array([[0, 1]]), np.array([[2, 3]]), np.array([[4, 5]])]
     b = fe.backend.concat(n, axis=0)  # [[0, 1], [2, 3], [4, 5]]
     b = fe.backend.concat(n, axis=1)  # [[0, 1, 2, 3, 4, 5]]
-    ```
-
-    This method can be used with TensorFlow tensors:
-    ```python
-    t = [tf.constant([[0, 1]]), tf.constant([[2, 3]]), tf.constant([[4, 5]])]
-    b = fe.backend.concat(t, axis=0)  # [[0, 1], [2, 3], [4, 5]]
-    b = fe.backend.concat(t, axis=1)  # [[0, 1, 2, 3, 4, 5]]
     ```
 
     This method can be used with PyTorch tensors:
@@ -57,9 +49,7 @@ def concat(tensors: List[Tensor], axis: int = 0) -> Optional[Tensor]:
     """
     if len(tensors) == 0:
         return None
-    if tf.is_tensor(tensors[0]):
-        return tf.concat(tensors, axis=axis)
-    elif isinstance(tensors[0], torch.Tensor):
+    if isinstance(tensors[0], torch.Tensor):
         return torch.cat(tensors, dim=axis)
     elif isinstance(tensors[0], np.ndarray):
         return np.concatenate(tensors, axis=axis)

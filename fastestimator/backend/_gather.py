@@ -15,13 +15,12 @@
 from typing import TypeVar
 
 import numpy as np
-import tensorflow as tf
 import torch
 
 from fastestimator.backend._squeeze import squeeze
 from fastestimator.backend._to_tensor import to_tensor
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
+Tensor = TypeVar('Tensor', torch.Tensor, np.ndarray)
 
 
 def gather(tensor: Tensor, indices: Tensor) -> Tensor:
@@ -36,15 +35,6 @@ def gather(tensor: Tensor, indices: Tensor) -> Tensor:
     b = fe.backend.gather(n, ind)  # [[2, 3], [0, 1], [2, 3]]
     n = np.array([[[0, 1], [2, 3]], [[4, 5], [6, 7]], [[8, 9], [10, 11]]])
     b = fe.backend.gather(n, ind)  # [[[4, 5], [6, 7]], [[0, 1], [2, 3]], [[4, 5], [6, 7]]]
-    ```
-
-    This method can be used with TensorFlow tensors:
-    ```python
-    ind = tf.constant([1, 0, 1])
-    t = tf.constant([[0, 1], [2, 3], [4, 5]])
-    b = fe.backend.gather(t, ind)  # [[2, 3], [0, 1], [2, 3]]
-    t = tf.constant([[[0, 1], [2, 3]], [[4, 5], [6, 7]], [[8, 9], [10, 11]]])
-    b = fe.backend.gather(t, ind)  # [[[4, 5], [6, 7]], [[0, 1], [2, 3]], [[4, 5], [6, 7]]]
     ```
 
     This method can be used with PyTorch tensors:
@@ -66,11 +56,7 @@ def gather(tensor: Tensor, indices: Tensor) -> Tensor:
     Raises:
         ValueError: If `tensor` is an unacceptable data type.
     """
-    if tf.is_tensor(tensor):
-        indices = to_tensor(indices, 'tf')
-        indices = tf.cast(indices, tf.int64)
-        return tf.gather(tensor, indices=squeeze(indices), axis=0)
-    elif isinstance(tensor, torch.Tensor):
+    if isinstance(tensor, torch.Tensor):
         return tensor[squeeze(indices).type(torch.int64)]
     elif isinstance(tensor, np.ndarray):
         return np.take(tensor, squeeze(indices).astype('int64'), axis=0)

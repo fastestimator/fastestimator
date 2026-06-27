@@ -13,80 +13,93 @@
 [![PyPI stable Download](https://img.shields.io/pypi/dm/fastestimator?label=stable%20downloads&color=16D1B4)](https://pypistats.org/packages/fastestimator)
 [![PyPI stable Download](https://img.shields.io/pypi/dm/fastestimator-nightly?label=nightly%20downloads&color=16D1B4)](https://pypistats.org/packages/fastestimator-nightly)
 
-FastEstimator is a high-level deep learning library built on TensorFlow2 and PyTorch. With the help of FastEstimator, you can easily build a high-performance deep learning model and run it anywhere. :wink:
+FastEstimator is a high-level deep learning library built on PyTorch. With the
+help of FastEstimator, you can easily build a high-performance deep learning
+model and run it anywhere. :wink:
+
+**FastEstimator 2.0** is a major release that streamlines the framework to be
+**PyTorch-only**, removes TensorFlow dependencies, migrates to
+[UV](https://docs.astral.sh/uv/) for modern dependency management, and includes
+updated ops, traces, and tutorials.
 
 For more information, please visit our [website](https://www.fastestimator.org/).
 
 ## Support Matrix
 
-| FastEstimator  | Python | TensorFlow | PyTorch | CUDA |  Installation Instruction |
-| -------------  | ------  | --------- | ------- | ---- | ----------- |
-| Nightly  | 3.10-3.12  | 2.15.1 | 2.3.1 | 12.2.2 | master branch |
-| 1.7 (recent stable) | 3.10-3.12  | 2.15.1 | 2.3.1 | 12.2 | [r1.7 branch](https://github.com/fastestimator/fastestimator/tree/r1.7) |
-| 1.6  | 3.8-3.10  | 2.11.1 | 2.0.1 | 11.8 | [r1.6 branch](https://github.com/fastestimator/fastestimator/tree/r1.6) |
-| 1.5  | 3.7-3.9  | 2.9.1 | 1.10.2 | 11.0 | [r1.5 branch](https://github.com/fastestimator/fastestimator/tree/r1.5) |
-| 1.4  | 3.6-3.8  | 2.4.1 | 1.7.1 | 11.0 | [r1.4 branch](https://github.com/fastestimator/fastestimator/tree/r1.4) |
-| 1.3  | 3.6-3.8  | 2.4.1 | 1.7.1 | 11.0 | [r1.3 branch](https://github.com/fastestimator/fastestimator/tree/r1.3) |
-| 1.2  | 3.6-3.8  | 2.4.1 | 1.7.1 | 11.0 | [r1.2 branch](https://github.com/fastestimator/fastestimator/tree/r1.2) |
-| 1.1  | 3.6-3.8  | 2.3.0 | 1.6.0 | 10.1 | [r1.1 branch](https://github.com/fastestimator/fastestimator/tree/r1.1) |
+| FastEstimator  | Python | PyTorch | CUDA |  Installation Instruction |
+| -------------  | ------  | ------- | ---- | ----------- |
+| Nightly  | 3.10-3.12  | 2.3.1 | 12.2.2 | master branch |
+| 2.0 (latest stable) | 3.10-3.12  | 2.3.1 | 12.2.2 | [r2.0 branch](https://github.com/fastestimator/fastestimator/tree/r2.0) |
+| 1.7 | 3.10-3.12  | 2.3.1 | 12.2 | [r1.7 branch](https://github.com/fastestimator/fastestimator/tree/r1.7) |
+| 1.6  | 3.8-3.10  | 2.0.1 | 11.8 | [r1.6 branch](https://github.com/fastestimator/fastestimator/tree/r1.6) |
+| 1.5  | 3.7-3.9  | 1.10.2 | 11.0 | [r1.5 branch](https://github.com/fastestimator/fastestimator/tree/r1.5) |
+| 1.4  | 3.6-3.8  | 1.7.1 | 11.0 | [r1.4 branch](https://github.com/fastestimator/fastestimator/tree/r1.4) |
+| 1.3  | 3.6-3.8  | 1.7.1 | 11.0 | [r1.3 branch](https://github.com/fastestimator/fastestimator/tree/r1.3) |
+| 1.2  | 3.6-3.8  | 1.7.1 | 11.0 | [r1.2 branch](https://github.com/fastestimator/fastestimator/tree/r1.2) |
+| 1.1  | 3.6-3.8  | 1.6.0 | 10.1 | [r1.1 branch](https://github.com/fastestimator/fastestimator/tree/r1.1) |
 
 ## Installation
 
-### 1. Install Dependencies
+We recommend using [UV](https://docs.astral.sh/uv/) for fast, reliable package management.
 
-* Install TensorFlow
-  * Linux:
+### Quick Start with UV
 
-      ```bash
-      pip install tensorflow==2.15.1
-      ```
-
-  * Mac (M1/M2):
-        Please follow this [installation guide](https://github.com/fastestimator/fastestimator/blob/master/installation_docs/mac_installation.md)
-
-  * Windows:
-        Please follow this [installation guide](https://github.com/fastestimator/fastestimator/blob/master/installation_docs/tensorflow_windows_installation.md)
-
-* Install PyTorch
-  * CPU:
-
-      ```bash
-      pip install --no-cache-dir torch==2.3.1+cpu torchvision==0.18.1+cpu torchaudio==2.3.1+cpu -f https://download.pytorch.org/whl/cpu/torch_stable.html
-      ```
-
-  * GPU:
-
-      ```bash
-      pip install --no-cache-dir torch==2.3.1+cu121 torchvision==0.18.1+cu121 torchaudio==2.3.1+cu121 -f https://download.pytorch.org/whl/cu121/torch_stable.html
-      ```
-
-* Extra Dependencies:
-  * Windows:
-    * Install Build Tools for Visual Studio 2019 [here](https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2019).
-
-    * Install latest Visual C++ redistributable [here](https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads) and choose x86 for 32 bit OS, x64 for 64 bit OS.
-
-  * Linux:
-
-      ``` bash
-      apt-get install libglib2.0-0 libsm6 libxrender1 libxext6
-      ```
-
-  * Mac:
-    * Please follow this [installation guide](https://github.com/fastestimator/fastestimator/blob/master/installation_docs/mac_installation.md)
-
-### 2. Install FastEstimator
-
-* Stable:
-
-    ``` bash
-    pip install fastestimator
+1. Install UV:
+    ```bash
+    curl -LsSf https://astral.sh/uv/install.sh | sh
     ```
 
-* Nightly (Linux/Mac):
+2. Install FastEstimator:
+    ```bash
+    uv pip install fastestimator
+    ```
 
-    ``` bash
+    PyTorch is included automatically:
+    - **macOS**: Standard PyTorch with MPS (Apple Silicon GPU) support
+    - **Linux/Windows**: CPU-optimized PyTorch build
+
+### For Developers
+
+```bash
+git clone https://github.com/fastestimator/fastestimator.git
+cd fastestimator
+uv sync                        # Install all dependencies
+uv sync --extra jupyter        # Include Jupyter notebook support
+uv sync --extra dev            # Include development tools
+```
+
+### System Dependencies
+
+* **Linux:**
+    ```bash
+    apt-get install libglib2.0-0 libsm6 libxrender1 libxext6 graphviz
+    ```
+
+* **macOS:** See the [Mac installation guide](https://github.com/fastestimator/fastestimator/blob/master/installation_docs/mac_installation.md)
+
+* **Windows:**
+    * Install [Build Tools for Visual Studio 2019](https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2019)
+    * Install [Visual C++ redistributable](https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads)
+
+* **Optional (for Traceability reports):** LaTeX (`texlive-latex-base`, `texlive-latex-extra`)
+
+### Alternative: pip install
+
+* Stable:
+    ```bash
+    pip install fastestimator
+    ```
+    Note: PyTorch is included in the base dependencies. On macOS you get MPS support; on Linux/Windows you get CPU builds.
+
+* Nightly:
+    ```bash
     pip install fastestimator-nightly
+    ```
+
+* For GPU with CUDA (Linux/Windows only):
+    ```bash
+    pip install fastestimator
+    pip install torch==2.3.1+cu121 torchvision==0.18.1+cu121 torchaudio==2.3.1+cu121 -f https://download.pytorch.org/whl/cu121
     ```
 
 ## Docker Hub
@@ -106,7 +119,7 @@ Docker containers create isolated virtual environments that share resources with
       docker pull fastestimator/fastestimator:latest-cpu
       ```
 
-* Nighly:
+* Nightly:
   * GPU:
 
       ``` bash

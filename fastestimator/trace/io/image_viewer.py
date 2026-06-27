@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Sequence, Union, Iterable
+from typing import Iterable, Sequence, Union
 
 from fastestimator.summary.logs.log_plot import visualize_logs
 from fastestimator.summary.summary import Summary
@@ -35,11 +35,13 @@ class ImageViewer(Trace):
             like "!infer" or "!train".
         interactive: Whether the image should be interactive. This is False by default to reduce jupyter file size.
     """
-    def __init__(self,
-                 inputs: Union[str, Sequence[str]],
-                 mode: Union[None, str, Iterable[str]] = ("eval", "test"),
-                 interactive: bool = False,
-                 ) -> None:
+
+    def __init__(
+            self,
+            inputs: Union[str, Sequence[str]],
+            mode: Union[None, str, Iterable[str]] = ("eval", "test"),
+            interactive: bool = False,
+    ) -> None:
         super().__init__(inputs=inputs, mode=mode)
         self.interactive = interactive
 

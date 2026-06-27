@@ -17,10 +17,10 @@ from typing import Any, Dict, Iterable, Optional, Set, Union
 
 from fastestimator.summary.summary import Summary
 from fastestimator.trace.trace import Trace
+from fastestimator.util.base_util import DefaultKeyDict, to_set
 from fastestimator.util.data import Data
 from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import to_number
-from fastestimator.util.base_util import to_set, DefaultKeyDict
 
 
 @traceable()
@@ -49,6 +49,7 @@ class InstanceTracker(Trace):
     Raises:
         ValueError: If `n_max_to_keep` or `n_min_to_keep` are invalid.
     """
+
     def __init__(self,
                  index: str,
                  metric: str,

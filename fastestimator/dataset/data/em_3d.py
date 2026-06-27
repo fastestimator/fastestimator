@@ -21,7 +21,11 @@ import numpy as np
 import tifffile
 
 from fastestimator.dataset.numpy_dataset import NumpyDataset
-from fastestimator.util.google_download_util import download_file_from_google_drive
+from fastestimator.util.google_download_util import download_url_with_fallback
+
+# Sourced from https://zenodo.org/records/3981037 (Platelet-EM dataset)
+_EM3D_URL = "https://zenodo.org/records/3981037/files/images_and_labels_rgba.zip?download=1"
+_EM3D_GDRIVE_ID = "1OMVY1bkfssYdH11xuFdxv7nhqEjzCY7L"
 
 color_mapping = {
     0: [0, 0, 0, 0],
@@ -115,8 +119,10 @@ def load_data(root_dir: Optional[str] = None, image_key: str = "image", label_ke
     data_compressed_path = os.path.join(root_dir, 'images_and_labels_rgba.zip')
     data_folder_path = os.path.join(root_dir, 'platelet-em/images')
 
-    download_file_from_google_drive('1OMVY1bkfssYdH11xuFdxv7nhqEjzCY7L', data_compressed_path)
-    shutil.unpack_archive(data_compressed_path, root_dir)
+    if not os.path.exists(data_folder_path):
+        print("Downloading data to {}".format(root_dir))
+        download_url_with_fallback(_EM3D_URL, _EM3D_GDRIVE_ID, data_compressed_path)
+        shutil.unpack_archive(data_compressed_path, root_dir)
 
     train_data = tifffile.imread(os.path.join(root_dir, 'platelet-em/images/50-images.tif'))
     val_data = tifffile.imread(os.path.join(root_dir, 'platelet-em/images/24-images.tif'))

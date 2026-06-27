@@ -15,25 +15,21 @@
 import unittest
 
 import numpy as np
-import tensorflow as tf
 import torch
 
 import fastestimator as fe
 
 
 class TestZscore(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.data_np = np.array([[0, 1], [2, 3]])
-        cls.data_tf = tf.constant([[0, 1], [2, 3]])
         cls.data_torch = torch.tensor([[0, 1], [2, 3]])
         cls.op = np.array([[-1.34164079, -0.4472136], [0.4472136, 1.34164079]])
 
     def test_zscore_np(self):
         self.assertTrue(np.allclose(fe.backend.zscore(self.data_np), self.op))
-
-    def test_zscore_tf(self):
-        self.assertTrue(np.allclose(fe.backend.zscore(self.data_tf).numpy(), self.op))
 
     def test_zscore_torch(self):
         self.assertTrue(np.allclose(fe.backend.zscore(self.data_torch).numpy(), self.op))

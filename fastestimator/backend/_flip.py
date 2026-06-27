@@ -15,10 +15,9 @@
 from typing import List, TypeVar
 
 import numpy as np
-import tensorflow as tf
 import torch
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
+Tensor = TypeVar('Tensor', torch.Tensor, np.ndarray)
 
 
 def flip(tensor: Tensor, axis: List[int]) -> Tensor:
@@ -29,13 +28,6 @@ def flip(tensor: Tensor, axis: List[int]) -> Tensor:
     n = np.array([[[0, 1], [2, 3]], [[4, 5], [6, 7]], [[8, 9], [10, 11]]])
     b = fe.backend.flip(n,axis = [0])  # [[[8,  9], [10, 11]], [[4,  5], [6,  7]], [[0,  1], [2,  3]]]
     b = fe.backend.flip(n,axis = [0,1])  # [[[10, 11],[8,  9]], [[6,  7], [4,  5]], [[2,  3], [0,  1]]]
-    ```
-
-    This method can be used with TensorFlow tensors:
-    ```python
-    t = tf.constant([[[0, 1], [2, 3]], [[4, 5], [6, 7]], [[8, 9], [10, 11]]])
-    b = fe.backend.flip(t,axis = [0])  # [[[8,  9], [10, 11]], [[4,  5], [6,  7]], [[0,  1], [2,  3]]]
-    b = fe.backend.flip(t,axis = [0,1])  # [[[10, 11],[8,  9]], [[6,  7], [4,  5]], [[2,  3], [0,  1]]]
     ```
 
     This method can be used with PyTorch tensors:
@@ -55,9 +47,7 @@ def flip(tensor: Tensor, axis: List[int]) -> Tensor:
     Raises:
         ValueError: If `tensor` is an unacceptable data type.
     """
-    if tf.is_tensor(tensor):
-        return tf.reverse(tensor, axis=axis)
-    elif isinstance(tensor, torch.Tensor):
+    if isinstance(tensor, torch.Tensor):
         return torch.flip(tensor, dims=axis)
     elif isinstance(tensor, np.ndarray):
         return np.flip(tensor, axis=axis)

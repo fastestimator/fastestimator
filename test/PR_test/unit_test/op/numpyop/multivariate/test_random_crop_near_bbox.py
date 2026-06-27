@@ -20,6 +20,7 @@ from fastestimator.op.numpyop.multivariate import RandomCropNearBBox
 
 
 class TestRandomCropNearBBox(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.single_input = [np.random.rand(28, 28, 3), np.array([12, 12, 19, 19])]

@@ -3,7 +3,7 @@ import unittest
 
 import fastestimator as fe
 from fastestimator.op.numpyop import NumpyOp
-from fastestimator.test.unittest_util import sample_system_object, sample_system_object_torch
+from fastestimator.test.unittest_util import sample_system_object_torch
 
 
 class TestNumpyOp(NumpyOp):
@@ -15,7 +15,7 @@ class TestNumpyOp(NumpyOp):
 class TestOneOf(unittest.TestCase):
     def test_save_and_load_state_tf(self):
         def instantiate_system():
-            system = sample_system_object()
+            system = sample_system_object_torch()
             system.pipeline.ops = [
                 fe.op.numpyop.meta.OneOf(
                     TestNumpyOp(inputs="x", outputs="x", mode="train", var=1),

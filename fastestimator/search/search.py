@@ -37,6 +37,7 @@ class Search:
     Raises:
         AssertionError: If `best_mode` is not 'min' or 'max', or search_idx is not an input argument of `eval_fn`.
     """
+
     def __init__(self, eval_fn: Callable[..., Dict], name: str = "search"):
         assert "search_idx" in inspect.signature(eval_fn).parameters, \
             "eval_fn must take 'search_idx' as one of its input arguments"
@@ -52,7 +53,7 @@ class Search:
         self.search_summary = []
         self.evaluation_cache = {}
 
-    def process_results(self,result: Union[dict, Any]) -> Dict[str, Union[float, int, str, list]]:
+    def process_results(self, result: Union[dict, Any]) -> Dict[str, Union[float, int, str, list]]:
         """
         Process results to ensure efficient storing and loading
             1. Convert a numpy array to list
@@ -64,16 +65,15 @@ class Search:
         Returns:
             result returned by `eval_fn` in a dictionary format.
         """
-        if isinstance(result,dict):
-            for key,val in result.items():
-                if isinstance(val,np.ndarray):
+        if isinstance(result, dict):
+            for key, val in result.items():
+                if isinstance(val, np.ndarray):
                     result[key] = val.tolist()
-                elif isinstance(val,dict):
+                elif isinstance(val, dict):
                     result[key] = self.process_results(val)
             return result
         else:
             return {"value": result}
-
 
     def evaluate(self, **kwargs: Any) -> Dict[str, Union[float, int, str, list]]:
         """Evaluate the eval_fn and return the result.
@@ -119,8 +119,7 @@ class Search:
             raise ValueError("Multiple keys exist in result dictionary and optimize_field is None.")
         return optimize_field
 
-    def get_best_results(self,
-                         best_mode: Optional[str] = None,
+    def get_best_results(self, best_mode: Optional[str] = None,
                          optimize_field: Optional[str] = None) -> Dict[str, Dict[str, Any]]:
         """Get the best result from the current search summary.
 

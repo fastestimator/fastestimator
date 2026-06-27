@@ -12,35 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Iterable, Optional, TypeVar, Union
+from typing import Iterable, Union
 
-import tensorflow as tf
 import torch
 
-from fastestimator.util.base_util import NonContext
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
-
-
-def get_gradient(target: Tensor,
-                 sources: Union[Iterable[Tensor], Tensor],
+def get_gradient(target: torch.Tensor,
+                 sources: Union[Iterable[torch.Tensor], torch.Tensor],
                  higher_order: bool = False,
-                 tape: Optional[tf.GradientTape] = None,
-                 retain_graph: bool = True) -> Union[Iterable[Tensor], Tensor]:
+                 retain_graph: bool = True) -> Union[Iterable[torch.Tensor], torch.Tensor]:
     """Calculate gradients of a target w.r.t sources.
-
-    This method can be used with TensorFlow tensors:
-    ```python
-    x = tf.Variable([1.0, 2.0, 3.0])
-    with tf.GradientTape(persistent=True) as tape:
-        y = x * x
-
-        b = fe.backend.get_gradient(target=y, sources=x, tape=tape)  # [2.0, 4.0, 6.0]
-        b = fe.backend.get_gradient(target=b, sources=x, tape=tape)  # None
-
-        b = fe.backend.get_gradient(target=y, sources=x, tape=tape, higher_order=True)  # [2.0, 4.0, 6.0]
-        b = fe.backend.get_gradient(target=b, sources=x, tape=tape)  # [2.0, 2.0, 2.0]
-    ```
 
     This method can be used with PyTorch tensors:
     ```python
@@ -58,7 +39,6 @@ def get_gradient(target: Tensor,
         target: The target (final) tensor.
         sources: A sequence of source (initial) tensors.
         higher_order: Whether the gradient will be used for higher order gradients.
-        tape: TensorFlow gradient tape. Only needed when using the TensorFlow backend.
         retain_graph: Whether to retain PyTorch graph. Only valid when using the PyTorch backend.
 
     Returns:
@@ -67,10 +47,7 @@ def get_gradient(target: Tensor,
     Raises:
         ValueError: If `target` is an unacceptable data type.
     """
-    if tf.is_tensor(target):
-        with NonContext() if higher_order else tape.stop_recording():
-            gradients = tape.gradient(target, sources)
-    elif isinstance(target, torch.Tensor):
+    if isinstance(target, torch.Tensor):
         gradients = torch.autograd.grad(target,
                                         sources,
                                         grad_outputs=torch.ones_like(target),
@@ -79,16 +56,12 @@ def get_gradient(target: Tensor,
                                         allow_unused=True)
 
         if isinstance(sources, torch.Tensor):
-            #  The behavior table of tf and torch backend
+            #  The behavior table of torch backend
             #  ---------------------------------------------------------------
             #        | case 1                     | case 2                    |
             #  ---------------------------------------------------------------|
-            #  tf    | target: tf.Tensor          | target: tf.Tensor         |
-            #        | sources: tf.Tensor         | sources: [tf.Tensor]      |
-            #        | gradients: tf.Tensor       | gradients: [tf.Tensor]    |
-            # ----------------------------------------------------------------|
-            #  torch | target: torch.Tensor       | target: tf.Tensor         |
-            #        | sources: torch.Tensor      | sources: [tf.Tensor]      |
+            #  torch | target: torch.Tensor       | target: torch.Tensor      |
+            #        | sources: torch.Tensor      | sources: [torch.Tensor]   |
             #        | gradients: (torch.Tensor,) | gradients: (torch.Tensor,)|
             # ----------------------------------------------------------------
             # In order to make the torch behavior become the same as tf in case 1, need to unwrap the gradients when

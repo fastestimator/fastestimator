@@ -20,6 +20,7 @@ from fastestimator.op.numpyop.univariate import RandomGamma
 
 
 class TestRandomGamma(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.single_input = [np.random.rand(28, 28, 3)]

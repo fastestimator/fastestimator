@@ -18,6 +18,7 @@ from fastestimator.schedule import RepeatScheduler
 
 
 class TestRepeatScheduler(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.input_data = [1, 2, 2]

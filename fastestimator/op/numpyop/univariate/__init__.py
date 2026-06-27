@@ -31,6 +31,7 @@ __getattr__, __dir__, __all__ = lazy.attach(__name__,
                                                           'color': ['Color'],
                                                           'color_jitter': ['ColorJitter'],
                                                           'contrast': ['Contrast'],
+                                                          'ct_window': ['CTWindow'],
                                                           'defocus':['Defocus'],
                                                           'downscale': ['Downscale'],
                                                           'equalize': ['Equalize'],
@@ -38,7 +39,10 @@ __getattr__, __dir__, __all__ = lazy.attach(__name__,
                                                           'fda': ['FDA'],
                                                           'from_float': ['FromFloat'],
                                                           'gaussian_blur': ['GaussianBlur'],
+                                                          'gaussian_blur_3d': ['GaussianBlur3D'],
                                                           'gaussian_noise': ['GaussianNoise'],
+                                                          'gaussian_noise_3d': ['GaussianNoise3D'],
+                                                          'grid_mask': ['GridMask'],
                                                           'hadamard': ['Hadamard'],
                                                           'histogram_matching': ['HistogramMatching'],
                                                           'hue_saturation_value': ['HueSaturationValue'],
@@ -57,6 +61,7 @@ __getattr__, __dir__, __all__ = lazy.attach(__name__,
                                                           'random_brightness_contrast': ['RandomBrightnessContrast'],
                                                           'random_fog': ['RandomFog'],
                                                           'random_gamma': ['RandomGamma'],
+                                                          'random_intensity_shift': ['RandomIntensityShift'],
                                                           'random_rain': ['RandomRain'],
                                                           'random_shadow': ['RandomShadow'],
                                                           'random_shapes': ['RandomShapes'],
@@ -69,6 +74,7 @@ __getattr__, __dir__, __all__ = lazy.attach(__name__,
                                                           'sharpness': ['Sharpness'],
                                                           'shear_x': ['ShearX'],
                                                           'shear_y': ['ShearY'],
+                                                          'simulate_low_resolution': ['SimulateLowResolution'],
                                                           'solarize': ['Solarize'],
                                                           'to_array': ['ToArray'],
                                                           'to_float': ['ToFloat'],
@@ -95,6 +101,7 @@ if TYPE_CHECKING:
     from fastestimator.op.numpyop.univariate.color import Color
     from fastestimator.op.numpyop.univariate.color_jitter import ColorJitter
     from fastestimator.op.numpyop.univariate.contrast import Contrast
+    from fastestimator.op.numpyop.univariate.ct_window import CTWindow
     from fastestimator.op.numpyop.univariate.defocus import Defocus
     from fastestimator.op.numpyop.univariate.downscale import Downscale
     from fastestimator.op.numpyop.univariate.equalize import Equalize
@@ -102,7 +109,10 @@ if TYPE_CHECKING:
     from fastestimator.op.numpyop.univariate.fda import FDA
     from fastestimator.op.numpyop.univariate.from_float import FromFloat
     from fastestimator.op.numpyop.univariate.gaussian_blur import GaussianBlur
+    from fastestimator.op.numpyop.univariate.gaussian_blur_3d import GaussianBlur3D
     from fastestimator.op.numpyop.univariate.gaussian_noise import GaussianNoise
+    from fastestimator.op.numpyop.univariate.gaussian_noise_3d import GaussianNoise3D
+    from fastestimator.op.numpyop.univariate.grid_mask import GridMask
     from fastestimator.op.numpyop.univariate.hadamard import Hadamard
     from fastestimator.op.numpyop.univariate.histogram_matching import HistogramMatching
     from fastestimator.op.numpyop.univariate.hue_saturation_value import HueSaturationValue
@@ -121,6 +131,7 @@ if TYPE_CHECKING:
     from fastestimator.op.numpyop.univariate.random_brightness_contrast import RandomBrightnessContrast
     from fastestimator.op.numpyop.univariate.random_fog import RandomFog
     from fastestimator.op.numpyop.univariate.random_gamma import RandomGamma
+    from fastestimator.op.numpyop.univariate.random_intensity_shift import RandomIntensityShift
     from fastestimator.op.numpyop.univariate.random_rain import RandomRain
     from fastestimator.op.numpyop.univariate.random_shadow import RandomShadow
     from fastestimator.op.numpyop.univariate.random_shapes import RandomShapes
@@ -133,6 +144,7 @@ if TYPE_CHECKING:
     from fastestimator.op.numpyop.univariate.sharpness import Sharpness
     from fastestimator.op.numpyop.univariate.shear_x import ShearX
     from fastestimator.op.numpyop.univariate.shear_y import ShearY
+    from fastestimator.op.numpyop.univariate.simulate_low_resolution import SimulateLowResolution
     from fastestimator.op.numpyop.univariate.solarize import Solarize
     from fastestimator.op.numpyop.univariate.to_array import ToArray
     from fastestimator.op.numpyop.univariate.to_float import ToFloat

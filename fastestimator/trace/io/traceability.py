@@ -30,7 +30,6 @@ import dot2tex as d2t
 import jsonpickle
 import numpy as np
 import pydot
-import tensorflow as tf
 import torch
 from cpuinfo import get_cpu_info
 from natsort import humansorted
@@ -299,7 +298,7 @@ class Traceability(Trace):
         with self.doc.create(Section("Parameters")):
             model_ids = {
                 FEID(id(model))
-                for model in self.system.network.models if isinstance(model, (tf.keras.Model, torch.nn.Module))
+                for model in self.system.network.models if isinstance(model, (torch.nn.Module))
             }
             # Locate the datasets in order to provide extra details about them later in the summary
             datasets = {}
@@ -321,38 +320,34 @@ class Traceability(Trace):
             start = 0
             start = self._loop_tables(start,
                                       classes=(Estimator, BaseNetwork, Pipeline),
-                                      name="Base Classes",
+                                      name='Base Classes',
                                       model_ids=model_ids,
                                       datasets=datasets)
             start = self._loop_tables(start,
                                       classes=Scheduler,
-                                      name="Schedulers",
+                                      name='Schedulers',
                                       model_ids=model_ids,
                                       datasets=datasets)
-            start = self._loop_tables(start, classes=Trace, name="Traces", model_ids=model_ids, datasets=datasets)
-            start = self._loop_tables(start, classes=Op, name="Operators", model_ids=model_ids, datasets=datasets)
-            start = self._loop_tables(start, classes=Slicer, name="Slicers", model_ids=model_ids, datasets=datasets)
+            start = self._loop_tables(start, classes=Trace, name='Traces', model_ids=model_ids, datasets=datasets)
+            start = self._loop_tables(start, classes=Op, name='Operators', model_ids=model_ids, datasets=datasets)
+            start = self._loop_tables(start, classes=Slicer, name='Slicers', model_ids=model_ids, datasets=datasets)
+            start = self._loop_tables(start, classes=(Dataset), name='Datasets', model_ids=model_ids, datasets=datasets)
             start = self._loop_tables(start,
-                                      classes=(Dataset, tf.data.Dataset),
-                                      name="Datasets",
-                                      model_ids=model_ids,
-                                      datasets=datasets)
-            start = self._loop_tables(start,
-                                      classes=(tf.keras.Model, torch.nn.Module),
-                                      name="Models",
+                                      classes=(torch.nn.Module),
+                                      name='Models',
                                       model_ids=model_ids,
                                       datasets=datasets)
             start = self._loop_tables(start,
                                       classes=types.FunctionType,
-                                      name="Functions",
+                                      name='Functions',
                                       model_ids=model_ids,
                                       datasets=datasets)
             start = self._loop_tables(start,
-                                      classes=(np.ndarray, tf.Tensor, tf.Variable, torch.Tensor),
-                                      name="Tensors",
+                                      classes=(np.ndarray, torch.Tensor),
+                                      name='Tensors',
                                       model_ids=model_ids,
                                       datasets=datasets)
-            self._loop_tables(start, classes=Any, name="Miscellaneous", model_ids=model_ids, datasets=datasets)
+            self._loop_tables(start, classes=Any, name='Miscellaneous', model_ids=model_ids, datasets=datasets)
             self.get_parameter_summary()
 
     def get_parameter_summary(self):
@@ -364,18 +359,18 @@ class Traceability(Trace):
         }
         parameter_retrieval_errors = []
         try:
-            parameters["no_of_model_parameters"] = {
+            parameters['no_of_model_parameters'] = {
                 model.model_name.lower(): get_model_parameters(model)
-                for model in self.system.network.models if isinstance(model, (tf.keras.Model, torch.nn.Module))
+                for model in self.system.network.models if isinstance(model, (torch.nn.Module))
             }
         except Exception as e:
             print(e)
             parameter_retrieval_errors.append('no_of_model_parameters')
 
         try:
-            parameters["lr"] = {
+            parameters['lr'] = {
                 model.model_name.lower(): fe.backend.get_lr(model=model)
-                for model in self.system.network.models if isinstance(model, (tf.keras.Model, torch.nn.Module))
+                for model in self.system.network.models if isinstance(model, (torch.nn.Module))
             }
         except Exception as e:
             print(e)
@@ -486,34 +481,11 @@ class Traceability(Trace):
         """
         with self.doc.create(Section("Models")):
             for model in humansorted(self.system.network.models, key=lambda m: m.model_name):
-                if not isinstance(model, (tf.keras.Model, torch.nn.Module)):
+                if not isinstance(model, torch.nn.Module):
                     continue
                 self.doc.append(NoEscape(r'\FloatBarrier'))
                 with self.doc.create(Subsection(f"{model.model_name.capitalize()}", label=model.model_name)):
-                    if isinstance(model, tf.keras.Model):
-                        # Text Summary
-                        summary = []
-                        model.summary(line_length=92, print_fn=lambda x: summary.append(x))
-                        summary = "\n".join(summary)
-                        self.doc.append(Verbatim(summary))
-                        with self.doc.create(Center()):
-                            self.doc.append(HrefFEID(FEID(id(model)), model.model_name))
-
-                        # Visual Summary
-                        # noinspection PyBroadException
-                        try:
-                            file_path = os.path.join(self.resource_dir,
-                                                     "{}_{}.pdf".format(self.report_name, model.model_name))
-                            dot = tf.keras.utils.model_to_dot(model, show_shapes=True, expand_nested=True)
-                            # LaTeX \maxdim is around 575cm (226 inches), so the image must have max dimension less than
-                            # 226 inches. However, the 'size' parameter doesn't account for the whole node height, so
-                            # set the limit lower (100 inches) to leave some wiggle room.
-                            dot.set('size', '100')
-                            dot.write(file_path, format='pdf')
-                        except Exception:
-                            file_path = None
-                            warn(f"Model {model.model_name} could not be visualized by Traceability")
-                    elif isinstance(model, torch.nn.Module):
+                    if isinstance(model, torch.nn.Module):
                         if hasattr(model, 'fe_input_spec'):
                             # Text Summary
                             # noinspection PyUnresolvedReferences

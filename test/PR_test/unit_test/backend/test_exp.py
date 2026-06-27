@@ -15,22 +15,16 @@
 import unittest
 
 import numpy as np
-import tensorflow as tf
 import torch
 
 import fastestimator as fe
 
 
 class TestExp(unittest.TestCase):
+
     def test_exp_np_input(self):
         n = np.array([-2., 2, 1])
         obj1 = fe.backend.exp(n)
-        obj2 = np.array([0.13533528, 7.3890561, 2.71828183])
-        self.assertTrue(np.allclose(obj1, obj2))
-
-    def test_exp_tf_input(self):
-        t = tf.constant([-2., 2, 1])
-        obj1 = fe.backend.exp(t)
         obj2 = np.array([0.13533528, 7.3890561, 2.71828183])
         self.assertTrue(np.allclose(obj1, obj2))
 

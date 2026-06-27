@@ -12,10 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Any, Callable, Dict, Iterable, List, MutableMapping, Optional, Sequence, TypeVar, Union
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    List,
+    MutableMapping,
+    Optional,
+    Sequence,
+    TypeVar,
+    Union,
+)
 
 import numpy as np
-import tensorflow as tf
 import torch
 from torch.utils.data.dataloader import default_collate
 
@@ -25,7 +35,7 @@ from fastestimator.types import FilteredData
 from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import pad_batch
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
+Tensor = TypeVar('Tensor', torch.Tensor, np.ndarray)
 
 
 @traceable()
@@ -44,6 +54,7 @@ class NumpyOp(Op):
         ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
             ds_ids except for a particular one, you can pass an argument like "!ds1".
     """
+
     def __init__(self,
                  inputs: Union[None, str, Iterable[str]] = None,
                  outputs: Union[None, str, Iterable[str]] = None,
@@ -176,6 +187,7 @@ class Delete(NumpyOp):
         ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
             ds_ids except for a particular one, you can pass an argument like "!ds1".
     """
+
     def __init__(self,
                  keys: Union[str, Sequence[str]],
                  mode: Union[None, str, Iterable[str]] = None,
@@ -203,6 +215,7 @@ class LambdaOp(NumpyOp):
         ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
             ds_ids except for a particular one, you can pass an argument like "!ds1".
     """
+
     def __init__(self,
                  fn: Callable,
                  inputs: Union[None, str, Iterable[str]] = None,
@@ -248,6 +261,7 @@ class RemoveIf(NumpyOp):
         ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
             ds_ids except for a particular one, you can pass an argument like "!ds1".
     """
+
     def __init__(self,
                  fn: Callable[..., bool],
                  replacement: bool = True,

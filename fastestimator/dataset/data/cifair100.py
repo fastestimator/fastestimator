@@ -21,7 +21,10 @@ import numpy as np
 
 from fastestimator.dataset.data.cifair10 import _load_batch
 from fastestimator.dataset.numpy_dataset import NumpyDataset
-from fastestimator.util.google_download_util import download_file_from_google_drive
+from fastestimator.util.google_download_util import download_url_with_fallback
+
+_CIFAIR100_URL = "https://github.com/cvjena/cifair/releases/download/v1.0/ciFAIR-100.zip"
+_CIFAIR100_GDRIVE_ID = "1ZE_wf5UTd9fJqBgikb7MJtfFEeAfXybS"
 
 
 def load_data(root_dir: str = None, image_key: str = "x", label_key: str = "y",
@@ -54,7 +57,7 @@ def load_data(root_dir: str = None, image_key: str = "x", label_key: str = "y",
 
     if not os.path.exists(image_extracted_path):
         print("Downloading data to {}".format(root_dir))
-        download_file_from_google_drive('1ZE_wf5UTd9fJqBgikb7MJtfFEeAfXybS', image_compressed_path)
+        download_url_with_fallback(_CIFAIR100_URL, _CIFAIR100_GDRIVE_ID, image_compressed_path)
 
         print("Extracting data to {}".format(root_dir))
         shutil.unpack_archive(image_compressed_path, root_dir)

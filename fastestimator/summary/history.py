@@ -25,7 +25,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, TextIO, Type
 
-from keras import mixed_precision
+import torch
 from prettytable import PrettyTable, from_db_cursor
 
 from fastestimator.schedule.schedule import Scheduler
@@ -348,8 +348,12 @@ class HistoryRecorder:
             features.append({'feature': 'Deterministic', 'fk': self.pk})
         if any([len(mode_dict) > 1 for mode_dict in self.system.pipeline.data.values()]):
             features.append({'feature': 'MultiDataset', 'fk': self.pk})
-        if mixed_precision.global_policy().compute_dtype == 'float16':
-            features.append({'feature': 'MixedPrecision', 'fk': self.pk})
+        if torch.cuda.is_available() and torch.cuda.get_device_properties(0).major >= 7:
+            # Check if any model is using mixed precision (AMP) by checking for float16 parameters
+            for model in self.system.network.models:
+                if any(p.dtype == torch.float16 for p in model.parameters()):
+                    features.append({'feature': 'MixedPrecision', 'fk': self.pk})
+                    break
         return features
 
     def _get_datasets_in_use(self) -> List[Dict[str, str]]:
@@ -840,6 +844,7 @@ class HistoryReader:
 class _GroupAction(argparse._AppendAction):
     """An argparse action which can be invoked multiple times in order to build a dictionary of entries.
     """
+
     def __call__(self, parser, namespace, values, option_string=None):
         if len(values) < 2:
             raise argparse.ArgumentError(self, "--group arguments should of the form <name> <idx1> [<idx2> ...]")

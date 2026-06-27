@@ -14,7 +14,18 @@
 # ==============================================================================
 import math
 import random
-from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Union, cast, overload
+from typing import (
+    Any,
+    Dict,
+    Iterable,
+    List,
+    Mapping,
+    Optional,
+    Sequence,
+    Union,
+    cast,
+    overload,
+)
 
 from torch.utils.data import Dataset
 from typing_extensions import Self
@@ -73,6 +84,7 @@ class InterleaveDataset(FEDataset):
         pattern: The step-wise interleaving patterns. When datasets provided is a list, it requires list of integer
             when `datasets` is list, requires a list of names when `datasets` is dictionary.
     """
+
     @overload
     def __init__(self, datasets: Sequence[Dataset], pattern: Optional[List[int]] = None) -> None:
         ...
@@ -147,7 +159,9 @@ class InterleaveDataset(FEDataset):
         This method is invoked by the FEDataLoader which allows each epoch to have different random pairings of the
         basis datasets.
         """
-        from fastestimator.dataset.extend_dataset import ExtendDataset  # Hide this to prevent circular import
+        from fastestimator.dataset.extend_dataset import (
+            ExtendDataset,  # Hide this to prevent circular import
+        )
 
         # Reset any children who need resetting
         for fn in self.child_reset_fns:
@@ -180,12 +194,13 @@ class InterleaveDataset(FEDataset):
         Returns:
             How many batches of data can this dataset serve per epoch. It is sum of all dataset's number of batch.
         """
-        from fastestimator.dataset.extend_dataset import ExtendDataset  # Hide this to prevent circular import
+        from fastestimator.dataset.extend_dataset import (
+            ExtendDataset,  # Hide this to prevent circular import
+        )
 
         # first calculate the minimum number of cycles each dataset can afford according to the repeat pattern
-        num_cycles = min((ds.spoof_length if isinstance(ds, ExtendDataset) else len(ds)) // (f * bs) for ds,
-                         f,
-                         bs in zip(self.datasets, self.frequency, self.batch_sizes))
+        num_cycles = min((ds.spoof_length if isinstance(ds, ExtendDataset) else len(ds)) // (f * bs)
+                         for ds, f, bs in zip(self.datasets, self.frequency, self.batch_sizes))
         assert num_cycles > 0, "some dataset does not have enough samples for a single repeat pattern, please consider \
             using `ExtendDataset` to increase its length"
 

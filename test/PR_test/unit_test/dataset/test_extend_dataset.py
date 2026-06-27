@@ -26,6 +26,7 @@ def inputs():
 
 
 class TestBatchDataset(unittest.TestCase):
+
     def test_dataset_contraction(self):
         ds1 = GeneratorDataset(generator=inputs(), samples_per_epoch=10)
         unpaired_ds = fe.dataset.ExtendDataset(dataset=ds1, spoof_length=5)

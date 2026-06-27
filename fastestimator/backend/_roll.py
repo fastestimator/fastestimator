@@ -15,10 +15,9 @@
 from typing import List, TypeVar, Union
 
 import numpy as np
-import tensorflow as tf
 import torch
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
+Tensor = TypeVar('Tensor', torch.Tensor, np.ndarray)
 
 
 def roll(tensor: Tensor, shift: Union[int, List[int]], axis: Union[int, List[int]]) -> Tensor:
@@ -34,15 +33,6 @@ def roll(tensor: Tensor, shift: Union[int, List[int]], axis: Union[int, List[int
     b = fe.backend.roll(n, shift=2, axis=1)  # [[2, 3, 1], [6, 7, 5]]
     b = fe.backend.roll(n, shift=-2, axis=1)  # [[3, 1, 2], [7, 5, 6]]
     b = fe.backend.roll(n, shift=[-1, -1], axis=[0, 1])  # [[6, 7, 5], [2, 3, 1]]
-    ```
-
-    This method can be used with TensorFlow tensors:
-    ```python
-    t = tf.constant([[1.0, 2.0, 3.0], [5.0, 6.0, 7.0]])
-    b = fe.backend.roll(t, shift=1, axis=0)  # [[5, 6, 7], [1, 2, 3]]
-    b = fe.backend.roll(t, shift=2, axis=1)  # [[2, 3, 1], [6, 7, 5]]
-    b = fe.backend.roll(t, shift=-2, axis=1)  # [[3, 1, 2], [7, 5, 6]]
-    b = fe.backend.roll(t, shift=[-1, -1], axis=[0, 1])  # [[6, 7, 5], [2, 3, 1]]
     ```
 
     This method can be used with PyTorch tensors:
@@ -66,9 +56,7 @@ def roll(tensor: Tensor, shift: Union[int, List[int]], axis: Union[int, List[int
     Raises:
         ValueError: If `tensor` is an unacceptable data type.
     """
-    if tf.is_tensor(tensor):
-        return tf.roll(tensor, shift=shift, axis=axis)
-    elif isinstance(tensor, torch.Tensor):
+    if isinstance(tensor, torch.Tensor):
         return torch.roll(tensor, shifts=shift, dims=axis)
     elif isinstance(tensor, np.ndarray):
         return np.roll(tensor, shift=shift, axis=axis)

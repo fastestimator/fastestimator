@@ -15,10 +15,9 @@
 from typing import TypeVar
 
 import numpy as np
-import tensorflow as tf
 import torch
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
+Tensor = TypeVar('Tensor', torch.Tensor, np.ndarray)
 
 
 def expand_dims(tensor: Tensor, axis: int = 1) -> Tensor:
@@ -29,13 +28,6 @@ def expand_dims(tensor: Tensor, axis: int = 1) -> Tensor:
     n = np.array([2,7,5])
     b = fe.backend.expand_dims(n, axis=0)  # [[2, 5, 7]]
     b = fe.backend.expand_dims(n, axis=1)  # [[2], [5], [7]]
-    ```
-
-    This method can be used with TensorFlow tensors:
-    ```python
-    t = tf.constant([2,7,5])
-    b = fe.backend.expand_dims(t, axis=0)  # [[2, 5, 7]]
-    b = fe.backend.expand_dims(t, axis=1)  # [[2], [5], [7]]
     ```
 
     This method can be used with PyTorch tensors:
@@ -55,9 +47,7 @@ def expand_dims(tensor: Tensor, axis: int = 1) -> Tensor:
     Raises:
         ValueError: If `tensor` is an unacceptable data type.
     """
-    if tf.is_tensor(tensor):
-        return tf.expand_dims(tensor, axis=axis)
-    elif isinstance(tensor, torch.Tensor):
+    if isinstance(tensor, torch.Tensor):
         return torch.unsqueeze(tensor, dim=axis)
     elif isinstance(tensor, np.ndarray):
         return np.expand_dims(tensor, axis=axis)

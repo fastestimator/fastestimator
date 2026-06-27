@@ -14,8 +14,6 @@
 # ==============================================================================
 from typing import Any, Dict, Iterable, List, Optional, Tuple, TypeVar, Union
 
-import tensorflow as tf
-import tensorflow_probability as tfp
 import torch
 
 from fastestimator.backend._get_shape import get_shape
@@ -24,7 +22,7 @@ from fastestimator.backend._reshape import reshape
 from fastestimator.backend._roll import roll
 from fastestimator.op.tensorop.tensorop import TensorOp
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
+Tensor = TypeVar('Tensor', bound=torch.Tensor)
 
 
 class MixUpBatch(TensorOp):
@@ -45,6 +43,7 @@ class MixUpBatch(TensorOp):
     Raises:
         AssertionError: If input arguments are invalid.
     """
+
     def __init__(self,
                  inputs: Iterable[str],
                  outputs: Iterable[str],
@@ -61,9 +60,7 @@ class MixUpBatch(TensorOp):
         self.shared_beta = shared_beta
 
     def build(self, framework: str, device: Optional[torch.device] = None) -> None:
-        if framework == 'tf':
-            self.beta = tfp.distributions.Beta(self.alpha, self.alpha)
-        elif framework == 'torch':
+        if framework == 'torch':
             self.beta = torch.distributions.beta.Beta(
                 torch.tensor([self.alpha]).to(device), torch.tensor([self.alpha]).to(device))
         else:

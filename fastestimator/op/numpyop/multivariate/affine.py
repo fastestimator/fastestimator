@@ -76,6 +76,7 @@ class Affine(MultiVariateAlbumentation):
     Image types:
         uint8, float32
     """
+
     def __init__(self,
                  rotate: Union[None, Number, Tuple[Number, Number]] = None,
                  scale: Union[None, float, Tuple[float, float]] = None,

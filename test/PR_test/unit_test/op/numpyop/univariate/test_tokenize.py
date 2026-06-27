@@ -19,6 +19,7 @@ from fastestimator.test.unittest_util import is_equal
 
 
 class TestTokenize(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.single_input = ['This is a function to test tokenize op']

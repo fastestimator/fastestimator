@@ -23,7 +23,6 @@ from threading import Lock
 from typing import Any, Dict, Iterable, List, Literal, Optional, Set, Tuple, Type, TypeVar, Union, cast, overload
 
 import numpy as np
-import tensorflow as tf
 from torch.utils.data import DataLoader, Dataset
 from typing_extensions import Self
 
@@ -40,9 +39,9 @@ from fastestimator.schedule.schedule import EpochScheduler, RepeatScheduler, Sch
 from fastestimator.types import FilteredData
 from fastestimator.util.base_util import filter_nones, to_list, to_set, warn
 from fastestimator.util.traceability_util import traceable
-from fastestimator.util.util import cpu_count, get_num_devices
+from fastestimator.util.util import cpu_count, get_num_devices, get_num_gpus
 
-DataSource = TypeVar('DataSource', Dataset, DataLoader, tf.data.Dataset)
+DataSource = TypeVar('DataSource', Dataset, DataLoader)
 
 
 @traceable(blacklist=('ctx_loader', 'ctx_lock'))
@@ -198,7 +197,7 @@ class Pipeline:
             **kwargs: A selection of variables and their values which must be validated.
 
         Returns:
-            True iff the `dataset` is a PyTorch Dataset (as opposed to a DataLoader or tf.data.Dataset).
+            True iff the `dataset` is a PyTorch Dataset (as opposed to a DataLoader).
 
         Raises:
             AssertionError: If the `kwargs` are found to be invalid based on the given `dataset`.
@@ -214,7 +213,7 @@ class Pipeline:
             # num_process check
             assert isinstance(self.num_process, int), "number of processes must be an integer"
             return True
-        elif isinstance(dataset, (DataLoader, tf.data.Dataset)):
+        elif isinstance(dataset, (DataLoader)):
             if kwargs['batch_size'] is not None:
                 warn("batch_size will only be used for built-in dataset")
             if kwargs['ops'] is not None:
@@ -315,8 +314,6 @@ class Pipeline:
 
         for ds_id in ds_ids:
             with self(mode=mode, epoch=epoch, ds_id=ds_id, steps_per_epoch=num_steps) as loader:
-                if isinstance(loader, tf.data.Dataset):
-                    loader = loader.take(num_steps)
                 start = time.perf_counter()
                 for idx, _ in enumerate(loader, start=1):
                     if idx % log_interval == 0:
@@ -561,8 +558,6 @@ class Pipeline:
         """
         results = []
         with self(mode=mode, epoch=epoch, ds_id=ds_id, shuffle=shuffle) as loader:
-            if isinstance(loader, tf.data.Dataset):
-                loader = loader.take(num_steps)
             if loader:
                 for idx, batch in enumerate(loader, start=1):
                     results.append(batch)
@@ -677,7 +672,7 @@ class Pipeline:
         self.ctx_lock.release()
         return self
 
-    def __enter__(self) -> Union[DataLoader, tf.data.Dataset]:
+    def __enter__(self) -> DataLoader:
         """Get a data loader from the Pipeline for the current epoch and mode.
 
         A given pipeline can only provide one loader at a time. This helps to prevent issues with multi-threading.
@@ -712,8 +707,7 @@ class Pipeline:
                           ctx_ops,
                           self.ctx_mode,
                           self.ctx_output_keys | self.ctx_batch_input_keys if self.ctx_output_keys else None,
-                          deep_remainder=False) for ds,
-                ctx_ops in zip(self.ctx_dataset.datasets, self.ctx_ops)
+                          deep_remainder=False) for ds, ctx_ops in zip(self.ctx_dataset.datasets, self.ctx_ops)
             ]
             self.ctx_dataset.op_datasets = op_datasets
             # when batch_size is None, then it indicates each sample is a batch
@@ -724,6 +718,7 @@ class Pipeline:
                                                    ops=self.ctx_batch_ops,
                                                    output_keys=self.ctx_output_keys,
                                                    mode=self.ctx_mode)
+            _use_pin_memory = get_num_gpus() > 0
             try:
                 data = FEDataLoader(self.ctx_dataset,
                                     postprocess_fn=postprocess_fn,
@@ -732,7 +727,8 @@ class Pipeline:
                                     steps_per_epoch=self.ctx_steps_per_epoch,
                                     num_workers=self.num_process,
                                     drop_last=self.ctx_batch_info.drop_last,
-                                    collate_fn=self.ctx_batch_info.collate_fn)
+                                    collate_fn=self.ctx_batch_info.collate_fn,
+                                    pin_memory=_use_pin_memory)
             except ValueError as err:
                 self.ctx_lock.release()
                 raise err
@@ -753,6 +749,7 @@ class Pipeline:
                                                    ops=self.ctx_batch_ops,
                                                    output_keys=self.ctx_output_keys,
                                                    mode=self.ctx_mode)
+            _use_pin_memory = get_num_gpus() > 0
             try:
                 data = FEDataLoader(op_dataset,
                                     postprocess_fn=postprocess_fn,
@@ -761,7 +758,8 @@ class Pipeline:
                                     steps_per_epoch=self.ctx_steps_per_epoch,
                                     num_workers=self.num_process,
                                     drop_last=self.ctx_batch_info.drop_last,
-                                    collate_fn=self.ctx_batch_info.collate_fn)
+                                    collate_fn=self.ctx_batch_info.collate_fn,
+                                    pin_memory=_use_pin_memory)
             except ValueError as err:
                 self.ctx_lock.release()
                 raise err
@@ -778,7 +776,6 @@ class Pipeline:
         # killing one another through multi-processing.
         gc.collect()
         self.ctx_lock.release()
-
 
 def _batch_postprocess(data: Dict[str, Any], ops: List[NumpyOp], output_keys: Set[str], mode: str, shared: bool = True) -> \
         Union[Dict[str, Any], FilteredData]:

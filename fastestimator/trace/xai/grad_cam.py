@@ -16,7 +16,6 @@ from typing import Any, Dict, Iterable, Optional, TypeVar, Union
 
 import cv2
 import numpy as np
-import tensorflow as tf
 import torch
 
 from fastestimator.backend._argmax import argmax
@@ -30,7 +29,7 @@ from fastestimator.util.img_data import BatchDisplay, GridDisplay
 from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import to_number
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
+Tensor = TypeVar('Tensor', torch.Tensor, np.ndarray)
 
 
 @traceable()
@@ -58,6 +57,7 @@ class GradCAM(Trace):
         ds_id: What dataset id(s) to execute this Trace in. To execute regardless of ds_id, pass None. To execute in all
             ds_ids except for a particular one, you can pass an argument like "!ds1".
     """
+
     def __init__(self,
                  images: str,
                  grads: str,
@@ -109,8 +109,6 @@ class GradCAM(Trace):
         images = concat(self.images)[:self.n_samples or self.n_found]
         _, height, width = get_image_dims(images)
         grads = to_number(concat(self.grads)[:self.n_samples or self.n_found])
-        if tf.is_tensor(images):
-            grads = np.moveaxis(grads, source=-1, destination=1)  # grads should be channel first
         columns = []
         labels = None if not self.labels else concat(self.labels)[:self.n_samples or self.n_found]
         if labels is not None:

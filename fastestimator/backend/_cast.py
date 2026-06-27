@@ -15,12 +15,11 @@
 from typing import Collection, TypeVar, Union
 
 import numpy as np
-import tensorflow as tf
 import torch
 
 from fastestimator.util.util import STRING_TO_TF_DTYPE, STRING_TO_TORCH_DTYPE
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
+Tensor = TypeVar('Tensor', torch.Tensor, np.ndarray)
 
 
 def cast(data: Union[Collection, Tensor], dtype: Union[str, Tensor]) -> Union[Collection, Tensor]:
@@ -34,14 +33,6 @@ def cast(data: Union[Collection, Tensor], dtype: Union[str, Tensor]) -> Union[Co
     data = fe.backend.cast(data, "float16")
     fe.backend.to_type(data)
     # {'x': dtype('float16'), 'y': [dtype('float16'), dtype('float16')], 'z': {'key': dtype('float16')}}
-    ```
-
-    This method can be used with TensorFlow tensors:
-    ```python
-    data = {"x": tf.ones((10,15)), "y":[tf.ones((4)), tf.ones((5, 3))], "z":{"key":tf.ones((2,2))}}
-    fe.backend.to_type(data) # {'x': tf.float32, 'y': [tf.float32, tf.float32], 'z': {'key': tf.float32}}
-    data = fe.backend.cast(data, "uint8")
-    fe.backend.to_type(data) # {'x': tf.uint8, 'y': [tf.uint8, tf.uint8], 'z': {'key': tf.uint8}}
     ```
 
     This method can be used with PyTorch tensors:
@@ -68,16 +59,12 @@ def cast(data: Union[Collection, Tensor], dtype: Union[str, Tensor]) -> Union[Co
             return tuple([cast(val, dtype) for val in data])
         elif isinstance(data, set):
             return set([cast(val, dtype) for val in data])
-        elif tf.is_tensor(data):
-            return tf.cast(data, STRING_TO_TF_DTYPE[dtype])
         elif isinstance(data, torch.Tensor):
             return data.type(STRING_TO_TORCH_DTYPE[dtype])
         else:
             return np.array(data, dtype=dtype)
-    elif tf.is_tensor(dtype) or isinstance(dtype, torch.Tensor) or isinstance(dtype, np.ndarray):
-        if tf.is_tensor(dtype):
-            return tf.cast(data, dtype.dtype)
-        elif isinstance(dtype, torch.Tensor):
+    elif isinstance(dtype, torch.Tensor) or isinstance(dtype, np.ndarray):
+        if isinstance(dtype, torch.Tensor):
             if isinstance(data, torch.Tensor):
                 return data.to(dtype.dtype)
             return torch.tensor(data, dtype=dtype.dtype, device=dtype.device)

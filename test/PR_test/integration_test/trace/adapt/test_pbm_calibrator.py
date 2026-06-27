@@ -19,8 +19,7 @@ import unittest
 import dill
 import numpy as np
 
-from fastestimator.test.unittest_util import is_equal
-from fastestimator.test.unittest_util import sample_system_object
+from fastestimator.test.unittest_util import is_equal, sample_system_object_torch
 from fastestimator.trace.adapt import PBMCalibrator
 from fastestimator.util.data import Data
 
@@ -31,7 +30,7 @@ class TestPBMCalibrator(unittest.TestCase):
         save_dir = tempfile.mkdtemp()
         cls.save_file = os.path.join(save_dir, 'calibrator.pkl')
         cls.pbm_calibrator = PBMCalibrator(true_key='y', pred_key='y_pred', save_path=cls.save_file)
-        cls.pbm_calibrator.system = sample_system_object()
+        cls.pbm_calibrator.system = sample_system_object_torch()
 
     def test_on_epoch_begin(self):
         self.pbm_calibrator.on_epoch_begin(data=Data())

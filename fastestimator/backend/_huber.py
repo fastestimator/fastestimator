@@ -14,28 +14,15 @@
 # ==============================================================================
 from typing import TypeVar
 
-import tensorflow as tf
 import torch
 
 from fastestimator.backend._reduce_mean import reduce_mean
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
+Tensor = TypeVar('Tensor', bound=torch.Tensor)
 
 
 def huber(y_true: Tensor, y_pred: Tensor, beta: float = 1.0) -> Tensor:
     """Calculate Huber Loss between two tensors.
-
-    This method can be used with TensorFlow tensors:
-    ```python
-
-    true = tf.constant([[0,1,0,0], [0,0,0,1], [0,0,1,0], [1,0,0,0]])
-    pred = tf.constant([[0.1,0.9,0.05,0.05], [0.1,0.2,0.0,0.7], [0.0,0.15,0.8,0.05], [1.0,0.0,0.0,0.0]])
-    Huber_Loss = fe.backend.huber(y_pred=pred, y_true=true, loss_type='huber', beta=0.65)   #[0.0031, 0.0175, 0.0081, 0.0000]
-
-    true = tf.constant([[1], [3], [2], [0]])
-    pred = tf.constant([[2.0], [0.0], [2.0], [1.0]])
-    Huber_Loss = fe.backend.huber(y_pred=pred, y_true=true, loss_type='huber', beta=0.65)   #[0.4387, 1.7387, 0.0000, 0.4387]
-    ```
 
     This method can be used with PyTorch tensors:
     ```python
@@ -64,12 +51,7 @@ def huber(y_true: Tensor, y_pred: Tensor, beta: float = 1.0) -> Tensor:
     if beta <= 0:
         raise ValueError("Beta cannot be less than or equal to 0")
 
-    if tf.is_tensor(y_pred):
-        if tf.rank(y_pred) == 1:
-            y_true = tf.expand_dims(y_true, axis=-1)
-            y_pred = tf.expand_dims(y_pred, axis=-1)
-        huber_loss = tf.keras.losses.huber(y_true, y_pred, delta=beta)
-    elif isinstance(y_pred, torch.Tensor):
+    if isinstance(y_pred, torch.Tensor):
         huber_loss = reduce_mean(torch.nn.HuberLoss(reduction="none", delta=beta)(y_pred, y_true), axis=-1)
     else:
         raise ValueError("Unrecognized tensor type {}".format(type(y_pred)))

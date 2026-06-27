@@ -21,7 +21,7 @@ from plotly.subplots import make_subplots
 
 from fastestimator.search.search import Search
 from fastestimator.search.visualize.vis_util import SearchData, _load_search_file
-from fastestimator.util.base_util import in_notebook, FigureFE
+from fastestimator.util.base_util import FigureFE, in_notebook
 
 
 def _heatmap_supports_data(data: SearchData, throw_on_invalid: bool = True) -> bool:
@@ -102,9 +102,10 @@ def plot_heatmap(search: Union[Search, str],
                         horizontal_spacing=horizontal_gap,
                         x_title=search.params[0],
                         y_title=search.params[1])
-    fig.update_layout({'title': title,
-                       'title_x': 0.5,
-                       })
+    fig.update_layout({
+        'title': title,
+        'title_x': 0.5,
+    })
 
     # Fill in the penultimate row x-labels when the last row has empty columns
     for idx in range((n_plots % n_cols) or n_cols, n_cols):
@@ -123,23 +124,26 @@ def plot_heatmap(search: Union[Search, str],
     for idx, plot in enumerate(search.results):
         row = idx // n_cols
         col = idx % n_cols
-        fig.add_trace(Heatmap(x=x,
-                              y=y,
-                              z=search.data[plot],
-                              colorscale="Viridis",
-                              reversescale=reverse_colors,
-                              colorbar={'len': plot_height,
-                                        'lenmode': 'fraction',
-                                        'yanchor': 'top',
-                                        'y': 1 - row * (plot_height + vertical_gap),
-                                        'xanchor': 'left',
-                                        'x': col * (plot_width + horizontal_gap) + plot_width},
-                              name="",
-                              hovertemplate=search.params[0] + ": %{x}<br>" + search.params[1] + ": %{y}<br>" +
-                                            plot + ": %{z}",
-                              hoverongaps=False),
-                      row=row + 1,
-                      col=col + 1)
+        fig.add_trace(
+            Heatmap(
+                x=x,
+                y=y,
+                z=search.data[plot],
+                colorscale="Viridis",
+                reversescale=reverse_colors,
+                colorbar={
+                    'len': plot_height,
+                    'lenmode': 'fraction',
+                    'yanchor': 'top',
+                    'y': 1 - row * (plot_height + vertical_gap),
+                    'xanchor': 'left',
+                    'x': col * (plot_width + horizontal_gap) + plot_width
+                },
+                name="",
+                hovertemplate=search.params[0] + ": %{x}<br>" + search.params[1] + ": %{y}<br>" + plot + ": %{z}",
+                hoverongaps=False),
+            row=row + 1,
+            col=col + 1)
 
         # Make sure that the image aspect ratio doesn't get messed up
         x_axis_name = fig.get_subplot(row=row + 1, col=col + 1).xaxis.plotly_name
@@ -152,8 +156,8 @@ def plot_heatmap(search: Union[Search, str],
 
     # If inside a jupyter notebook then force the height based on number of rows
     if in_notebook():
-        fig.update_layout(height=500 * max(1.0, len(y_labels)/5.0) * n_rows)
-        fig.update_layout(width=500 * max(1.0, len(x_labels)/5.0) * n_cols)
+        fig.update_layout(height=500 * max(1.0, len(y_labels) / 5.0) * n_rows)
+        fig.update_layout(width=500 * max(1.0, len(x_labels) / 5.0) * n_cols)
 
     return FigureFE.from_figure(fig)
 

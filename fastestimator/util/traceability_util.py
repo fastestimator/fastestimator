@@ -24,7 +24,6 @@ from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Type, TypeVa
 
 import numpy as np
 import pandas as pd
-import tensorflow as tf
 import torch
 from pylatex import Document, Label, Marker, MultiColumn, NoEscape, Package, Table, Tabularx, TextColor
 from pylatex.base_classes import LatexObject
@@ -76,8 +75,6 @@ _RestorableClasses = (int,
                       str,
                       type(None),
                       ValWithError,
-                      tf.Tensor,
-                      tf.Variable,
                       torch.Tensor,
                       np.ndarray,
                       np.number,
@@ -85,7 +82,7 @@ _RestorableClasses = (int,
                       np.flexible,
                       pd.DataFrame)
 
-Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
+Model = TypeVar('Model', bound=torch.nn.Module)
 
 
 class FeInputSpec:
@@ -97,12 +94,11 @@ class FeInputSpec:
         model_input: The input to the model.
         model: The model which corresponds to the given `model_input`.
     """
-
     def __init__(self, model_input: Any, model: Model):
         self.shape = to_shape(model_input)
         self.dtype = to_type(model_input)
         self.device = self._get_device(model_input)
-        self.tensor_func = tf.ones if isinstance(model, tf.keras.Model) else torch.ones
+        self.tensor_func = torch.ones
 
     def _get_device(self, data: Any) -> Union[None, str, torch.device]:
         """Get the device on which a tensor or collection of tensors is residing.
@@ -113,7 +109,7 @@ class FeInputSpec:
         Returns:
             The device on which the tensors are residing
         """
-        if tf.is_tensor(data) or isinstance(data, torch.Tensor):
+        if isinstance(data, torch.Tensor):
             return data.device
         elif isinstance(data, dict):
             return self._get_device(list(data.values()))
@@ -166,7 +162,6 @@ class FeSplitSummary(LatexObject):
 
     This class is intentionally not @traceable.
     """
-
     def __init__(self):
         super().__init__()
         self.data = []
@@ -191,10 +186,8 @@ class FeSplitSummary(LatexObject):
         return " $\\rightarrow$ ".join([
             f"{HrefFEID(parent, name='').dumps() if isinstance(parent, FEID) else parent}({escape_latex(fraction)}" +
             (f", seed={seed}" if seed is not None else "") +
-            (f", stratify=`{escape_latex(stratify)}'" if stratify is not None else "") + ")" for parent,
-            fraction,
-            seed,
-            stratify in self.data
+            (f", stratify=`{escape_latex(stratify)}'" if stratify is not None else "") + ")"
+            for parent, fraction, seed, stratify in self.data
         ])
 
 
@@ -520,7 +513,7 @@ def _trace_value(inp: Any, tables: Dict[FEID, FeSummaryTable], ret_ref: Flag, wr
         return _trace_value(args, tables, ret_ref, wrap_str=False).raw_input  # unwrap kwargs back into a dict
     elif isinstance(inp, _VarWrap):
         return inp.var
-    elif isinstance(inp, (tf.keras.Model, torch.nn.Module)):
+    elif isinstance(inp, (torch.nn.Module)):
         # FE models should never actually get here since they are given summaries by trace_model() during fe.build()
         inp_id = FEID(id(inp))
         if inp_id in tables:
@@ -548,21 +541,17 @@ def _trace_value(inp: Any, tables: Dict[FEID, FeSummaryTable], ret_ref: Flag, wr
         return PyContainer(
             data={
                 _trace_value(k, tables, ret_ref, wrap_str=wrap_str): _trace_value(v, tables, ret_ref, wrap_str=True)
-                for k,
-                v in inp.items()
+                for k, v in inp.items()
             },
             truncate=_CollectionSizeLimit)
-    elif isinstance(inp, (tf.Tensor, torch.Tensor, np.ndarray, tf.Variable)):
+    elif isinstance(inp, (torch.Tensor, np.ndarray)):
         inp_type = type(inp)
         inp_id = FEID(id(inp))
         if inp_id not in tables:
-            if isinstance(inp, (tf.Tensor, torch.Tensor, tf.Variable)):
+            if isinstance(inp, (torch.Tensor, np.ndarray)):
                 if isinstance(inp, torch.Tensor):
                     inp = inp.cpu().detach()
                     inp.numpy()
-                # In the elif here we're sure to be tf
-                elif inp.dtype != tf.dtypes.variant:
-                    inp = inp.numpy()  # The variant dtype can't be cast to numpy()
             rank = inp.ndim
             description = {'shape': inp.shape}
             if rank == 0 or (rank == 1 and inp.shape[0] <= 10):
@@ -1088,7 +1077,7 @@ def fe_summary(self) -> List[FeSummaryTable]:
     from torch.utils.data import Dataset
 
     from fastestimator.estimator import Estimator
-    from fastestimator.network import TFNetwork, TorchNetwork
+    from fastestimator.network import TorchNetwork
     from fastestimator.op.op import Op
     from fastestimator.pipeline import Pipeline
     from fastestimator.schedule.schedule import Scheduler
@@ -1098,14 +1087,12 @@ def fe_summary(self) -> List[FeSummaryTable]:
     # re-number the references for nicer viewing
     ordered_items = sorted(
         self._fe_traceability_summary.items(),
-        key=lambda x: 0 if issubclass(x[1].type, Estimator) else 1
-        if issubclass(x[1].type, (TFNetwork, TorchNetwork)) else 2 if issubclass(x[1].type, Pipeline) else 3
-        if issubclass(x[1].type, Scheduler) else 4 if issubclass(x[1].type, Trace) else 5
-        if issubclass(x[1].type, Op) else 6 if issubclass(x[1].type, Slicer) else 7
-        if issubclass(x[1].type, (Dataset, tf.data.Dataset)) else 8
-        if issubclass(x[1].type, (tf.keras.Model, torch.nn.Module)) else 9
-        if issubclass(x[1].type, types.FunctionType) else 10
-        if issubclass(x[1].type, (np.ndarray, tf.Tensor, tf.Variable, torch.Tensor)) else 11)
+        key=lambda x: 0 if issubclass(x[1].type, Estimator) else 1 if issubclass(x[1].type, (TorchNetwork, )) else 2
+        if issubclass(x[1].type, Pipeline) else 3 if issubclass(x[1].type, Scheduler) else 4
+        if issubclass(x[1].type, Trace) else 5 if issubclass(x[1].type, Op) else 6
+        if issubclass(x[1].type, Slicer) else 7 if issubclass(x[1].type, (Dataset, )) else 8
+        if issubclass(x[1].type, (torch.nn.Module, )) else 9 if issubclass(x[1].type, types.FunctionType) else 10
+        if issubclass(x[1].type, (np.ndarray, torch.Tensor)) else 11)
     key_mapping = {fe_id: f"@FE{idx}" for idx, (fe_id, _) in enumerate(ordered_items)}
     FEID.set_translation_dict(key_mapping)
     return [item[1] for item in ordered_items]
@@ -1153,7 +1140,7 @@ def __setstate__(self, state: Dict[str, Any]) -> None:
     """
     for key, replacement_data in state.items():
         if key not in self.__dict__:
-            self.key = replacement_data
+            self.__dict__[key] = replacement_data
             continue
         current_data = self.__dict__[key]
         self.__dict__[key] = _setdata(current_data, replacement_data)
@@ -1186,9 +1173,6 @@ def _setdata(current: Any, new: Any) -> Any:
         # Might want to consider removing the key equality requirement, but unclear what ramifications that would have.
         for key in current.keys():
             current[key] = _setdata(current[key], new[key])
-        return current
-    if isinstance(current, tf.Variable) and isinstance(new, tf.Variable) and current.shape == new.shape:
-        current.assign(new)
         return current
     if isinstance(current, torch.Tensor) and isinstance(new, torch.Tensor) and current.shape == new.shape:
         current.copy_(new)
@@ -1314,9 +1298,7 @@ def is_restorable(data: Any, memory_limit: int = 0) -> Tuple[bool, int]:
     """
     if isinstance(data, _RestorableClasses):
         size = sys.getsizeof(data)
-        if isinstance(data, tf.Tensor):
-            size = sys.getsizeof(data.numpy())
-        elif isinstance(data, torch.Tensor):
+        if isinstance(data, torch.Tensor):
             size = data.element_size() * data.nelement()
         return True, size
     elif isinstance(data, dict):

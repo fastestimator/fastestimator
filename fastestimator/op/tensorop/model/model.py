@@ -16,7 +16,6 @@ import inspect
 from functools import partial
 from typing import Any, Dict, Iterable, List, Optional, Set, Tuple, Union
 
-import tensorflow as tf
 import torch
 
 from fastestimator.backend._feed_forward import feed_forward
@@ -53,7 +52,6 @@ class ModelOp(TensorOp):
             so you must provide output key names for them within the `outputs` argument. Note that layer names may be
             different between single-gpu and multi-gpu environments, though we attempt to prevent this.
     """
-
     def __init__(self,
                  model: Model,
                  inputs: Union[None, str, Iterable[str]] = None,
@@ -71,17 +69,7 @@ class ModelOp(TensorOp):
             warn("Layer names / ids may be different between single-gpu and multi-gpu environments")
         for intermediate_layer in intermediate_layers:
             storage = {}
-            if isinstance(model, tf.keras.Model):
-                layers = list(model._flatten_layers(include_self=False, recursive=True))
-                if isinstance(intermediate_layer, int):
-                    intermediate_layer = layers[intermediate_layer]
-                else:
-                    layers = {layer.name: layer for layer in layers}
-                    intermediate_layer = layers[intermediate_layer]
-                if not hasattr(intermediate_layer, 'fe_original_call'):
-                    intermediate_layer.fe_original_call = intermediate_layer.call
-                    intermediate_layer.call = partial(_capture_call_tf, fe_storage=storage, fe_layer=intermediate_layer)
-            elif isinstance(model, torch.nn.Module):
+            if isinstance(model, torch.nn.Module):
                 layers = model.named_modules()
                 if get_num_devices() > 1:
                     # Try to automatically adjust parameters for multi-gpu so that user doesn't need to change code
@@ -115,9 +103,6 @@ class ModelOp(TensorOp):
                 self.multi_inputs = len(inspect.signature(self.model.module.forward).parameters.keys()) > 1
             else:
                 self.multi_inputs = len(inspect.signature(self.model.forward).parameters.keys()) > 1
-        elif framework == "tf" and "keras.src.engine" not in str(type(self.model)):
-            model_call_args = {x for x in inspect.signature(self.model.call).parameters.keys()}
-            self.multi_inputs = len(model_call_args) > 1
 
     def get_fe_models(self) -> Set[Model]:
         return {self.model}
@@ -134,10 +119,6 @@ class ModelOp(TensorOp):
             if isinstance(self.model, torch.nn.Module):
                 with torch.no_grad():
                     data = self._forward_pass(data, training=training)
-            else:
-                tape = state['tape']
-                with tape.stop_recording() if tape else NonContext():
-                    data = self._forward_pass(data, training=training)
         intermediate_outputs = []
         for output in self.intermediate_outputs:
             intermediate_outputs.append(_unpack_output(output, self.device))
@@ -152,26 +133,6 @@ class ModelOp(TensorOp):
         else:
             data = feed_forward(self.model, data, training=training)
         return data
-
-
-def _capture_call_tf(input: tf.Tensor,
-                     fe_storage: Dict[Union[str, torch.device], Tensor],
-                     fe_layer: tf.keras.layers.Layer,
-                     **kwargs) -> tf.Tensor:
-    """A function to capture the output of a TF model layer.
-
-    Args:
-        input: The input tensor to the layer. Note that this must be the first argument in the method signature.
-        fe_storage: A place to store the output from the layer.
-        fe_layer: A tf layer such that fe_layer(input) -> output.
-        **kwargs: Any arguments to be passed along to the fe_layer call method.
-
-    Returns:
-        The output of the given layer for the specified input.
-    """
-    output = fe_layer.fe_original_call(input, **kwargs)
-    fe_storage[''] = output  # TF multi-gpu doesn't need to store separately per device
-    return output
 
 
 def _capture_call_torch(module: torch.nn.Module,
@@ -202,7 +163,8 @@ def _unpack_output(output_dict: Dict[Union[str, torch.device], Tensor], device: 
         A stacked representation of the tensor(s) in the output_dict.
     """
     if isinstance(device, torch.device):
+        if len(output_dict) == 1:
+            # Single device: return tensor directly to preserve autograd graph
+            return next(iter(output_dict.values())).to(device)
         response = torch.vstack([t[1].to(device) for t in sorted(output_dict.items(), key=lambda x: x[0].index or 0)])
-    else:  # tf
-        response = output_dict[device]
     return response

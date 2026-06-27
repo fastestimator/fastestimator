@@ -14,28 +14,15 @@
 # ==============================================================================
 from typing import TypeVar
 
-import tensorflow as tf
 import torch
 
 from fastestimator.backend._reduce_mean import reduce_mean
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
+Tensor = TypeVar('Tensor', bound=torch.Tensor)
 
 
 def smooth_l1_loss(y_true: Tensor, y_pred: Tensor, beta: float = 1.0) -> Tensor:
     """Calculate Smooth L1 Loss between two tensors.
-
-    This method can be used with TensorFlow tensors:
-    ```python
-
-    true = tf.constant([[0,1,0,0], [0,0,0,1], [0,0,1,0], [1,0,0,0]])
-    pred = tf.constant([[0.1,0.9,0.05,0.05], [0.1,0.2,0.0,0.7], [0.0,0.15,0.8,0.05], [1.0,0.0,0.0,0.0]])
-    Smooth_L1 = fe.backend.smooth_l1_loss(y_pred=pred, y_true=true, loss_type='smooth', beta=0.65)   #[0.0048, 0.0269, 0.0125, 0.0000]
-
-    true = tf.constant([[1], [3], [2], [0]])
-    pred = tf.constant([[2.0], [0.0], [2.0], [1.0]])
-    Smooth_L1 = fe.backend.smooth_l1_loss(y_pred=pred, y_true=true, loss_type='smooth', beta=0.65)   #[0.6750, 2.6750, 0.0000, 0.6750]
-    ```
 
     This method can be used with PyTorch tensors:
     ```python
@@ -64,16 +51,8 @@ def smooth_l1_loss(y_true: Tensor, y_pred: Tensor, beta: float = 1.0) -> Tensor:
     if beta <= 0:
         raise ValueError("Beta cannot be less than or equal to 0")
 
-    if tf.is_tensor(y_pred):
-        y_true = tf.cast(y_true, y_pred.dtype)
-        regression_diff = tf.math.abs(y_true - y_pred)  # |y - f(x)|
-        regression_loss = tf.where(tf.math.less(regression_diff, beta),
-                                   0.5 * tf.math.pow(regression_diff, 2) / beta,
-                                   regression_diff - 0.5 * beta)
-        smooth_mae = reduce_mean(regression_loss, axis=-1)
-    elif isinstance(y_pred, torch.Tensor):
-        smooth_mae = reduce_mean(
-            torch.nn.SmoothL1Loss(reduction="none", beta=beta)(y_pred, y_true), axis=-1)
+    if isinstance(y_pred, torch.Tensor):
+        smooth_mae = reduce_mean(torch.nn.SmoothL1Loss(reduction="none", beta=beta)(y_pred, y_true), axis=-1)
     else:
         raise ValueError("Unrecognized tensor type {}".format(type(y_pred)))
     return smooth_mae

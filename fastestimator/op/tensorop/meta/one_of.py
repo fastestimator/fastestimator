@@ -15,15 +15,14 @@
 from typing import Any, Dict, List, Optional, Set, TypeVar, Union
 
 import numpy as np
-import tensorflow as tf
 import torch
 
 from fastestimator.backend._cast import cast
 from fastestimator.op.tensorop.tensorop import TensorOp
 from fastestimator.util.traceability_util import traceable
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
-Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
+Tensor = TypeVar('Tensor', bound=torch.Tensor)
+Model = TypeVar('Model', bound=torch.nn.Module)
 
 
 @traceable()
@@ -34,6 +33,7 @@ class OneOf(TensorOp):
         *tensor_ops: Ops to choose between with a specified (or uniform) probability.
         probs: List of probabilities, must sum to 1. When None, the probabilities will be equally distributed.
     """
+
     def __init__(self, *tensor_ops: TensorOp, probs: Optional[List[float]] = None) -> None:
         inputs = tensor_ops[0].inputs
         outputs = tensor_ops[0].outputs
@@ -59,7 +59,7 @@ class OneOf(TensorOp):
         self.framework = None
 
     def build(self, framework: str, device: Optional[torch.device] = None) -> None:
-        assert framework in {"tf", "torch"}, "unrecognized framework: {}".format(framework)
+        assert framework == "torch", "unrecognized framework: {}".format(framework)
         self.framework = framework
         for op in self.ops:
             op.build(framework, device)
@@ -89,9 +89,5 @@ class OneOf(TensorOp):
         Returns:
             The `data` after application of one of the available numpyOps.
         """
-        if self.framework == 'tf':
-            idx = cast(tf.random.categorical(tf.math.log([self.probs]), 1), dtype='int32')[0, 0]
-            results = tf.switch_case(idx, [lambda op=op: op.forward(data, state) for op in self.ops])
-        else:
-            results = np.random.choice(self.ops, p=self.probs).forward(data, state)
+        results = np.random.choice(self.ops, p=self.probs).forward(data, state)
         return results

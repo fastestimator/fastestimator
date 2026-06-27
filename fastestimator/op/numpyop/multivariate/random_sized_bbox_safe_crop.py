@@ -16,7 +16,8 @@ from typing import Iterable, Optional, Union
 
 import cv2
 from albumentations import BboxParams
-from albumentations.augmentations import RandomSizedBBoxSafeCrop as RandomSizedBBoxSafeCropAlb
+from albumentations.augmentations import (
+    RandomSizedBBoxSafeCrop as RandomSizedBBoxSafeCropAlb, )
 
 from fastestimator.op.numpyop.multivariate.multivariate import MultiVariateAlbumentation
 from fastestimator.util.traceability_util import traceable
@@ -50,6 +51,7 @@ class RandomSizedBBoxSafeCrop(MultiVariateAlbumentation):
     Image types:
         uint8, float32
     """
+
     def __init__(self,
                  height: int,
                  width: int,

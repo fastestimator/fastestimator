@@ -15,17 +15,16 @@
 import unittest
 
 import numpy as np
-import tensorflow as tf
 import torch
 
 from fastestimator.backend import random_uniform_like
 
 
 class TestRandomUniformLike(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.test_np = np.array([[0, 1], [1, 1]])
-        cls.test_tf = tf.constant([[0, 1], [2, 2]])
         cls.test_torch = torch.Tensor([[1, 1], [2, 3]])
 
     def test_random_uniform_np_type(self):
@@ -34,14 +33,6 @@ class TestRandomUniformLike(unittest.TestCase):
     def test_random_uniform_np_value(self):
         self.assertTrue((random_uniform_like(self.test_np).shape == (2, 2)),
                         'Output array shape should be same as input')
-
-    def test_random_uniform_tf_type(self):
-        self.assertIsInstance(random_uniform_like(self.test_tf), tf.Tensor, 'Output type must be tf.Tensor')
-
-    def test_random_uniform_tf_value(self):
-        output_shape = tf.shape([2, 2])
-        self.assertTrue(tf.reduce_all(tf.equal(tf.shape(random_uniform_like(self.test_tf)), output_shape)),
-                        'Output tensor shape should be same as input')
 
     def test_random_uniform_torch_type(self):
         self.assertIsInstance(random_uniform_like(self.test_torch), torch.Tensor, 'Output must be torch.Tensor')

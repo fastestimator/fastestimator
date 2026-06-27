@@ -15,12 +15,11 @@
 from typing import TypeVar, Union
 
 import numpy as np
-import tensorflow as tf
 import torch
 
 from fastestimator.util.util import STRING_TO_TORCH_DTYPE
 
-Tensor = TypeVar('Tensor', tf.Tensor, tf.Variable, torch.Tensor, np.ndarray)
+Tensor = TypeVar('Tensor', torch.Tensor, np.ndarray)
 
 
 def ones_like(tensor: Tensor, dtype: Union[None, str] = None) -> Tensor:
@@ -31,13 +30,6 @@ def ones_like(tensor: Tensor, dtype: Union[None, str] = None) -> Tensor:
     n = np.array([[0,1],[2,3]])
     b = fe.backend.ones_like(n)  # [[1, 1], [1, 1]]
     b = fe.backend.ones_like(n, dtype="float32")  # [[1.0, 1.0], [1.0, 1.0]]
-    ```
-
-    This method can be used with TensorFlow tensors:
-    ```python
-    t = tf.constant([[0,1],[2,3]])
-    b = fe.backend.ones_like(t)  # [[1, 1], [1, 1]]
-    b = fe.backend.ones_like(t, dtype="float32")  # [[1.0, 1.0], [1.0, 1.0]]
     ```
 
     This method can be used with PyTorch tensors:
@@ -57,9 +49,7 @@ def ones_like(tensor: Tensor, dtype: Union[None, str] = None) -> Tensor:
     Raises:
         ValueError: If `tensor` is an unacceptable data type.
     """
-    if tf.is_tensor(tensor):
-        return tf.ones_like(tensor, dtype=dtype)
-    elif isinstance(tensor, torch.Tensor):
+    if isinstance(tensor, torch.Tensor):
         return torch.ones_like(tensor, dtype=STRING_TO_TORCH_DTYPE[dtype])
     elif isinstance(tensor, np.ndarray):
         return np.ones_like(tensor, dtype=dtype)

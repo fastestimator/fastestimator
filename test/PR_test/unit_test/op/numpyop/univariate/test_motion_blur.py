@@ -20,6 +20,7 @@ from fastestimator.op.numpyop.univariate import MotionBlur
 
 
 class TestMotionBlur(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.single_input = [np.random.rand(28, 28, 3).astype(np.float32)]

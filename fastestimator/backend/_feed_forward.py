@@ -15,24 +15,15 @@
 from typing import TypeVar, Union
 
 import numpy as np
-import tensorflow as tf
 import torch
 
 from fastestimator.backend._to_tensor import to_tensor
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
+Tensor = TypeVar('Tensor', bound=torch.Tensor)
 
 
-def feed_forward(model: Union[tf.keras.Model, torch.nn.Module], *x: Union[Tensor, np.ndarray],
-                 training: bool = True) -> Tensor:
+def feed_forward(model: torch.nn.Module, *x: Union[Tensor, np.ndarray], training: bool = True) -> Tensor:
     """Run a forward step on a given model.
-
-    This method can be used with TensorFlow models:
-    ```python
-    m = fe.architecture.tensorflow.LeNet(classes=2)
-    x = tf.ones((3,28,28,1))  # (batch, height, width, channels)
-    b = fe.backend.feed_forward(m, x)  # [[~0.5, ~0.5], [~0.5, ~0.5], [~0.5, ~0.5]]
-    ```
 
     This method can be used with PyTorch models:
     ```python
@@ -42,8 +33,8 @@ def feed_forward(model: Union[tf.keras.Model, torch.nn.Module], *x: Union[Tensor
     ```
 
     Args:
-        model: A neural network to run the forward step through.
-        x: One or more input tensor for the `model`. This value will be auto-cast to either a tf.Tensor or torch.Tensor
+        model: A PyTorch neural network to run the forward step through.
+        x: One or more input tensor for the `model`. This value will be auto-cast to torch.Tensor
             as applicable for the `model`.
         training: Whether this forward step is part of training or not. This may impact the behavior of `model` layers
             such as dropout.
@@ -54,10 +45,7 @@ def feed_forward(model: Union[tf.keras.Model, torch.nn.Module], *x: Union[Tensor
     Raises:
         ValueError: If `model` is an unacceptable data type.
     """
-    if isinstance(model, tf.keras.Model):
-        x = to_tensor(x, "tf")
-        x = model(*x, training=training)
-    elif isinstance(model, torch.nn.Module):
+    if isinstance(model, torch.nn.Module):
         model.train(mode=training)
         x = to_tensor(x, "torch")
         x = model(*x)

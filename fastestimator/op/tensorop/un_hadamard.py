@@ -16,7 +16,6 @@ import math
 from typing import Any, Dict, Iterable, List, Optional, TypeVar, Union
 
 import numpy as np
-import tensorflow as tf
 import torch
 from scipy.linalg import hadamard
 
@@ -27,7 +26,7 @@ from fastestimator.backend._to_tensor import to_tensor
 from fastestimator.op.tensorop.tensorop import TensorOp
 from fastestimator.util.traceability_util import traceable
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
+Tensor = TypeVar('Tensor', bound=torch.Tensor)
 
 
 @traceable()
@@ -45,6 +44,7 @@ class UnHadamard(TensorOp):
         ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
             ds_ids except for a particular one, you can pass an argument like "!ds1".
     """
+
     def __init__(self,
                  inputs: Union[str, List[str]],
                  outputs: Union[str, List[str]],
@@ -76,9 +76,8 @@ class UnHadamard(TensorOp):
             np.array((self.code_length + 1) * math.pow((1.0 - max_prob) / (max_prob * (self.n_classes - 1)), 1 / power),
                      dtype=np.float32),
             target_type=framework)
-        if framework == "torch":
-            self.labels = self.labels.to(device)
-            self.eps = self.eps.to(device)
+        self.labels = self.labels.to(device)
+        self.eps = self.eps.to(device)
 
     def forward(self, data: List[Tensor], state: Dict[str, Any]) -> List[Tensor]:
         results = []

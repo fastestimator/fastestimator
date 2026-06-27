@@ -107,8 +107,10 @@ class SiameseDirDataset(LabeledDirDataset):
             results.append(
                 self._skip_init(data,
                                 class_data=class_data,
-                                **{k: v
-                                   for k, v in self.__dict__.items() if k not in {'data', 'class_data'}}))
+                                **{
+                                    k: v
+                                    for k, v in self.__dict__.items() if k not in {'data', 'class_data'}
+                                }))
         # Re-key the remaining data to be contiguous from 0 to new max index
         self.data = {new_idx: v for new_idx, (old_idx, v) in enumerate(self.data.items())}
         self.class_data = self._data_to_class(self.data, self.label_key)

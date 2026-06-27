@@ -23,16 +23,28 @@ from time import time
 from typing import Any, Callable, Dict, List, Optional, Union
 
 import numpy as np
-from pylatex import Command, Document, Itemize, LongTable, MultiColumn, NoEscape, Package, Section, Subsection, Table, \
-    Tabularx, escape_latex
+from pylatex import (
+    Command,
+    Document,
+    Itemize,
+    LongTable,
+    MultiColumn,
+    NoEscape,
+    Package,
+    Section,
+    Subsection,
+    Table,
+    Tabularx,
+    escape_latex,
+)
 
 import fastestimator as fe
 from fastestimator.trace.trace import Trace
+from fastestimator.util.base_util import to_list, to_set
 from fastestimator.util.data import Data
 from fastestimator.util.latex_util import IterJoin, WrapText
 from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import to_number
-from fastestimator.util.base_util import to_set, to_list
 
 
 @traceable()
@@ -54,6 +66,7 @@ class TestCase:
     Raises:
         ValueError: If user set `fail_threshold` for an aggregate test.
     """
+
     def __init__(self,
                  description: str,
                  criteria: Callable[..., Union[bool, np.ndarray]],
@@ -96,6 +109,7 @@ class TestReport(Trace):
         test_title: The title of the test, or None to use the experiment name.
         data_id: Data instance ID key. If provided, then per-instances test will include failing instance IDs.
     """
+
     def __init__(self,
                  test_cases: Union[TestCase, List[TestCase]],
                  save_path: str,

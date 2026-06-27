@@ -15,10 +15,9 @@
 from typing import TypeVar
 
 import numpy as np
-import tensorflow as tf
 import torch
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
+Tensor = TypeVar('Tensor', torch.Tensor, np.ndarray)
 
 
 def argmax(tensor: Tensor, axis: int = 0) -> Tensor:
@@ -29,13 +28,6 @@ def argmax(tensor: Tensor, axis: int = 0) -> Tensor:
     n = np.array([[2,7,5],[9,1,3],[4,8,2]])
     b = fe.backend.argmax(n, axis=0)  # [1, 2, 0]
     b = fe.backend.argmax(n, axis=1)  # [1, 0, 1]
-    ```
-
-    This method can be used with TensorFlow tensors:
-    ```python
-    t = tf.constant([[2,7,5],[9,1,3],[4,8,2]])
-    b = fe.backend.argmax(t, axis=0)  # [1, 2, 0]
-    b = fe.backend.argmax(t, axis=1)  # [1, 0, 1]
     ```
 
     This method can be used with PyTorch tensors:
@@ -55,9 +47,7 @@ def argmax(tensor: Tensor, axis: int = 0) -> Tensor:
     Raises:
         ValueError: If `tensor` is an unacceptable data type.
     """
-    if tf.is_tensor(tensor):
-        return tf.argmax(tensor, axis=axis)
-    elif isinstance(tensor, torch.Tensor):
+    if isinstance(tensor, torch.Tensor):
         return tensor.max(dim=axis, keepdim=False)[1]
     elif isinstance(tensor, np.ndarray):
         return np.argmax(tensor, axis=axis)

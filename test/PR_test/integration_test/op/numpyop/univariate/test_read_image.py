@@ -22,6 +22,7 @@ from fastestimator.test.unittest_util import is_equal
 
 
 class TestReadImage(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.img1_path = os.path.abspath(

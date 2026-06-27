@@ -16,7 +16,6 @@ import math
 from typing import Optional, TypeVar
 
 import numpy as np
-import tensorflow as tf
 import torch
 
 from fastestimator.backend._maximum import maximum
@@ -26,7 +25,7 @@ from fastestimator.backend._tensor_pow import tensor_pow
 from fastestimator.backend._to_tensor import to_tensor
 from fastestimator.util.util import TENSOR_TO_NP_DTYPE
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
+Tensor = TypeVar('Tensor', torch.Tensor, np.ndarray)
 
 
 def iwd(tensor: Tensor,
@@ -38,17 +37,11 @@ def iwd(tensor: Tensor,
 
     This can be used as an activation function for the final layer of a neural network instead of softmax. For example,
     instead of: model.add(layers.Dense(classes, activation='softmax')), you could use:
-    model.add(layers.Dense(classes, activation=lambda x: iwd(tf.nn.sigmoid(x))))
+    model.add(layers.Dense(classes, activation=lambda x: iwd(torch.sigmoid(x))))
 
     This method can be used with Numpy data:
     ```python
     n = np.array([[0.5]*5, [0]+[1]*4])
-    b = fe.backend.iwd(n)  # [[0.2, 0.2, 0.2, 0.2, 0.2], [0.95, 0.0125, 0.0125, 0.0125, 0.0125]]
-    ```
-
-    This method can be used with TensorFlow tensors:
-    ```python
-    t = tf.constant([[0.5]*5, [0]+[1]*4])
     b = fe.backend.iwd(n)  # [[0.2, 0.2, 0.2, 0.2, 0.2], [0.95, 0.0125, 0.0125, 0.0125, 0.0125]]
     ```
 
@@ -80,8 +73,7 @@ def iwd(tensor: Tensor,
     if eps is None:
         eps = np.array(pairwise_distance * math.pow((1.0 - max_prob) / (max_prob * (tensor.shape[-1] - 1)), 1 / power),
                        dtype=TENSOR_TO_NP_DTYPE[tensor.dtype])
-        eps = to_tensor(
-            eps, target_type='torch' if isinstance(tensor, torch.Tensor) else 'tf' if tf.is_tensor(tensor) else 'np')
+        eps = to_tensor(eps, target_type='torch' if isinstance(tensor, torch.Tensor) else 'np')
         if isinstance(eps, torch.Tensor):
             eps = eps.to(tensor.device)
     tensor = maximum(tensor, eps)

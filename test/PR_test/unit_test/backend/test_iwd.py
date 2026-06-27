@@ -15,13 +15,13 @@
 import unittest
 
 import numpy as np
-import tensorflow as tf
 import torch
 
 import fastestimator as fe
 
 
 class TestIWD(unittest.TestCase):
+
     def test_np_input_max_pr95_l5_p1(self):
         l = 5
         pr = 0.95
@@ -110,18 +110,6 @@ class TestIWD(unittest.TestCase):
         n = np.array([[0.5] * l, [0] + [1] * (l - 1)])
         target = np.array([[1.0 / l] * l, [pr] + [(1.0 - pr) / (l - 1.0)] * (l - 1)])
         b = fe.backend.iwd(n, power=p, max_prob=pr, pairwise_distance=1.0)
-        self.assertTrue(np.allclose(b, target))
-
-    def test_tf_input(self):
-        n = tf.convert_to_tensor([[0.5] * 5, [0] + [1] * 4])
-        target = tf.convert_to_tensor([[0.2, 0.2, 0.2, 0.2, 0.2], [0.95, 0.0125, 0.0125, 0.0125, 0.0125]])
-        b = fe.backend.iwd(n)
-        self.assertTrue(np.allclose(b, target))
-
-    def test_tf_input_c8(self):
-        n = tf.convert_to_tensor([[0.5] * 5, [0] + [8] * 4])
-        target = tf.convert_to_tensor([[0.2, 0.2, 0.2, 0.2, 0.2], [0.95, 0.0125, 0.0125, 0.0125, 0.0125]])
-        b = fe.backend.iwd(n, pairwise_distance=8.0)
         self.assertTrue(np.allclose(b, target))
 
     def test_torch_input(self):

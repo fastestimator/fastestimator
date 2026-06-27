@@ -14,28 +14,15 @@
 # ==============================================================================
 from typing import TypeVar
 
-import tensorflow as tf
 import torch
 
 from fastestimator.backend._reduce_mean import reduce_mean
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
+Tensor = TypeVar('Tensor', bound=torch.Tensor)
 
 
 def l1_loss(y_true: Tensor, y_pred: Tensor) -> Tensor:
     """Calculate Mean Absolute Error between two tensors.
-
-    This method can be used with TensorFlow tensors:
-    ```python
-
-    true = tf.constant([[0,1,0,0], [0,0,0,1], [0,0,1,0], [1,0,0,0]])
-    pred = tf.constant([[0.1,0.9,0.05,0.05], [0.1,0.2,0.0,0.7], [0.0,0.15,0.8,0.05], [1.0,0.0,0.0,0.0]])
-    L1 = fe.backend.l1_loss(y_pred=pred, y_true=true)                                         #[0.0750, 0.1500, 0.1000, 0.0000]
-
-    true = tf.constant([[1], [3], [2], [0]])
-    pred = tf.constant([[2.0], [0.0], [2.0], [1.0]])
-    L1 = fe.backend.l1_loss(y_pred=pred, y_true=true)                                         #[1., 3., 0., 1.]
-    ```
 
     This method can be used with PyTorch tensors:
     ```python
@@ -59,12 +46,7 @@ def l1_loss(y_true: Tensor, y_pred: Tensor) -> Tensor:
     Raises:
         ValueError: If `y_pred` is an unacceptable data type.
     """
-    if tf.is_tensor(y_pred):
-        if tf.rank(y_pred) == 1:
-            y_true = tf.expand_dims(y_true, axis=-1)
-            y_pred = tf.expand_dims(y_pred, axis=-1)
-        mae = tf.losses.MAE(y_true, y_pred)
-    elif isinstance(y_pred, torch.Tensor):
+    if isinstance(y_pred, torch.Tensor):
         mae = reduce_mean(torch.nn.L1Loss(reduction="none")(y_pred, y_true), axis=-1)
     else:
         raise ValueError("Unrecognized tensor type {}".format(type(y_pred)))

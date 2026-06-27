@@ -18,8 +18,8 @@ from typing import Any, Dict, Iterable, List, Union
 from scipy.io import loadmat
 
 from fastestimator.op.numpyop.numpyop import NumpyOp
-from fastestimator.util.traceability_util import traceable
 from fastestimator.util.base_util import to_list
+from fastestimator.util.traceability_util import traceable
 
 
 @traceable()
@@ -40,6 +40,7 @@ class ReadMat(NumpyOp):
             ds_ids except for a particular one, you can pass an argument like "!ds1".
         parent_path: Parent path that will be prepended to a given filepath.
     """
+
     def __init__(self,
                  inputs: str,
                  outputs: Union[str, Iterable[str]],

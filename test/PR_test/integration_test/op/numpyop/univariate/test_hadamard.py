@@ -21,6 +21,7 @@ from fastestimator.test.unittest_util import is_equal
 
 
 class TestHadamard(unittest.TestCase):
+
     def test_4class(self):
         tohadamard = Hadamard(inputs='y', outputs='y', n_classes=4)
         output = tohadamard.forward(data=[np.array([3.0, 2.0, 2.0, 2.0, 0.0])], state={})[0]

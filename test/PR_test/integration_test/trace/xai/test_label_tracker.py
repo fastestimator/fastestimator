@@ -15,9 +15,9 @@
 import tempfile
 import unittest
 
-import tensorflow as tf
+import torch
 
-from fastestimator.test.unittest_util import sample_system_object
+from fastestimator.test.unittest_util import sample_system_object_torch
 from fastestimator.trace.xai import LabelTracker
 from fastestimator.util import Data
 
@@ -26,28 +26,42 @@ class TestLabelTracker(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # Epoch 1 Data
-        batch1_metrics = tf.constant([0.9, 0.8, 0.1, 0.4, 0.9, 0.6, 0.1, 0.6, 0.8, 0.3])
-        batch1_labels = tf.constant([2, 1, 0, 1, 0, 1, 1, 1, 0, 0])
-        batch2_metrics = tf.constant([0.3, 0.1, 0.0, 0.8, 0.5, 0.5, 0.6, 0.2, 0.5, 1.0])
-        batch2_labels = tf.constant([1, 1, 1, 1, 0, 1, 0, 0, 0, 0])
-        batch3_metrics = tf.constant([0.3, 0.4, 0.7, 0.9, 0.3, 0.0, 0.3, 0.7, 0.8, 0.6])
-        batch3_labels = tf.constant([2, 2, 2, 2, 2, 0, 2, 2, 2, 2])
+        batch1_metrics = torch.Tensor([0.9, 0.8, 0.1, 0.4, 0.9, 0.6, 0.1, 0.6, 0.8, 0.3])
+        batch1_labels = torch.Tensor([2, 1, 0, 1, 0, 1, 1, 1, 0, 0])
+        batch2_metrics = torch.Tensor([0.3, 0.1, 0.0, 0.8, 0.5, 0.5, 0.6, 0.2, 0.5, 1.0])
+        batch2_labels = torch.Tensor([1, 1, 1, 1, 0, 1, 0, 0, 0, 0])
+        batch3_metrics = torch.Tensor([0.3, 0.4, 0.7, 0.9, 0.3, 0.0, 0.3, 0.7, 0.8, 0.6])
+        batch3_labels = torch.Tensor([2, 2, 2, 2, 2, 0, 2, 2, 2, 2])
         # Epoch 2 Data
-        batch4_metrics = tf.constant([0.8, 0.9, 0.6, 0.1, 0.7, 0.3, 0.9, 0.9, 0.4, 0.6])
-        batch4_labels = tf.constant([0, 1, 0, 1, 0, 1, 1, 1, 0, 0])
-        batch5_metrics = tf.constant([0.4, 0.4, 0.9, 0.1, 0.4, 0.9, 0.0, 0.8, 1.0, 0.1])
-        batch5_labels = tf.constant([2, 2, 2, 2, 0, 1, 0, 0, 0, 0])
-        batch6_metrics = tf.constant([0.3, 0.9, 0.9, 0.5, 0.9, 0.8, 0.6, 0.1, 0.1, 0.2])
-        batch6_labels = tf.constant([1, 1, 1, 1, 2, 2, 2, 2, 2, 2])
+        batch4_metrics = torch.Tensor([0.8, 0.9, 0.6, 0.1, 0.7, 0.3, 0.9, 0.9, 0.4, 0.6])
+        batch4_labels = torch.Tensor([0, 1, 0, 1, 0, 1, 1, 1, 0, 0])
+        batch5_metrics = torch.Tensor([0.4, 0.4, 0.9, 0.1, 0.4, 0.9, 0.0, 0.8, 1.0, 0.1])
+        batch5_labels = torch.Tensor([2, 2, 2, 2, 0, 1, 0, 0, 0, 0])
+        batch6_metrics = torch.Tensor([0.3, 0.9, 0.9, 0.5, 0.9, 0.8, 0.6, 0.1, 0.1, 0.2])
+        batch6_labels = torch.Tensor([1, 1, 1, 1, 2, 2, 2, 2, 2, 2])
 
         cls.training_data = [[
-            Data({'acc': batch1_metrics, 'y': batch1_labels}),
-            Data({'acc': batch2_metrics, 'y': batch2_labels}),
-            Data({'acc': batch3_metrics, 'y': batch3_labels})
-        ], [Data({'acc': batch4_metrics, 'y': batch4_labels}),
-            Data({'acc': batch5_metrics, 'y': batch5_labels}),
-            Data({'acc': batch6_metrics, 'y': batch6_labels})
-            ]]
+            Data({
+                'acc': batch1_metrics, 'y': batch1_labels
+            }),
+            Data({
+                'acc': batch2_metrics, 'y': batch2_labels
+            }),
+            Data({
+                'acc': batch3_metrics, 'y': batch3_labels
+            })
+        ],
+                             [
+                                 Data({
+                                     'acc': batch4_metrics, 'y': batch4_labels
+                                 }),
+                                 Data({
+                                     'acc': batch5_metrics, 'y': batch5_labels
+                                 }),
+                                 Data({
+                                     'acc': batch6_metrics, 'y': batch6_labels
+                                 })
+                             ]]
 
         cls.epoch_1_means = {0: 0.49, 1: 0.42, 2: 0.59}
         cls.epoch_2_means = {0: 0.54, 1: 0.66, 2: 0.45}
@@ -70,7 +84,7 @@ class TestLabelTracker(unittest.TestCase):
 
     def test_basic_happy_path(self):
         labeltracker = LabelTracker(label='y', metric='acc', bounds=None, outputs='out')
-        system = sample_system_object()
+        system = sample_system_object_torch()
         labeltracker.system = system
         response = Data()
         self._simulate_training(labeltracker, response)
@@ -98,9 +112,11 @@ class TestLabelTracker(unittest.TestCase):
         labeltracker = LabelTracker(label='y',
                                     metric='acc',
                                     bounds=None,
-                                    label_mapping={'good': 0, 'bad': 1},
+                                    label_mapping={
+                                        'good': 0, 'bad': 1
+                                    },
                                     outputs='out')
-        system = sample_system_object()
+        system = sample_system_object_torch()
         labeltracker.system = system
         response = Data()
         self._simulate_training(labeltracker, response)
@@ -117,18 +133,14 @@ class TestLabelTracker(unittest.TestCase):
             self.assertEqual(2, len(response))
         with self.subTest('Check correct mean values (epoch 1)'):
             target = {'good': self.epoch_1_means[0], 'bad': self.epoch_1_means[1]}
-            self.assertDictEqual(target,
-                                 {elem.name: round(elem.history['train']['acc'][3], 6)
-                                  for elem in response})
+            self.assertDictEqual(target, {elem.name: round(elem.history['train']['acc'][3], 6) for elem in response})
         with self.subTest('Check correct mean values (epoch 2)'):
             target = {'good': self.epoch_2_means[0], 'bad': self.epoch_2_means[1]}
-            self.assertDictEqual(target,
-                                 {elem.name: round(elem.history['train']['acc'][6], 6)
-                                  for elem in response})
+            self.assertDictEqual(target, {elem.name: round(elem.history['train']['acc'][6], 6) for elem in response})
 
     def test_multiple_bounds(self):
         labeltracker = LabelTracker(label='y', metric='acc', bounds=['std', 'range'], outputs='out')
-        system = sample_system_object()
+        system = sample_system_object_torch()
         labeltracker.system = system
         response = Data()
         self._simulate_training(labeltracker, response)
@@ -154,7 +166,7 @@ class TestLabelTracker(unittest.TestCase):
     def test_save_and_load_state(self):
         def instantiate_system():
             tracker = LabelTracker(label='y', metric='acc', bounds=[None, 'range'], outputs='out')
-            system = sample_system_object()
+            system = sample_system_object_torch()
             system.traces.append(tracker)
             tracker.system = system
             return system, tracker

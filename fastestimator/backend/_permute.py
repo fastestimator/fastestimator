@@ -15,10 +15,9 @@
 from typing import List, TypeVar
 
 import numpy as np
-import tensorflow as tf
 import torch
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
+Tensor = TypeVar('Tensor', torch.Tensor, np.ndarray)
 
 
 def permute(tensor: Tensor, permutation: List[int]) -> Tensor:
@@ -29,13 +28,6 @@ def permute(tensor: Tensor, permutation: List[int]) -> Tensor:
     n = np.array([[[0, 1], [2, 3]], [[4, 5], [6, 7]], [[8, 9], [10, 11]]])
     b = fe.backend.permute(n, [2, 0, 1])  # [[[0, 2], [4, 6], [8, 10]], [[1, 3], [5, 7], [9, 11]]]
     b = fe.backend.permute(n, [0, 2, 1])  # [[[0, 2], [1, 3]], [[4, 6], [5, 7]], [[8, 10], [9, 11]]]
-    ```
-
-    This method can be used with TensorFlow tensors:
-    ```python
-    t = tf.constant([[[0, 1], [2, 3]], [[4, 5], [6, 7]], [[8, 9], [10, 11]]])
-    b = fe.backend.permute(t, [2, 0, 1])  # [[[0, 2], [4, 6], [8, 10]], [[1, 3], [5, 7], [9, 11]]]
-    b = fe.backend.permute(t, [0, 2, 1])  # [[[0, 2], [1, 3]], [[4, 6], [5, 7]], [[8, 10], [9, 11]]]
     ```
 
     This method can be used with PyTorch tensors:
@@ -55,9 +47,7 @@ def permute(tensor: Tensor, permutation: List[int]) -> Tensor:
     Raises:
         ValueError: If `tensor` is an unacceptable data type.
     """
-    if tf.is_tensor(tensor):
-        return tf.transpose(tensor, perm=permutation)
-    elif isinstance(tensor, torch.Tensor):
+    if isinstance(tensor, torch.Tensor):
         return tensor.permute(*permutation)
     elif isinstance(tensor, np.ndarray):
         return np.transpose(tensor, axes=permutation)

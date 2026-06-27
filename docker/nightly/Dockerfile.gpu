@@ -1,4 +1,4 @@
-# Copyright 2019 The TensorFlow Authors. All Rights Reserved.
+# Copyright 2024 The FastEstimator Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
+
 FROM nvidia/cuda:12.2.2-base-ubuntu22.04 as base
 
 ENV NV_CUDA_LIB_VERSION 12.2.2-1
@@ -39,7 +40,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ${NV_LIBNCCL_PACKAGE} \
     && rm -rf /var/lib/apt/lists/*
 
-# Keep apt from auto upgrading the cublas and nccl packages. See https://gitlab.com/nvidia/container-images/cuda/-/issues/88
+# Keep apt from auto upgrading the cublas and nccl packages
 RUN apt-mark hold ${NV_LIBCUBLAS_PACKAGE_NAME} ${NV_LIBNCCL_PACKAGE_NAME}
 
 ENV LD_LIBRARY_PATH=/usr/local/nvidia/lib:/usr/local/nvidia/lib64
@@ -49,67 +50,91 @@ ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
 ENV DEBIAN_FRONTEND=noninteractive
 ENV LANG C.UTF-8
 
-COPY setup.sources.sh /setup.sources.sh
-COPY setup.packages.sh /setup.packages.sh
-COPY cpu.packages.txt /cpu.packages.txt
-RUN /setup.sources.sh
-RUN /setup.packages.sh /cpu.packages.txt
+# Install system packages
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    pkg-config \
+    gnupg \
+    ca-certificates \
+    wget \
+    curl \
+    unzip \
+    software-properties-common \
+    && rm -rf /var/lib/apt/lists/*
 
-ARG PYTHON_VERSION=python3.10
-ARG TENSORFLOW_PACKAGE=tensorflow[and-cuda]==2.15.1
-COPY setup.python.sh /setup.python.sh
-COPY gpu.requirements.txt /gpu.requirements.txt
-RUN /setup.python.sh $PYTHON_VERSION /gpu.requirements.txt
-RUN pip install --no-cache-dir ${TENSORFLOW_PACKAGE}
+# Add deadsnakes PPA for Python 3.10
+RUN add-apt-repository ppa:deadsnakes/ppa
 
-COPY setup.cuda.sh /setup.cuda.sh
-RUN /setup.cuda.sh
+# Install Python 3.10
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3.10 \
+    python3.10-venv \
+    python3.10-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-COPY bashrc /etc/bash.bashrc
-RUN chmod a+rwx /etc/bash.bashrc
+# Set Python 3.10 as default
+RUN ln -sf /usr/bin/python3.10 /usr/bin/python3 && \
+    ln -sf /usr/bin/python3.10 /usr/bin/python
 
-RUN apt-get update
+# Install UV
+ENV UV_INSTALL_DIR="/usr/local"
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+ENV PATH="/usr/local/bin:$PATH"
 
 # OpenCV dependencies
-RUN apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     libglib2.0-0 \
     libsm6 \
     libxrender1 \
     libxext6 \
-    git
+    git \
+    && rm -rf /var/lib/apt/lists/*
 
-# Traceability requirement
-ENV DEBIAN_FRONTEND noninteractive
-RUN apt-get install -y \
+# Traceability requirements
+RUN apt-get update && apt-get install -y --no-install-recommends \
     graphviz \
     texlive-latex-base \
-    texlive-latex-extra
+    texlive-latex-extra \
+    && rm -rf /var/lib/apt/lists/*
 
-# Resolve an issue encountered when doing pip install -e
-ENV SETUPTOOLS_USE_DISTUTILS stdlib
-# upgrade essential packages
-RUN pip install --upgrade pip setuptools
+# GPU cleaning requirement
+RUN apt-get update && apt-get install -y --no-install-recommends lsof && rm -rf /var/lib/apt/lists/*
 
-# nightly test related packages
-RUN pip install --no-cache-dir \
+# Clean up CUDA installation - remove unnecessary static libraries and set up stubs
+RUN find /usr/local/cuda-*/lib*/ -type f -name 'lib*_static.a' -not -name 'libcudart_static.a' -delete 2>/dev/null || true && \
+    rm -f /usr/lib/x86_64-linux-gnu/libcudnn_static_v*.a 2>/dev/null || true && \
+    if [ -d /usr/local/cuda/lib64/stubs ]; then \
+        ln -sf /usr/local/cuda/lib64/stubs/libcuda.so /usr/local/cuda/lib64/stubs/libcuda.so.1 2>/dev/null || true && \
+        echo "/usr/local/cuda/lib64/stubs" > /etc/ld.so.conf.d/z-cuda-stubs.conf && \
+        ldconfig; \
+    fi
+
+# Create virtual environment with UV
+RUN uv venv /opt/venv --python 3.10
+ENV VIRTUAL_ENV=/opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Install PyTorch (GPU/CUDA 12.1) using UV
+RUN uv pip install torch==2.3.1 torchvision==0.18.1 torchaudio==2.3.1 --index-url https://download.pytorch.org/whl/cu121
+
+# Install Jupyter and testing packages
+RUN uv pip install \
     ipython==8.18.1 \
     ipykernel==6.27.1 \
     ipywidgets==8.1.1 \
     papermill==2.4.0 \
-    traitlets==5.14.0
-
-RUN pip install jupyter-client notebook
+    traitlets==5.14.0 \
+    jupyter-client \
+    notebook
 
 RUN ipython kernel install --user --name nightly_build
 
-# GPU cleaning requirement
-RUN apt-get install -y lsof
-
-# backend dependencies
-RUN pip install torch==2.3.1+cu121 torchvision==0.18.1+cu121 torchaudio==2.3.1+cu121 -f https://download.pytorch.org/whl/cu121/torch_stable.html
-# install FastEstimator
+# Install FastEstimator from GitHub master branch (nightly)
 ARG InstallFE=True
-RUN if [ $InstallFE = "True" ]; then pip install git+https://github.com/fastestimator/fastestimator.git; fi
+RUN if [ "$InstallFE" = "True" ]; then uv pip install git+https://github.com/fastestimator/fastestimator.git; fi
+
+COPY bashrc /etc/bash.bashrc
+RUN chmod a+rwx /etc/bash.bashrc
 
 WORKDIR /

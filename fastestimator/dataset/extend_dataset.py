@@ -26,6 +26,7 @@ class ExtendDataset(Dataset):
         dataset: The Original dataset(s) which need expansion or contraction.
         spoof_length: Length to which original dataset must be expanded or contracted to. (New desired length)
     """
+
     def __init__(self, dataset: Dataset, spoof_length: int) -> None:
         self.dataset = dataset
         self.spoof_length = spoof_length

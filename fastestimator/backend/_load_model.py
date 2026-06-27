@@ -13,25 +13,13 @@
 # limitations under the License.
 # ==============================================================================
 import os
-import pickle
 from collections import OrderedDict
-from typing import Union
 
-import tensorflow as tf
 import torch
 
-from fastestimator.backend._set_lr import set_lr
 
-
-def load_model(model: Union[tf.keras.Model, torch.nn.Module], weights_path: str, load_optimizer: bool = False):
+def load_model(model: torch.nn.Module, weights_path: str, load_optimizer: bool = False):
     """Load saved weights for a given model.
-
-    This method can be used with TensorFlow models:
-    ```python
-    m = fe.build(fe.architecture.tensorflow.LeNet, optimizer_fn="adam")
-    fe.backend.save_model(m, save_dir="tmp", model_name="test")
-    fe.backend.load_model(m, weights_path="tmp/test.h5")
-    ```
 
     This method can be used with PyTorch models:
     ```python
@@ -54,21 +42,7 @@ def load_model(model: Union[tf.keras.Model, torch.nn.Module], weights_path: str,
     if not os.path.exists(weights_path):
         raise ValueError("Weights path doesn't exist: ", weights_path)
 
-    if isinstance(model, tf.keras.Model):
-        model.load_weights(weights_path)
-        if load_optimizer:
-            assert model.current_optimizer, "optimizer does not exist"
-            optimizer_path = "{}_opt.pkl".format(os.path.splitext(weights_path)[0])
-            assert os.path.exists(optimizer_path), "cannot find optimizer path: {}".format(optimizer_path)
-            with open(optimizer_path, 'rb') as f:
-                state_dict = pickle.load(f)
-            model.current_optimizer.set_weights(state_dict['weights'])
-            weight_decay = None
-            if hasattr(model.current_optimizer, "weight_decay") and tf.keras.backend.get_value(
-                    model.current_optimizer.weight_decay) is not None:
-                weight_decay = state_dict['weight_decay']
-            set_lr(model, state_dict['lr'], weight_decay=weight_decay)
-    elif isinstance(model, torch.nn.Module):
+    if isinstance(model, torch.nn.Module):
         if isinstance(model, torch.nn.DataParallel):
             model.module.load_state_dict(preprocess_torch_weights(weights_path))
         else:

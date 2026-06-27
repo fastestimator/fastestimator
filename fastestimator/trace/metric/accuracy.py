@@ -44,6 +44,7 @@ class Accuracy(Trace):
             computing an aggregate across all ds_ids on which it runs. This is automatically False if `output_name`
             contains a "|" character.
     """
+
     def __init__(self,
                  true_key: str,
                  pred_key: str,

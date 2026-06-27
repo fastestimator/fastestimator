@@ -23,6 +23,7 @@ class TestTraceSortTraces(unittest.TestCase):
     * fe.trace.Trace
     * fe.util.util.to_set()
     """
+
     def test_estimator_sort_traces_with_available_outputs_have_dependency(self):
         trace1 = Trace(inputs="x", outputs="y")
         trace2 = Trace(inputs="y", outputs="z")
@@ -93,6 +94,7 @@ class TestTraceSortTraces(unittest.TestCase):
 
 
 class TestTraceNames(unittest.TestCase):
+
     def test_forbidden_names_semi(self):
         with self.assertRaises(AssertionError):
             fe.trace.Trace(inputs="x:")

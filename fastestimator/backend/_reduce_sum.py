@@ -15,10 +15,9 @@
 from typing import Sequence, TypeVar, Union
 
 import numpy as np
-import tensorflow as tf
 import torch
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
+Tensor = TypeVar('Tensor', torch.Tensor, np.ndarray)
 
 
 def reduce_sum(tensor: Tensor, axis: Union[None, int, Sequence[int]] = None, keepdims: bool = False) -> Tensor:
@@ -31,15 +30,6 @@ def reduce_sum(tensor: Tensor, axis: Union[None, int, Sequence[int]] = None, kee
     b = fe.backend.reduce_sum(n, axis=0)  # [[6, 8], [10, 12]]
     b = fe.backend.reduce_sum(n, axis=1)  # [[4, 6], [12, 14]]
     b = fe.backend.reduce_sum(n, axis=[0,2])  # [14, 22]
-    ```
-
-    This method can be used with TensorFlow tensors:
-    ```python
-    t = tf.constant([[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]])
-    b = fe.backend.reduce_sum(t)  # 36
-    b = fe.backend.reduce_sum(t, axis=0)  # [[6, 8], [10, 12]]
-    b = fe.backend.reduce_sum(t, axis=1)  # [[4, 6], [12, 14]]
-    b = fe.backend.reduce_sum(t, axis=[0,2])  # [14, 22]
     ```
 
     This method can be used with PyTorch tensors:
@@ -62,9 +52,7 @@ def reduce_sum(tensor: Tensor, axis: Union[None, int, Sequence[int]] = None, kee
     Raises:
         ValueError: If `tensor` is an unacceptable data type.
     """
-    if tf.is_tensor(tensor):
-        return tf.reduce_sum(tensor, axis=axis, keepdims=keepdims)
-    elif isinstance(tensor, torch.Tensor):
+    if isinstance(tensor, torch.Tensor):
         if axis is None:
             axis = list(range(len(tensor.shape)))
         return tensor.sum(dim=axis, keepdim=keepdims)

@@ -18,9 +18,7 @@ from io import StringIO
 from unittest.mock import patch
 
 import numpy as np
-import tensorflow as tf
 import torch
-from tensorflow.python.client import device_lib
 
 import fastestimator as fe
 import fastestimator.util.cli_util
@@ -168,7 +166,7 @@ class TestSuppressor(unittest.TestCase):
     def test_suppressor(self):
         with patch('sys.stdout', new=StringIO()) as fake_stdout:
             with fe.util.Suppressor():
-                print("hello world")
+                print('hello world')
             log = fake_stdout.getvalue()
             self.assertEqual(log, '')
 
@@ -176,11 +174,10 @@ class TestSuppressor(unittest.TestCase):
 class TestTimer(unittest.TestCase):
     def test_timer_as_context_manager(self):
         with patch('sys.stdout', new=StringIO()) as fake_stdout:
-            with patch('tensorflow.print', new=print):
-                with fe.util.Timer():
-                    time.sleep(1)
-                context = fake_stdout.getvalue()  # Tasks took ? seconds
-        exec_time = float(context.split(" ")[2])
+            with fe.util.Timer():
+                time.sleep(1)
+            context = fake_stdout.getvalue()  # Tasks took ? seconds
+        exec_time = float(context.split(' ')[2])
         self.assertTrue(abs(exec_time - 1) < 0.1)
 
     def test_timer_as_decorator(self):
@@ -189,9 +186,8 @@ class TestTimer(unittest.TestCase):
             time.sleep(1)
 
         with patch('sys.stdout', new=StringIO()) as fake_stdout:
-            with patch('tensorflow.print', new=print):
-                func()
-                context = fake_stdout.getvalue()  # T2 took ? seconds
+            func()
+            context = fake_stdout.getvalue()  # T2 took ? seconds
 
         with self.subTest("test the printed name"):
             task_name = context.split(" ")[0]
@@ -261,13 +257,6 @@ class TestGetType(unittest.TestCase):
         x = fe.util.get_type(np.ones((10, 10), dtype=np.float32))
         self.assertEqual(x, 'float32')
 
-    def test_get_type_tf(self):
-        x = fe.util.get_type(tf.ones((10, 10), dtype='float16'))
-        self.assertEqual(x, "<dtype: 'float16'>")
-
-        x = fe.util.get_type(tf.Variable([1, 2, 3], dtype=tf.int64))
-        self.assertEqual(x, "<dtype: 'int64'>")
-
     def test_get_type_torch(self):
         x = fe.util.get_type(torch.ones((10, 10)).type(torch.float))
         self.assertEqual(x, "torch.float32")
@@ -286,8 +275,8 @@ class TestGetType(unittest.TestCase):
         self.assertEqual(x, "List[List[List[int]]]")
 
     def test_get_type_tuple(self):
-        x = fe.util.get_type((tf.ones((10, 10), dtype='float16'), ))
-        self.assertEqual(x, "List[<dtype: 'float16'>]")
+        x = fe.util.get_type((np.ones((10, 10), dtype='float16'), ))
+        self.assertEqual(x, "List[float16]")
 
 
 class TestGetShape(unittest.TestCase):
@@ -315,13 +304,13 @@ class TestGetShape(unittest.TestCase):
 class TestParseModes(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.modes = {"train", "eval", "test", "infer"}
-        cls.n_modes = {"!train", "!eval", "!test", "!infer"}
+        cls.modes = {'train', 'eval', 'test', 'infer'}
+        cls.n_modes = {'!train', '!eval', '!test', '!infer'}
         cls.n_modes_map = {
-            "!train": {"eval", "test", "infer"},
-            "!eval": {"train", "test", "infer"},
-            "!test": {"train", "eval", "infer"},
-            "!infer": {"train", "eval", "test"}
+            '!train': {'eval', 'test', 'infer'},
+            '!eval': {'train', 'test', 'infer'},
+            '!test': {'train', 'eval', 'infer'},
+            '!infer': {'train', 'eval', 'test'}
         }
 
     def test_parse_modes_single_mode_direct(self):
@@ -335,60 +324,60 @@ class TestParseModes(unittest.TestCase):
                 self.assertEqual(fe.util.parse_modes({mode}), self.n_modes_map[mode])
 
     def test_parse_modes_mutilple_mode_direct(self):
-        modes = [{"train", "eval"}, {"train", "eval", "test"}, {"train", "eval", "test", "infer"}]
+        modes = [{'train', 'eval'}, {'train', 'eval', 'test'}, {'train', 'eval', 'test', 'infer'}]
         for mode in modes:
             with self.subTest(modes=mode):
                 self.assertEqual(fe.util.parse_modes(mode), mode)
 
     def test_parse_modes_mutilple_mode_negation(self):
-        modes = [{"!train", "!eval"}, {"!train", "!eval", "!test"}, {"!train", "!eval", "!test", "!infer"}]
-        anss = [{"test", "infer"}, {"infer"}, set()]
+        modes = [{'!train', '!eval'}, {'!train', '!eval', '!test'}, {'!train', '!eval', '!test', '!infer'}]
+        anss = [{'test', 'infer'}, {'infer'}, set()]
         for mode, ans in zip(modes, anss):
             with self.subTest(modes=mode):
                 self.assertEqual(fe.util.parse_modes(mode), ans)
 
     def test_parse_modes_invalid_mode(self):
         with self.assertRaises(AssertionError):
-            fe.util.parse_modes({"wrong_mode"})
+            fe.util.parse_modes({'wrong_mode'})
 
     def test_parse_modes_empty_set(self):
         self.assertEqual(fe.util.parse_modes(set()), set())
 
     def test_parse_modes_mix_true_and_negation(self):
         with self.assertRaises(AssertionError):
-            fe.util.parse_modes({"train", "!eval"})
+            fe.util.parse_modes({'train', '!eval'})
 
 
 class TestPadBatch(unittest.TestCase):
     def test_pad_batch_pad_one_entry(self):
-        data = [{"x": np.ones((2, 2)), "y": 8}, {"x": np.ones((3, 1)), "y": 4}]
+        data = [{'x': np.ones((2, 2)), 'y': 8}, {'x': np.ones((3, 1)), 'y': 4}]
         fe.util.pad_batch(data, pad_value=0)
         obj = [{
-            "x": np.array([[1., 1.], [1., 1.], [0., 0.]]), "y": 8
+            'x': np.array([[1., 1.], [1., 1.], [0., 0.]]), 'y': 8
         }, {
-            "x": np.array([[1., 0.], [1., 0.], [1., 0.]]), "y": 4
+            'x': np.array([[1., 0.], [1., 0.], [1., 0.]]), 'y': 4
         }]
 
         self.assertTrue(is_equal(data, obj))
 
     def test_pad_batch_pad_all_entry(self):
-        data = [{"x": np.ones((3, 1)), "y": np.ones((1, 1))}, {"x": np.ones((2, 2)), "y": np.ones((1, 3))}]
+        data = [{'x': np.ones((3, 1)), 'y': np.ones((1, 1))}, {'x': np.ones((2, 2)), 'y': np.ones((1, 3))}]
         fe.util.pad_batch(data, pad_value=0)
         obj = [{
-            "x": np.array([[1., 0.], [1., 0.], [1., 0.]]), "y": np.array([[1., 0., 0.]])
+            'x': np.array([[1., 0.], [1., 0.], [1., 0.]]), 'y': np.array([[1., 0., 0.]])
         }, {
-            "x": np.array([[1., 1.], [1., 1.], [0., 0.]]), "y": np.array([[1., 1., 1.]])
+            'x': np.array([[1., 1.], [1., 1.], [0., 0.]]), 'y': np.array([[1., 1., 1.]])
         }]
 
         self.assertTrue(is_equal(data, obj))
 
     def test_pad_batch_different_different_key_assertion(self):
-        data = [{"x1": np.ones((2, 2)), "y": 8}, {"x": np.ones((3, 1)), "y": 4}]
+        data = [{'x1': np.ones((2, 2)), 'y': 8}, {'x': np.ones((3, 1)), 'y': 4}]
         with self.assertRaises(AssertionError):
             fe.util.pad_batch(data, pad_value=0)
 
     def test_pad_batch_different_rank_mismatch_assertion(self):
-        data = [{"x1": np.ones((2, 2, 2)), "y": 8}, {"x": np.ones((3, 1)), "y": 4}]
+        data = [{'x1': np.ones((2, 2, 2)), 'y': 8}, {'x': np.ones((3, 1)), 'y': 4}]
         with self.assertRaises(AssertionError):
             fe.util.pad_batch(data, pad_value=0)
 
@@ -423,31 +412,31 @@ class TestPadData(unittest.TestCase):
 
 class TestIsNumber(unittest.TestCase):
     def test_is_number_pos_float(self):
-        x = fe.util.is_number("13.7")
+        x = fe.util.is_number('13.7')
         self.assertTrue(x)
 
     def test_is_number_neg_float(self):
-        x = fe.util.is_number("-8.64")
+        x = fe.util.is_number('-8.64')
         self.assertTrue(x)
 
     def test_is_number_pos_scientific_expression(self):
-        x = fe.util.is_number("2.5e-10")
+        x = fe.util.is_number('2.5e-10')
         self.assertTrue(x)
 
     def test_is_number_neg_scientific_expression(self):
-        x = fe.util.is_number("-2.5e5")
+        x = fe.util.is_number('-2.5e5')
         self.assertTrue(x)
 
     def test_is_number_string(self):
-        x = fe.util.is_number("apple")
+        x = fe.util.is_number('apple')
         self.assertFalse(x)
 
     def test_is_number_string_with_number(self):
-        x = fe.util.is_number("123hello")
+        x = fe.util.is_number('123hello')
         self.assertFalse(x)
 
     def test_is_number_empty_string(self):
-        x = fe.util.is_number("")
+        x = fe.util.is_number('')
         self.assertFalse(x)
 
 
@@ -457,47 +446,42 @@ class TestDefaultKeyDict(unittest.TestCase):
         cls.test_dict = fe.util.DefaultKeyDict(default=lambda x: x + x, a=4, b=6)
 
     def test_default_key_dict_use_existed_key(self):
-        self.assertEqual(self.test_dict["a"], 4)
+        self.assertEqual(self.test_dict['a'], 4)
 
     def test_default_key_dict_use_non_existed_key(self):
         self.assertEqual(self.test_dict[10], 20)
 
     def test_default_key_dict_write_value_on_existed_key(self):
-        self.test_dict["a"] = -100
-        self.assertEqual(self.test_dict["a"], -100)
+        self.test_dict['a'] = -100
+        self.assertEqual(self.test_dict['a'], -100)
 
     def test_default_key_dict_write_value_on_non_existed_key(self):
-        self.test_dict["c"] = "hello"
-        self.assertEqual(self.test_dict["c"], "hello")
+        self.test_dict['c'] = 'hello'
+        self.assertEqual(self.test_dict['c'], 'hello')
 
 
 class TestGetNumDevices(unittest.TestCase):
     def test_get_num_devices(self):
         x = fe.util.get_num_devices()
-        local_device_protos = device_lib.list_local_devices()
-        gpu_list = [x.name for x in local_device_protos if x.device_type == 'GPU']
-        ans = max(1, len(gpu_list))
+        # Use PyTorch to count available GPUs
+        gpu_count = torch.cuda.device_count()
+        ans = max(1, gpu_count)
         self.assertEqual(x, ans)
 
 
 class TestGetBatchSize(unittest.TestCase):
     def test_get_batch_size_np(self):
-        data = {"a": np.ones([3, 4, 5])}
-        batch_size = fe.util.get_batch_size(data)
-        self.assertEqual(batch_size, 3)
-
-    def test_get_batch_size_tf(self):
-        data = {"a": tf.ones([3, 4, 5])}
+        data = {'a': np.ones([3, 4, 5])}
         batch_size = fe.util.get_batch_size(data)
         self.assertEqual(batch_size, 3)
 
     def test_get_batch_size_torch(self):
-        data = {"a": torch.ones([3, 4, 5])}
+        data = {'a': torch.ones([3, 4, 5])}
         batch_size = fe.util.get_batch_size(data)
         self.assertEqual(batch_size, 3)
 
     def test_get_batch_size_np_different_shape(self):
-        data = {"a": np.ones([3, 4, 5]), "b": np.ones([1, 2])}
+        data = {'a': np.ones([3, 4, 5]), 'b': np.ones([1, 2])}
         with self.assertRaises(AssertionError):
             batch_size = fe.util.get_batch_size(data)
 
@@ -507,7 +491,7 @@ class TestGetBatchSize(unittest.TestCase):
             batch_size = fe.util.get_batch_size(data)
 
     def test_get_batch_size_dict_with_all_irrelevent_value(self):
-        data = {"a": 1, "b": "hello"}
+        data = {'a': 1, 'b': 'hello'}
         with self.assertRaises(AssertionError):
             batch_size = fe.util.get_batch_size(data)
 
@@ -516,7 +500,6 @@ class TestToNumber(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.n = np.array([1, 2, 3])
-        cls.t = tf.constant([1, 2, 3])
         cls.p = torch.tensor([1, 2, 3])
 
     def test_to_number_np_value(self):
@@ -524,12 +507,6 @@ class TestToNumber(unittest.TestCase):
 
     def test_to_number_np_type(self):
         self.assertEqual(type(fe.util.util.to_number(self.n)), np.ndarray)
-
-    def test_to_number_tf_value(self):
-        self.assertTrue(np.allclose(fe.util.util.to_number(self.t), self.n))
-
-    def test_to_number_tf_type(self):
-        self.assertEqual(type(fe.util.util.to_number(self.t)), np.ndarray)
 
     def test_to_number_torch_value(self):
         self.assertTrue(np.allclose(fe.util.util.to_number(self.p), self.n))

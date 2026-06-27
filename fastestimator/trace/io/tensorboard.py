@@ -19,13 +19,8 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple, TypeVar, Union
 import cv2
 import numpy as np
 import tensorboard as tb
-import tensorflow as tf
 import torch
-from keras import backend
-from keras.src.callbacks import keras_model_summary
 from plotly.graph_objs import Figure
-from tensorflow.python.framework import ops as tfops
-from tensorflow.python.ops import summary_ops_v2
 from torch.utils.tensorboard import SummaryWriter
 
 from fastestimator.backend._abs import abs
@@ -36,7 +31,7 @@ from fastestimator.backend._reduce_sum import reduce_sum
 from fastestimator.backend._reshape import reshape
 from fastestimator.backend._squeeze import squeeze
 from fastestimator.backend._to_tensor import to_tensor
-from fastestimator.network import BaseNetwork, TFNetwork
+from fastestimator.network import BaseNetwork
 from fastestimator.trace.trace import Trace, parse_freq
 from fastestimator.util.base_util import DefaultKeyDict, is_number, to_list, to_set
 from fastestimator.util.data import Data
@@ -44,8 +39,8 @@ from fastestimator.util.img_data import Display
 from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import get_num_gpus, to_number
 
-Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
+Model = TypeVar('Model', bound=torch.nn.Module)
+Tensor = TypeVar('Tensor', bound=torch.Tensor)
 
 
 class _BaseWriter:
@@ -169,13 +164,13 @@ class _BaseWriter:
         method.
         """
         w_img = squeeze(weight)
-        shape = backend.int_shape(w_img)
+        shape = tuple(w_img.shape)
         if len(shape) == 1:  # Bias case
             w_img = reshape(w_img, [1, shape[0], 1, 1])
         elif len(shape) == 2:  # Dense layer kernel case
             if shape[0] > shape[1]:
                 w_img = permute(w_img, [0, 1])
-                shape = backend.int_shape(w_img)
+                shape = tuple(w_img.shape)
             w_img = reshape(w_img, [1, shape[0], shape[1], 1])
         elif len(shape) == 3:  # ConvNet case
             if kernel_channels_last:
@@ -188,64 +183,10 @@ class _BaseWriter:
                 w_img = permute(w_img, [3, 2, 0, 1])
             w_img = reduce_sum(abs(w_img), axis=1)  # Sum over the each channel within the kernel
             w_img = expand_dims(w_img, axis=-1)
-        shape = backend.int_shape(w_img)
+        shape = tuple(w_img.shape)
         # Not possible to handle 3D convnets etc.
         if len(shape) == 4 and shape[-1] in [1, 3, 4]:
             return w_img
-
-
-class _TfWriter(_BaseWriter):
-    """A class to write various TensorFlow data into TensorBoard summary files.
-
-    This class is intentionally not @traceable.
-
-    Args:
-        root_log_dir: The directory into which to store a new directory corresponding to this experiment's summary data
-        time_stamp: The timestamp of this experiment (used as a folder name within `root_log_dir`).
-        network: The network associated with the current experiment.
-    """
-    tf_summary_writers: Dict[str, tf.summary.SummaryWriter]
-
-    def __init__(self, root_log_dir: str, time_stamp: str, network: TFNetwork) -> None:
-        super().__init__(root_log_dir=root_log_dir, time_stamp=time_stamp, network=network)
-        self.tf_summary_writers = DefaultKeyDict(
-            lambda key: (tf.summary.create_file_writer(os.path.join(root_log_dir, time_stamp, key))))
-
-    def write_epoch_models(self, mode: str, epoch: int) -> None:
-        with self.tf_summary_writers[mode].as_default(), summary_ops_v2.always_record_summaries():
-            # Record the overall execution summary
-            if hasattr(self.network._forward_step_static, '_concrete_stateful_fn'):
-                # noinspection PyProtectedMember
-                summary_ops_v2.graph(self.network._forward_step_static._concrete_stateful_fn.graph)
-            # Record the individual model summaries
-            for model in self.network.ctx_models:
-                summary_writable = (model.__class__.__name__ == 'Sequential'
-                                    or (hasattr(model, '_is_graph_network') and model._is_graph_network))
-                if summary_writable:
-                    keras_model_summary(model.model_name, model, step=epoch)
-
-    def write_weights(self, mode: str, models: Iterable[Model], step: int, visualize: bool) -> None:
-        # Similar to TF implementation, but multiple models
-        with self.tf_summary_writers[mode].as_default(), summary_ops_v2.always_record_summaries():
-            for model in models:
-                for layer in model.layers:
-                    for weight in layer.weights:
-                        weight_name = weight.name.replace(':', '_')
-                        weight_name = "{}_{}".format(model.model_name, weight_name)
-                        with tfops.init_scope():
-                            weight = backend.get_value(weight)
-                        summary_ops_v2.histogram(weight_name, weight, step=step)
-                        if visualize:
-                            weight = self._weight_to_image(weight=weight, kernel_channels_last=True)
-                            if weight is not None:
-                                summary_ops_v2.image(weight_name, weight, step=step, max_images=weight.shape[0])
-
-    def close(self) -> None:
-        super().close()
-        modes = list(self.tf_summary_writers.keys())  # break connection with dictionary so can delete in iteration
-        for mode in modes:
-            self.tf_summary_writers[mode].close()
-            del self.tf_summary_writers[mode]
 
 
 class _TorchWriter(_BaseWriter):
@@ -253,7 +194,6 @@ class _TorchWriter(_BaseWriter):
 
     This class is intentionally not @traceable.
     """
-
     def write_epoch_models(self, mode: str, epoch: int) -> None:
         for model in self.network.ctx_models:
             inputs = model.fe_input_spec.get_dummy_input()
@@ -351,17 +291,16 @@ class TensorBoard(Trace):
 
         else:
             embedding_images = [None for _ in range(len(write_embeddings))]
-        self.write_embeddings = [(feature, label, img_label) for feature,
-                                 label,
-                                 img_label in zip(write_embeddings, embedding_labels, embedding_images)]
+        self.write_embeddings = [
+            (feature, label, img_label)
+            for feature, label, img_label in zip(write_embeddings, embedding_labels, embedding_images)
+        ]
         self.collected_embeddings = defaultdict(list)
 
     def on_begin(self, data: Data) -> None:
         print("FastEstimator-Tensorboard: writing logs to {}".format(
             os.path.abspath(os.path.join(self.root_log_dir, self.system.experiment_time))))
-        self.writer = _TfWriter(self.root_log_dir, self.system.experiment_time, self.system.network) if isinstance(
-            self.system.network, TFNetwork) else _TorchWriter(
-                self.root_log_dir, self.system.experiment_time, self.system.network)
+        self.writer = _TorchWriter(self.root_log_dir, self.system.experiment_time, self.system.network)
         if self.write_graph and self.system.global_step == 1:
             self.painted_graphs = set()
 

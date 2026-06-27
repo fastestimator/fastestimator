@@ -16,7 +16,6 @@ import itertools
 import unittest
 
 import numpy as np
-import tensorflow as tf
 import torch
 from torch.utils.data import DataLoader, Dataset
 
@@ -73,15 +72,6 @@ class TorchCustomDataset(Dataset):
         return {key: self.data[key][idx] for key in self.data}
 
 
-def get_sample_tf_dataset():
-    x_train = np.array([[x] for x in range(100)], dtype=np.float32)
-    y_train = np.array([[x] for x in range(-99, 1)], dtype=np.float32)
-    train_data = {"x": x_train, "y": y_train}
-    dataset_tf = tf.data.Dataset.from_tensor_slices(train_data)
-    dataset_tf = dataset_tf.batch(4)
-    return dataset_tf
-
-
 def get_sample_torch_dataset():
     x_train = np.array([[x] for x in range(100)], dtype=np.float32)
     y_train = np.array([[x] for x in range(-99, 1)], dtype=np.float32)
@@ -108,14 +98,13 @@ class TestPipelineInit(unittest.TestCase):
     * fe.schedule.schedule.EpochScheduler
     """
     def setUp(self):
-        self.sample_tf_dataset = get_sample_tf_dataset()
         self.sample_torch_dataset = get_sample_torch_dataset()
         self.sample_torch_dataloader = get_sample_torch_dataloader()
         self.sample_numpy_op = SampleNumpyOp(inputs="x", outputs="x")
         self.sample_tensor_op = SampleTensorOp(inputs="x", outputs="x")
 
-    def test_pipeline_init_tf_dataset_torch_dataloader_have_op_batch_size_num_process(self):
-        dataset = {"tf_dataset": self.sample_tf_dataset, "dataloader": self.sample_torch_dataloader}
+    def test_pipeline_init_torch_dataloader_have_op_batch_size_num_process(self):
+        dataset = {"dataloader": self.sample_torch_dataloader}
 
         for data_type, data in dataset.items():
             with self.subTest("{} with numpyop".format(data_type)):
@@ -130,8 +119,8 @@ class TestPipelineInit(unittest.TestCase):
                 with self.assertRaises(AssertionError):
                     fe.Pipeline(train_data=data, eval_data=data, test_data=data, num_process=1)
 
-    def test_pipeline_init_tf_dataset_torch_dataloader_scheduler_have_op_batch_size_num_process(self):
-        dataset = {"tf_dataset": self.sample_tf_dataset, "dataloader": self.sample_torch_dataloader}
+    def test_pipeline_init_torch_dataloader_scheduler_have_op_batch_size_num_process(self):
+        dataset = {"dataloader": self.sample_torch_dataloader}
 
         for data_type, data in dataset.items():
             scheduler_dataset = EpochScheduler(epoch_dict={1: data, 2: None})
@@ -199,11 +188,7 @@ class TestPipelineInit(unittest.TestCase):
                 self.fail("exception occurred")
 
     def test_pipeline_init_all_dataset_no_op_batch_size_num_process(self):
-        dataset = {
-            "tf_dataset": self.sample_tf_dataset,
-            "dataloader": self.sample_torch_dataloader,
-            "torch_dataset": self.sample_torch_dataset
-        }
+        dataset = {"dataloader": self.sample_torch_dataloader, "torch_dataset": self.sample_torch_dataset}
 
         for data_type, data in dataset.items():
             with self.subTest("{}".format(data_type)):
@@ -400,16 +385,11 @@ class TestPipelineBenchmark(unittest.TestCase):
     * fe.pipeline.Pipeline.get_loader
     """
     def setUp(self):
-        self.sample_tf_dataset = get_sample_tf_dataset()
         self.sample_torch_dataset = get_sample_torch_dataset()
         self.sample_torch_dataloader = get_sample_torch_dataloader()
 
     def test_pipeline_benchmark_smoke(self):
-        dataset = {
-            "tf_dataset": self.sample_tf_dataset,
-            "torch_dataset": self.sample_torch_dataset,
-            "torch_dataloader": self.sample_torch_dataloader
-        }
+        dataset = {"torch_dataset": self.sample_torch_dataset, "torch_dataloader": self.sample_torch_dataloader}
 
         for data_type, data in dataset.items():
             with self.subTest("{}".format(data_type)):
@@ -503,20 +483,8 @@ class TestPipelineTransform(unittest.TestCase):
 
 class TestPipelineGetResults(unittest.TestCase):
     def setUp(self):
-        self.sample_tf_dataset = get_sample_tf_dataset()
         self.sample_torch_dataset = get_sample_torch_dataset()
         self.sample_torch_dataloader = get_sample_torch_dataloader()
-
-    def test_pipeline_get_result_tf_dataset_no_op(self):
-        pipeline = fe.Pipeline(train_data=self.sample_tf_dataset)
-        data = pipeline.get_results(num_steps=1)  # will ignore num_steps
-        data["x"] = data["x"].numpy()
-        data["y"] = data["y"].numpy()
-        ans = {
-            "x": np.array([[0], [1], [2], [3]], dtype=np.float32),
-            "y": np.array([[-99], [-98], [-97], [-96]], dtype=np.float32)
-        }
-        self.assertTrue(is_equal(data, ans))
 
     def test_pipeline_get_result_torch_dataset_no_op(self):
         pipeline = fe.Pipeline(train_data=self.sample_torch_dataset)
@@ -668,14 +636,8 @@ class TestPipelineGetLoader(unittest.TestCase):
     * fe.pipeline.Pipeline._pad_batch_collate
     """
     def setUp(self):
-        self.sample_tf_dataset = get_sample_tf_dataset()
         self.sample_torch_dataset = get_sample_torch_dataset()
         self.sample_torch_dataloader = get_sample_torch_dataloader()
-
-    def test_pipeline_get_loader_tf_dataset(self):
-        pipeline = fe.Pipeline(train_data=self.sample_tf_dataset)
-        with pipeline(mode="train") as loader:
-            self.assertEqual(loader, self.sample_tf_dataset)
 
     def test_pipeline_get_loader_torch_dataloader(self):
         pipeline = fe.Pipeline(train_data=self.sample_torch_dataloader)

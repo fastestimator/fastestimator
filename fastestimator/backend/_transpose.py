@@ -15,10 +15,9 @@
 from typing import TypeVar
 
 import numpy as np
-import tensorflow as tf
 import torch
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
+Tensor = TypeVar('Tensor', torch.Tensor, np.ndarray)
 
 
 def transpose(tensor: Tensor) -> Tensor:
@@ -28,12 +27,6 @@ def transpose(tensor: Tensor) -> Tensor:
     ```python
     n = np.array([[0,1,2],[3,4,5],[6,7,8]])
     b = fe.backend.transpose(n)  # [[0, 3, 6], [1, 4, 7], [2, 5, 8]]
-    ```
-
-    This method can be used with TensorFlow tensors:
-    ```python
-    t = tf.constant([[0,1,2],[3,4,5],[6,7,8]])
-    b = fe.backend.transpose(t)  # [[0, 3, 6], [1, 4, 7], [2, 5, 8]]
     ```
 
     This method can be used with PyTorch tensors:
@@ -51,9 +44,7 @@ def transpose(tensor: Tensor) -> Tensor:
     Raises:
         ValueError: If `tensor` is an unacceptable data type.
     """
-    if tf.is_tensor(tensor):
-        return tf.transpose(tensor)
-    elif isinstance(tensor, torch.Tensor):
+    if isinstance(tensor, torch.Tensor):
         return tensor.T
     elif isinstance(tensor, np.ndarray):
         return np.transpose(tensor)

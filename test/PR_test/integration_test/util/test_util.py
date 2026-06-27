@@ -16,14 +16,18 @@ import os
 import unittest
 
 import numpy as np
-import tensorflow as tf
 import torch
 
 import fastestimator as fe
-from fastestimator.test.unittest_util import check_img_similar, fig_to_rgb_array, img_to_rgb_array
+from fastestimator.test.unittest_util import (
+    check_img_similar,
+    fig_to_rgb_array,
+    img_to_rgb_array,
+)
 
 
 class TestShowImage(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.color_img_ans = img_to_rgb_array(
@@ -72,19 +76,6 @@ class TestShowImage(unittest.TestCase):
         img[:, 30:60, :] = np.array([0, 255, 0])
         img[:, 60:90, :] = np.array([0, 0, 255])
         img = torch.from_numpy(img.transpose((2, 0, 1)))
-
-        fig = fe.util.ImageDisplay(image=img)
-
-        obj1 = fig_to_rgb_array(fig.prepare())
-        obj2 = self.color_img_ans
-        self.assertTrue(check_img_similar(obj1, obj2))
-
-    def test_show_image_color_tf(self):
-        img = np.zeros((90, 90, 3), dtype=np.uint8)
-        img[:, 0:30, :] = np.array([255, 0, 0])
-        img[:, 30:60, :] = np.array([0, 255, 0])
-        img[:, 60:90, :] = np.array([0, 0, 255])
-        img = tf.convert_to_tensor(img)
 
         fig = fe.util.ImageDisplay(image=img)
 
@@ -143,8 +134,7 @@ class TestShowImage(unittest.TestCase):
 
     def test_show_image_bounding_box_np(self):
         bg_img = np.zeros((150, 150))
-        boxes = np.array([[0, 0, 10, 20], [10, 20, 30, 50], [40, 70, 200, 200],
-                          [0, 0, 0, 0], [0, 0, -50, -30]])
+        boxes = np.array([[0, 0, 10, 20], [10, 20, 30, 50], [40, 70, 200, 200], [0, 0, 0, 0], [0, 0, -50, -30]])
         fig = fe.util.ImageDisplay(image=bg_img, color_map='gray', bboxes=boxes).prepare()
         obj1 = fig_to_rgb_array(fig)
         obj2 = self.bb_img_ans

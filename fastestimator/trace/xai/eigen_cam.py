@@ -12,11 +12,10 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 # ==============================================================================
-from typing import Any, Dict, List, Optional, Tuple, TypeVar, Iterable, Union
+from typing import Any, Dict, Iterable, List, Optional, Tuple, TypeVar, Union
 
 import cv2
 import numpy as np
-import tensorflow as tf
 import torch
 
 from fastestimator.backend._argmax import argmax
@@ -26,11 +25,11 @@ from fastestimator.backend._reduce_max import reduce_max
 from fastestimator.backend._squeeze import squeeze
 from fastestimator.trace.trace import Trace
 from fastestimator.util.data import Data
-from fastestimator.util.img_data import GridDisplay, BatchDisplay
+from fastestimator.util.img_data import BatchDisplay, GridDisplay
 from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import to_number
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
+Tensor = TypeVar('Tensor', torch.Tensor, np.ndarray)
 
 
 @traceable()
@@ -120,7 +119,7 @@ class EigenCAM(Trace):
                     for i in range(activation.shape[0]):
                         small_activations.append(
                             cv2.resize(src=activation[i, ...],
-                                       dsize=(int(activation.shape[1]*scale), int(activation.shape[2]*scale)),
+                                       dsize=(int(activation.shape[1] * scale), int(activation.shape[2] * scale)),
                                        interpolation=cv2.INTER_AREA))
                     activation = np.array(small_activations)
             flat = activation.reshape(activation.shape[0], -1).transpose()
@@ -154,8 +153,6 @@ class EigenCAM(Trace):
         images = concat(self.images)[:self.n_samples or self.n_found]
         _, height, width = get_image_dims(images)
         activations = to_number(concat(self.activations)[:self.n_samples or self.n_found])
-        if tf.is_tensor(images):
-            activations = np.moveaxis(activations, source=-1, destination=1)  # Activations should be channel first
         columns = []
         labels = None if not self.labels else concat(self.labels)[:self.n_samples or self.n_found]
         if labels is not None:
@@ -180,16 +177,17 @@ class EigenCAM(Trace):
         for component_idx in range(n_components):
             batch = []
             for base_image, component_image in zip(images, batch_component_image):
+                # Convert to numpy HWC for processing and display
+                base_image = to_number(base_image)
+                if base_image.ndim == 3 and base_image.shape[0] in (1, 3) and base_image.shape[2] not in (1, 3):
+                    base_image = np.moveaxis(base_image, 0, -1)
                 if len(component_image) > component_idx:
                     mask = component_image[component_idx]
                     mask = cv2.resize(mask, (width, height))
                     mask = mask - np.min(mask)
                     mask = mask / np.max(mask)
-                    mask = cv2.cvtColor(cv2.applyColorMap(np.uint8(255*mask), cv2.COLORMAP_JET), cv2.COLOR_BGR2RGB)
+                    mask = cv2.cvtColor(cv2.applyColorMap(np.uint8(255 * mask), cv2.COLORMAP_JET), cv2.COLOR_BGR2RGB)
                     mask = np.float32(mask) / 255
-                    # switch to channel first for pytorch
-                    if isinstance(base_image, torch.Tensor):
-                        mask = np.moveaxis(mask, source=-1, destination=1)
                     new_image = base_image + mask
                     new_image = new_image / reduce_max(new_image)
                 else:

@@ -14,14 +14,13 @@
 # ==============================================================================
 from typing import Any, Dict, Iterable, List, TypeVar, Union
 
-import tensorflow as tf
 import torch
 
 from fastestimator.backend._l2_regularization import l2_regularization
 from fastestimator.op.tensorop.tensorop import TensorOp
 from fastestimator.util.traceability_util import traceable
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
+Tensor = TypeVar('Tensor', bound=torch.Tensor)
 
 
 @traceable()
@@ -34,13 +33,14 @@ class L2Regularizaton(TensorOp):
         mode: What mode(s) to execute this Op in. For example, "train", "eval", "test", or "infer". To execute
             regardless of mode, pass None. To execute in all modes except for a particular one, you can pass an argument
             like "!infer" or "!train".
-        model: A tensorflow or pytorch model
+        model: A pytorch model
         beta: The multiplicative factor, to weight the l2 regularization loss with the input loss
     """
+
     def __init__(self,
                  inputs: str,
                  outputs: str,
-                 model: Union[tf.keras.Model, torch.nn.Module],
+                 model: torch.nn.Module,
                  mode: Union[None, str, Iterable[str]] = None,
                  beta: float = 0.01):
         super().__init__(inputs=inputs, outputs=outputs, mode=mode)

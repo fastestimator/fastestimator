@@ -69,8 +69,7 @@ class Dice(Trace):
                  ds_id: Union[None, str, Iterable[str]] = None,
                  output_name: str = "Dice",
                  per_ds: bool = True) -> None:
-        super().__init__(inputs=(true_key, pred_key),
-                         mode=mode, outputs=output_name, ds_id=ds_id)
+        super().__init__(inputs=(true_key, pred_key), mode=mode, outputs=output_name, ds_id=ds_id)
         self.threshold = threshold
         self.mask_overlap = mask_overlap
         self.epsilon = 1e-8
@@ -108,14 +107,15 @@ class Dice(Trace):
         assert test <= 1, "Ground truth mask values passed to the Dice trace should range from 0 to 1, but found a " \
                           f"value of {test}"
 
-        dice = to_number(dice_score(y_pred=y_pred,
-                                    y_true=y_true,
-                                    sample_average=False,
-                                    channel_average=False,
-                                    mask_overlap=self.mask_overlap,
-                                    threshold=self.threshold,
-                                    empty_nan=True,
-                                    epsilon=self.epsilon))
+        dice = to_number(
+            dice_score(y_pred=y_pred,
+                       y_true=y_true,
+                       sample_average=False,
+                       channel_average=False,
+                       mask_overlap=self.mask_overlap,
+                       threshold=self.threshold,
+                       empty_nan=True,
+                       epsilon=self.epsilon))
         # Dice will be Batch x Channels
         for instance in dice:
             for idx, channel_dice in enumerate(instance):

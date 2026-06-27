@@ -39,17 +39,15 @@ class ZoomBlur(ImageOnlyAlbumentation):
         ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
             ds_ids except for a particular one, you can pass an argument like "!ds1".
     """
+
     def __init__(self,
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],
                  mode: Union[None, str, Iterable[str]] = None,
                  ds_id: Union[None, str, Iterable[str]] = None,
-                 max_factor: Union[float, Tuple[float, float]] = (1,1.31),
-                 step_factor: Union[float, Tuple[float, float]] = (0.01,0.03)
-                 ):
-        super().__init__(ZoomBlurAlb(max_factor=max_factor,
-                                     step_factor=step_factor,
-                                     always_apply=True),
+                 max_factor: Union[float, Tuple[float, float]] = (1, 1.31),
+                 step_factor: Union[float, Tuple[float, float]] = (0.01, 0.03)):
+        super().__init__(ZoomBlurAlb(max_factor=max_factor, step_factor=step_factor, always_apply=True),
                          inputs=inputs,
                          outputs=outputs,
                          mode=mode,

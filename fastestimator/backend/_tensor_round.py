@@ -15,10 +15,9 @@
 from typing import TypeVar
 
 import numpy as np
-import tensorflow as tf
 import torch
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
+Tensor = TypeVar('Tensor', torch.Tensor, np.ndarray)
 
 
 def tensor_round(tensor: Tensor) -> Tensor:
@@ -28,12 +27,6 @@ def tensor_round(tensor: Tensor) -> Tensor:
     ```python
     n = np.array([[1.25, 4.5, 6], [4, 9.11, 16]])
     b = fe.backend.tensor_round(n)  # [[1, 4, 6], [4, 9, 16]]
-    ```
-
-    This method can be used with TensorFlow tensors:
-    ```python
-    t = tf.constant([[1.25, 4.5, 6], [4, 9.11, 16.9]])
-    b = fe.backend.tensor_round(t)  # [[1, 4, 6], [4, 9, 17]]
     ```
 
     This method can be used with PyTorch tensors:
@@ -51,9 +44,7 @@ def tensor_round(tensor: Tensor) -> Tensor:
     Raises:
         ValueError: If `tensor` is an unacceptable data type.
     """
-    if tf.is_tensor(tensor):
-        return tf.round(tensor)
-    elif isinstance(tensor, torch.Tensor):
+    if isinstance(tensor, torch.Tensor):
         return torch.round(tensor)
     elif isinstance(tensor, np.ndarray):
         return np.round(tensor)

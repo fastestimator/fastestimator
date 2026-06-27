@@ -15,10 +15,9 @@
 from typing import TypeVar
 
 import numpy as np
-import tensorflow as tf
 import torch
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
+Tensor = TypeVar('Tensor', torch.Tensor, np.ndarray)
 
 
 def sign(tensor: Tensor) -> Tensor:
@@ -28,12 +27,6 @@ def sign(tensor: Tensor) -> Tensor:
     ```python
     n = np.array([-2, 7, -19])
     b = fe.backend.sign(n)  # [-1, 1, -1]
-    ```
-
-    This method can be used with TensorFlow tensors:
-    ```python
-    t = tf.constant([-2, 7, -19])
-    b = fe.backend.sign(t)  # [-1, 1, -1]
     ```
 
     This method can be used with PyTorch tensors:
@@ -51,9 +44,7 @@ def sign(tensor: Tensor) -> Tensor:
     Raises:
         ValueError: If `tensor` is an unacceptable data type.
     """
-    if tf.is_tensor(tensor):
-        return tf.sign(tensor)
-    elif isinstance(tensor, torch.Tensor):
+    if isinstance(tensor, torch.Tensor):
         return tensor.sign()
     elif isinstance(tensor, np.ndarray):
         return np.sign(tensor)

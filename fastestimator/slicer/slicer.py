@@ -14,9 +14,6 @@
 # ==============================================================================
 from typing import Dict, Iterable, List, MutableMapping, Sequence, Set, Tuple, Union
 
-import tensorflow as tf
-from tensorflow.python.distribute.values import DistributedValues
-
 from fastestimator.types import Tensor
 from fastestimator.util.base_util import check_ds_id, check_io_names, parse_modes, to_list, to_set
 from fastestimator.util.traceability_util import traceable
@@ -165,11 +162,7 @@ def forward_slicers(slicers: List[Slicer], data: MutableMapping[str, Tensor]) ->
         if not slicer.slice_inputs:
             continue
         input_data = tuple([data[key] for key in slicer.slice_inputs])
-        if input_data and isinstance(input_data[0], DistributedValues):
-            strategy = tf.distribute.get_strategy()
-            sliced_data = strategy.extended.call_for_each_replica(fn=slicer.slice_batches, args=(input_data, ))
-        else:
-            sliced_data = slicer.slice_batches(input_data)
+        sliced_data = slicer.slice_batches(input_data)
         if not slices:
             slices = [{key: value for key, value in zip(slicer.slice_inputs, element)} for element in sliced_data]
         else:
@@ -217,11 +210,6 @@ def reverse_slicers(slicers: List[Slicer], data: List[MutableMapping[str, Tensor
     leftover_data = {}
     for key in data[0].keys() - processed_keys:
         original_sample = original_data.get(key, data[0][key])
-        if isinstance(original_sample, DistributedValues):
-            if original_sample.values[0].shape.rank == 0:
-                original_sample = tf.reduce_mean(tuple(d for d in original_sample.values if not tf.math.is_nan(d)))
-            else:
-                original_sample = tf.concat(original_sample.values, axis=0)
         leftover_data[key] = original_sample
     batch.update(leftover_data)
     return batch

@@ -12,7 +12,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 # ==============================================================================
-from typing import Optional, Iterable, Union
+from typing import Iterable, Optional, Union
 
 import calibration as cal
 import numpy as np
@@ -50,6 +50,7 @@ class CalibrationError(Trace):
             computing an aggregate across all ds_ids on which it runs. This is automatically False if `output_name`
             contains a "|" character.
     """
+
     def __init__(self,
                  true_key: str,
                  pred_key: str,

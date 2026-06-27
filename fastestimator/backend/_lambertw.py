@@ -16,12 +16,10 @@ import math
 from typing import TypeVar
 
 import numpy as np
-import tensorflow as tf
-import tensorflow_probability as tfp
 import torch
 from scipy.special import lambertw as lamw
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
+Tensor = TypeVar('Tensor', torch.Tensor, np.ndarray)
 
 
 def lambertw(tensor: Tensor) -> Tensor:
@@ -35,12 +33,6 @@ def lambertw(tensor: Tensor) -> Tensor:
     ```python
     n = np.array([-1.0/math.e, -0.34, -0.32, -0.2, 0, 0.12, 0.15, math.e, 5, math.exp(1 + math.e), 100])
     b = fe.backend.lambertw(n)  # [-1, -0.654, -0.560, -0.259, 0, 0.108, 0.132, 1, 1.327, 2.718, 3.386]
-    ```
-
-    This method can be used with TensorFlow tensors:
-    ```python
-    t = tf.constant([-1.0/math.e, -0.34, -0.32, -0.2, 0, 0.12, 0.15, math.e, 5, math.exp(1 + math.e), 100])
-    b = fe.backend.lambertw(t)  # [-1, -0.654, -0.560, -0.259, 0, 0.108, 0.132, 1, 1.327, 2.718, 3.386]
     ```
 
     This method can be used with PyTorch tensors:
@@ -58,8 +50,6 @@ def lambertw(tensor: Tensor) -> Tensor:
     Raises:
         ValueError: If `tensor` is an unacceptable data type.
     """
-    if tf.is_tensor(tensor):
-        return tfp.math.lambertw(tensor)
     if isinstance(tensor, torch.Tensor):
         return _torch_lambertw(tensor)
     elif isinstance(tensor, np.ndarray):

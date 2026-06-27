@@ -19,8 +19,8 @@ import numpy as np
 from PIL import Image, ImageTransform
 
 from fastestimator.op.numpyop.numpyop import NumpyOp
-from fastestimator.util.traceability_util import traceable
 from fastestimator.util.base_util import param_to_range
+from fastestimator.util.traceability_util import traceable
 
 
 @traceable()
@@ -44,6 +44,7 @@ class TranslateX(NumpyOp):
     Image types:
         uint8
     """
+
     def __init__(self,
                  inputs: Union[str, Iterable[str]],
                  outputs: Union[str, Iterable[str]],

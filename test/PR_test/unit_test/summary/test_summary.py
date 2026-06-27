@@ -14,7 +14,7 @@
 # ==============================================================================
 import unittest
 
-from fastestimator.summary import average_summaries, Summary, ValWithError
+from fastestimator.summary import Summary, ValWithError, average_summaries
 
 
 class TestSummary(unittest.TestCase):
@@ -85,3 +85,128 @@ class TestAverageSummaries(unittest.TestCase):
             self.assertEqual(3.5, s_merge.history['eval']['wombats'][5].y)
             self.assertEqual(2.79289, round(s_merge.history['eval']['wombats'][5].y_min, 5))
             self.assertEqual(8.0, s_merge.history['eval']['wombats'][10].y)
+
+
+class TestSummaryRepr(unittest.TestCase):
+    def test_repr_empty(self):
+        s = Summary(name='test')
+        self.assertIn("test", repr(s))
+        self.assertIn("modes=[]", repr(s))
+
+    def test_repr_with_history(self):
+        s = Summary(name='exp1')
+        s.history['train']['loss'][10] = 0.5
+        r = repr(s)
+        self.assertIn("exp1", r)
+        self.assertIn("train", r)
+        self.assertIn("loss", r)
+
+
+class TestSummaryLen(unittest.TestCase):
+    def test_empty(self):
+        s = Summary(name='test')
+        self.assertEqual(len(s), 0)
+
+    def test_with_data(self):
+        s = Summary(name='test')
+        s.history['train']['loss'] = {1: 0.9, 2: 0.8, 3: 0.7}
+        s.history['eval']['acc'] = {1: 0.5, 2: 0.6}
+        self.assertEqual(len(s), 5)
+
+
+class TestSummaryGetKeys(unittest.TestCase):
+    def test_all_keys(self):
+        s = Summary(name='test')
+        s.history['train']['loss'][1] = 0.5
+        s.history['train']['acc'][1] = 0.8
+        s.history['eval']['val_loss'][1] = 0.6
+        keys = s.get_keys()
+        self.assertEqual(keys, ['acc', 'loss', 'val_loss'])
+
+    def test_keys_by_mode(self):
+        s = Summary(name='test')
+        s.history['train']['loss'][1] = 0.5
+        s.history['eval']['val_loss'][1] = 0.6
+        self.assertEqual(s.get_keys('train'), ['loss'])
+        self.assertEqual(s.get_keys('eval'), ['val_loss'])
+        self.assertEqual(s.get_keys('test'), [])
+
+
+class TestSummaryGetBest(unittest.TestCase):
+    def test_best_max(self):
+        s = Summary(name='test')
+        s.history['eval']['acc'] = {10: 0.5, 20: 0.9, 30: 0.7}
+        result = s.get_best('acc', mode='eval', largest=True)
+        self.assertEqual(result, (20, 0.9))
+
+    def test_best_min(self):
+        s = Summary(name='test')
+        s.history['eval']['loss'] = {10: 0.9, 20: 0.3, 30: 0.5}
+        result = s.get_best('loss', mode='eval', largest=False)
+        self.assertEqual(result, (20, 0.3))
+
+    def test_best_with_val_with_error(self):
+        s = Summary(name='test')
+        s.history['eval']['acc'] = {10: 0.5, 20: ValWithError(0.7, 0.9, 1.1)}
+        result = s.get_best('acc', mode='eval', largest=True)
+        self.assertEqual(result[0], 20)
+        self.assertIsInstance(result[1], ValWithError)
+
+    def test_best_missing_key(self):
+        s = Summary(name='test')
+        self.assertIsNone(s.get_best('nonexistent', mode='eval'))
+
+    def test_best_missing_mode(self):
+        s = Summary(name='test')
+        s.history['train']['acc'] = {10: 0.5}
+        self.assertIsNone(s.get_best('acc', mode='eval'))
+
+
+class TestSummaryToDict(unittest.TestCase):
+    def test_to_dict_all(self):
+        s = Summary(name='test')
+        s.history['train']['loss'] = {1: 0.9, 2: 0.8}
+        s.history['eval']['acc'] = {1: 0.5}
+        d = s.to_dict()
+        self.assertEqual(d['train']['loss'], {1: 0.9, 2: 0.8})
+        self.assertEqual(d['eval']['acc'], {1: 0.5})
+
+    def test_to_dict_single_mode(self):
+        s = Summary(name='test')
+        s.history['train']['loss'] = {1: 0.9}
+        s.history['eval']['acc'] = {1: 0.5}
+        d = s.to_dict(mode='train')
+        self.assertIn('loss', d)
+        self.assertNotIn('acc', d)
+
+    def test_to_dict_missing_mode(self):
+        s = Summary(name='test')
+        d = s.to_dict(mode='test')
+        self.assertEqual(d, {})
+
+
+class TestValWithErrorExtended(unittest.TestCase):
+    def test_repr(self):
+        v = ValWithError(0.1, 0.5, 0.9)
+        self.assertEqual(repr(v), "ValWithError(y_min=0.1, y=0.5, y_max=0.9)")
+
+    def test_hash(self):
+        v1 = ValWithError(0.1, 0.5, 0.9)
+        v2 = ValWithError(0.1, 0.5, 0.9)
+        self.assertEqual(hash(v1), hash(v2))
+
+    def test_ne(self):
+        v1 = ValWithError(0.1, 0.5, 0.9)
+        v2 = ValWithError(0.2, 0.6, 1.0)
+        self.assertNotEqual(v1, v2)
+
+    def test_format(self):
+        v = ValWithError(0.123456, 0.5, 0.876543)
+        formatted = f"{v:.2f}"
+        self.assertEqual(formatted, "(0.12, 0.50, 0.88)")
+
+    def test_in_set(self):
+        v1 = ValWithError(0.1, 0.5, 0.9)
+        v2 = ValWithError(0.1, 0.5, 0.9)
+        s = {v1}
+        self.assertIn(v2, s)

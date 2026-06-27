@@ -12,7 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Any, Dict, Generic, Iterable, List, Optional, TypeVar, Union, overload
+from typing import (
+    Any,
+    Dict,
+    Generic,
+    Iterable,
+    List,
+    Optional,
+    TypeVar,
+    Union,
+    overload,
+)
 
 from fastestimator.util.base_util import to_set
 from fastestimator.util.traceability_util import is_restorable, traceable
@@ -25,6 +35,7 @@ T2 = TypeVar('T2')
 class Scheduler(Generic[T]):
     """A class which can wrap things like Datasets and Ops to make their behavior epoch-dependent.
     """
+
     def get_current_value(self, epoch: int) -> Optional[T]:
         """Fetch whichever of the `Scheduler`s elements is appropriate based on the current epoch.
 
@@ -68,6 +79,7 @@ class RepeatScheduler(Scheduler[T]):
     Raises:
         AssertionError: If `repeat_list` is not a List.
     """
+
     def __init__(self, repeat_list: List[Optional[T]]) -> None:
         assert isinstance(repeat_list, List), "must provide a list as input of RepeatSchedule"
         self.repeat_list = repeat_list
@@ -115,6 +127,7 @@ class EpochScheduler(Scheduler[T]):
     Raises:
         AssertionError: If the `epoch_dict` is of the wrong type, or contains invalid keys.
     """
+
     def __init__(self, epoch_dict: Dict[int, T]) -> None:
         assert isinstance(epoch_dict, dict), "must provide dictionary as epoch_dict"
         self.epoch_dict = epoch_dict
@@ -157,8 +170,7 @@ class EpochScheduler(Scheduler[T]):
         return {
             'epoch_dict': {
                 key: elem if is_restorable(elem)[0] else elem.__getstate__() if hasattr(elem, '__getstate__') else {}
-                for key,
-                elem in self.epoch_dict.items()
+                for key, elem in self.epoch_dict.items()
             }
         }
 

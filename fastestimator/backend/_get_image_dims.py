@@ -15,10 +15,9 @@
 from typing import Tuple, TypeVar
 
 import numpy as np
-import tensorflow as tf
 import torch
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
+Tensor = TypeVar('Tensor', torch.Tensor, np.ndarray)
 
 
 def get_image_dims(tensor: Tensor) -> Tuple[int, int, int]:
@@ -28,12 +27,6 @@ def get_image_dims(tensor: Tensor) -> Tuple[int, int, int]:
     ```python
     n = np.random.random((2, 12, 12, 3))
     b = fe.backend.get_image_dims(n)  # (3, 12, 12)
-    ```
-
-    This method can be used with TensorFlow tensors:
-    ```python
-    t = tf.random.uniform((2, 12, 12, 3))
-    b = fe.backend.get_image_dims(t)  # (3, 12, 12)
     ```
 
     This method can be used with PyTorch tensors:
@@ -53,14 +46,7 @@ def get_image_dims(tensor: Tensor) -> Tuple[int, int, int]:
     """
     assert len(tensor.shape) == 3 or len(tensor.shape) == 4, \
         f"Number of dimensions of input must be either 3 or 4, but found {len(tensor.shape)} (shape: {tensor.shape})"
-    if tf.is_tensor(tensor):
-        shape = tf.shape(tensor)
-        channels, height, width = shape[-1], shape[-3], shape[-2]
-        if hasattr(channels, 'numpy'):
-            # Running in eager mode, so can convert to integer
-            channels, height, width = channels.numpy().item(), height.numpy().item(), width.numpy().item()
-        return channels, height, width
-    elif isinstance(tensor, np.ndarray):
+    if isinstance(tensor, np.ndarray):
         return tensor.shape[-1], tensor.shape[-3], tensor.shape[-2]
     elif isinstance(tensor, torch.Tensor):
         return tensor.shape[-3], tensor.shape[-2], tensor.shape[-1]

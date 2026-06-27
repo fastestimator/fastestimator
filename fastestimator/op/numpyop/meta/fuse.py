@@ -18,8 +18,8 @@ from typing import Any, Dict, List, Union
 import numpy as np
 
 from fastestimator.op.numpyop.numpyop import Batch, Delete, NumpyOp, forward_numpyop
-from fastestimator.util.traceability_util import traceable
 from fastestimator.util.base_util import to_list
+from fastestimator.util.traceability_util import traceable
 
 
 @traceable()
@@ -33,6 +33,7 @@ class Fuse(NumpyOp):
     Raises:
         ValueError: If `repeat` or `ops` are invalid.
     """
+
     def __init__(self, ops: Union[NumpyOp, List[NumpyOp]]) -> None:
         ops = to_list(ops)
         if len(ops) < 1:

@@ -52,6 +52,7 @@ class RandomScale(MultiVariateAlbumentation):
     Image types:
         uint8, float32
     """
+
     def __init__(self,
                  scale_limit: Union[float, Tuple[float, float]] = 0.1,
                  interpolation: int = cv2.INTER_LINEAR,

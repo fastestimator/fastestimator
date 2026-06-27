@@ -14,13 +14,12 @@
 # ==============================================================================
 from typing import Dict, Optional, TypeVar
 
-import tensorflow as tf
 import torch
 
 from fastestimator.backend._reduce_mean import reduce_mean
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
-Weight_Dict = TypeVar('Weight_Dict', tf.lookup.StaticHashTable, Dict[int, float])
+Tensor = TypeVar('Tensor', bound=torch.Tensor)
+Weight_Dict = TypeVar('Weight_Dict', bound=Dict[int, float])
 
 
 def binary_crossentropy(y_pred: Tensor,
@@ -31,18 +30,6 @@ def binary_crossentropy(y_pred: Tensor,
     """Compute binary crossentropy.
 
     This method is applicable when there are only two label classes (zero and one).
-
-    This method can be used with TensorFlow tensors:
-    ```python
-    true = tf.constant([[1], [0], [1], [0]])
-    pred = tf.constant([[0.9], [0.3], [0.8], [0.1]])
-    weights = tf.lookup.StaticHashTable(
-        tf.lookup.KeyValueTensorInitializer(tf.constant([1]), tf.constant([2.0])), default_value=1.0)
-    b = fe.backend.binary_crossentropy(y_pred=pred, y_true=true)  # 0.197
-    b = fe.backend.binary_crossentropy(y_pred=pred, y_true=true, average_loss=False)  # [0.105, 0.356, 0.223, 0.105]
-    b = fe.backend.binary_crossentropy(y_pred=pred, y_true=true, average_loss=False, class_weights=weights)
-    # [0.210, 0.356, 0.446, 0.105]
-    ```
 
     This method can be used with PyTorch tensors:
     ```python
@@ -70,34 +57,22 @@ def binary_crossentropy(y_pred: Tensor,
     Raises:
         AssertionError: If `y_true` or `y_pred` are unacceptable data types.
     """
-    assert isinstance(y_pred, torch.Tensor) or tf.is_tensor(y_pred), "only support tf.Tensor or torch.Tensor as y_pred"
-    assert isinstance(y_true, torch.Tensor) or tf.is_tensor(y_true), "only support tf.Tensor or torch.Tensor as y_true"
-    if tf.is_tensor(y_pred):
-        ce = tf.losses.binary_crossentropy(y_pred=y_pred,
-                                           y_true=tf.reshape(y_true, tf.shape(y_pred)),
-                                           from_logits=from_logits)
-        if class_weights is not None:
-            sample_weights = class_weights.lookup(
-                tf.cast(tf.reshape(y_true, tf.shape(ce)), dtype=class_weights.key_dtype))
-            ce = ce * sample_weights
-
-        ce = tf.reshape(ce, [tf.shape(ce)[0], -1])
-        ce = tf.reduce_mean(ce, 1)
+    assert isinstance(y_pred, torch.Tensor), "only support torch.Tensor as y_pred"
+    assert isinstance(y_true, torch.Tensor), "only support torch.Tensor as y_true"
+    y_true = y_true.to(y_pred.dtype)
+    if from_logits:
+        ce = torch.nn.BCEWithLogitsLoss(reduction="none")(input=y_pred, target=y_true.view(y_pred.size()))
     else:
-        y_true = y_true.to(y_pred.dtype)
-        if from_logits:
-            ce = torch.nn.BCEWithLogitsLoss(reduction="none")(input=y_pred, target=y_true.view(y_pred.size()))
-        else:
-            ce = torch.nn.BCELoss(reduction="none")(input=y_pred, target=y_true.view(y_pred.size()))
+        ce = torch.nn.BCELoss(reduction="none")(input=y_pred, target=y_true.view(y_pred.size()))
 
-        if class_weights is not None:
-            sample_weights = torch.ones_like(y_true)
-            for key in class_weights.keys():
-                sample_weights[y_true == key] = class_weights[key]
-            ce = ce * sample_weights.reshape(ce.shape)
+    if class_weights is not None:
+        sample_weights = torch.ones_like(y_true)
+        for key in class_weights.keys():
+            sample_weights[y_true == key] = class_weights[key]
+        ce = ce * sample_weights.reshape(ce.shape)
 
-        ce = ce.view(ce.shape[0], -1)
-        ce = torch.mean(ce, dim=1)
+    ce = ce.view(ce.shape[0], -1)
+    ce = torch.mean(ce, dim=1)
 
     if average_loss:
         ce = reduce_mean(ce)

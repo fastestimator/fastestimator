@@ -34,6 +34,7 @@ class WordtoId(NumpyOp):
         ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
             ds_ids except for a particular one, you can pass an argument like "!ds1".
     """
+
     def __init__(self,
                  mapping: Union[Dict[str, int], Callable[[List[str]], List[int]]],
                  inputs: Union[str, Iterable[str]],

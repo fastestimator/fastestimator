@@ -19,8 +19,8 @@ import numpy as np
 from PIL import Image, ImageEnhance
 
 from fastestimator.op.numpyop.numpyop import NumpyOp
-from fastestimator.util.traceability_util import traceable
 from fastestimator.util.base_util import param_to_range
+from fastestimator.util.traceability_util import traceable
 
 
 @traceable()
@@ -72,6 +72,8 @@ class Contrast(NumpyOp):
 
     @staticmethod
     def _apply_contrast(data: np.ndarray, factor: float) -> np.ndarray:
+        if data.dtype != np.uint8:
+            raise ValueError(f"Contrast requires uint8 input, got {data.dtype}")
         im = Image.fromarray(data)
         im = ImageEnhance.Contrast(im).enhance(factor)
         return np.array(im)

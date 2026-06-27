@@ -16,7 +16,7 @@ import os
 import tempfile
 import unittest
 
-from fastestimator.test.unittest_util import sample_system_object
+from fastestimator.test.unittest_util import sample_system_object_torch
 from fastestimator.trace.io import RestoreWizard
 from fastestimator.util.data import Data
 
@@ -32,7 +32,7 @@ class TestRestoreWizard(unittest.TestCase):
     def test_save(self):
         save_path = tempfile.mkdtemp()
         restore_wizard = RestoreWizard(directory=save_path)
-        restore_wizard.system = sample_system_object()
+        restore_wizard.system = sample_system_object_torch()
         restore_wizard.on_begin(Data())
         restore_wizard.on_epoch_end(Data())
         with self.subTest("Check Saved Files (1)"):
@@ -73,14 +73,14 @@ class TestRestoreWizard(unittest.TestCase):
         epoch_idx = 10
 
         restore_wizard = RestoreWizard(directory=save_path)
-        restore_wizard.system = sample_system_object()
+        restore_wizard.system = sample_system_object_torch()
         restore_wizard.on_begin(Data())
         restore_wizard.system.global_step = global_step
         restore_wizard.system.epoch_idx = epoch_idx
         restore_wizard.on_epoch_end(Data())
 
         restore_wizard = RestoreWizard(directory=save_path)
-        restore_wizard.system = sample_system_object()
+        restore_wizard.system = sample_system_object_torch()
         data = Data()
         restore_wizard.on_begin(data)
         with self.subTest("Check print message"):

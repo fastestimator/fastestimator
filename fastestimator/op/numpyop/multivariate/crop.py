@@ -51,6 +51,7 @@ class Crop(MultiVariateAlbumentation):
     Image types:
         uint8, float32
     """
+
     def __init__(self,
                  x_min: int = 0,
                  y_min: int = 0,

@@ -13,10 +13,9 @@
 # limitations under the License.
 # ==============================================================================
 from collections import defaultdict
-from typing import Any, Dict, List, Optional, Sequence, Iterable, Tuple, TypeVar, Union
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple, TypeVar, Union
 
 import numpy as np
-import tensorflow as tf
 import torch
 
 from fastestimator.backend._concat import concat
@@ -24,14 +23,17 @@ from fastestimator.backend._reduce_max import reduce_max
 from fastestimator.backend._reduce_min import reduce_min
 from fastestimator.backend._squeeze import squeeze
 from fastestimator.trace.trace import Trace
+from fastestimator.util.base_util import to_list
 from fastestimator.util.data import Data
 from fastestimator.util.img_data import BatchDisplay, GridDisplay
 from fastestimator.util.traceability_util import traceable
 from fastestimator.util.util import to_number
-from fastestimator.util.base_util import to_list
 from fastestimator.xai.saliency import SaliencyNet
 
-Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
+# Breaking change: The Model TypeVar now only supports torch.nn.Module (PyTorch models).
+# TensorFlow models (tf.keras.Model) are no longer supported.
+# Please refer to the release notes or migration guide for details.
+Model = TypeVar('Model', bound=torch.nn.Module)
 
 
 @traceable()
@@ -75,7 +77,9 @@ class Saliency(Trace):
         # Model outputs are required due to inability to statically determine the number of outputs from a pytorch model
         self.class_key = class_key
         self.model_outputs = to_list(model_outputs)
-        super().__init__(inputs=to_list(self.class_key) + to_list(model_inputs), outputs=outputs, mode=mode,
+        super().__init__(inputs=to_list(self.class_key) + to_list(model_inputs),
+                         outputs=outputs,
+                         mode=mode,
                          ds_id=ds_id)
         self.smoothing = smoothing
         self.integrating = integrating
@@ -159,9 +163,11 @@ class Saliency(Trace):
                 min_val = reduce_min(val)
                 diff = reduce_max(val) - min_val
                 for outkey in self.outputs:
-                    columns.append(BatchDisplay(image=(0.3 * (sal[outkey] * (val - min_val) + min_val) + 0.3 * val +
-                                                       0.4 * sal[outkey] * diff + min_val),
-                                                title="{} {}".format(key, outkey)))
+                    columns.append(
+                        BatchDisplay(
+                            image=(0.3 * (sal[outkey] * (val - min_val) + min_val) + 0.3 * val +
+                                   0.4 * sal[outkey] * diff + min_val),
+                            title="{} {}".format(key, outkey)))
         for key in self.outputs:
             columns.append(BatchDisplay(image=masks[key], title=key, color_map="inferno"))
             if smoothed:

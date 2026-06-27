@@ -39,7 +39,6 @@ def get_dependency():
         'scipy',
         'PyLaTeX==1.4.1',
         'natsort==8.3.1',
-        'tensorflow_probability==0.22.1',
         'transformers==4.38.2',
         'torchinfo==1.7.2',
         'graphviz==0.20.1',
@@ -56,7 +55,7 @@ def get_dependency():
         'requests==2.32.2',
         'tqdm==4.66.5',
         'numpy==1.26.4',
-        'pyfiglet==0.8.post1',
+        'pyfiglet==1.0.4',
         'opencv-python==4.7.0.72',
         'pandas==2.0.1',
         'wget==3.2',
@@ -74,7 +73,8 @@ def get_dependency():
         'py-cpuinfo==9.0.0',
         'fastparquet==2024.2.0',
         'jax==0.4.33',
-        'jaxlib==0.4.33'
+        'jaxlib==0.4.33',
+        'tensorboard'
     ]
     return dependencies
 
@@ -83,16 +83,22 @@ setup(
     entry_points={"console_scripts": ["fastestimator = fastestimator.cli.main:main"]},
     name=get_name(),
     version=get_version(),
-    description="Deep learning framework",
+    description="A high-level deep learning library built on PyTorch",
     packages=find_packages(),
     package_dir={'': '.'},
-    long_description="FastEstimator is a high-level deep learning API. With the help of FastEstimator, you can easily \
-                    build a high-performance deep learning model and run it anywhere.",
+    long_description=
+    "FastEstimator is a high-level deep learning library built on PyTorch. With the help of FastEstimator, you can easily build a high-performance deep learning model and run it anywhere.",
     author="FastEstimator Dev",
     url='https://github.com/fastestimator/fastestimator',
     license="Apache License 2.0",
-    keywords="fastestimator tensorflow pytorch",
-    classifiers=["License :: OSI Approved :: Apache Software License", "Programming Language :: Python :: 3"],
+    keywords="fastestimator pytorch deep-learning machine-learning",
+    classifiers=[
+        "License :: OSI Approved :: Apache Software License",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
+    ],
     # Declare minimal set for installation
     install_requires=get_dependency(),
     python_requires='>=3.10.0',

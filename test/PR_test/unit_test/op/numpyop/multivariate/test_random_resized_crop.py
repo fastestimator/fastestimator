@@ -20,6 +20,7 @@ from fastestimator.op.numpyop.multivariate import RandomResizedCrop
 
 
 class TestRandomResizedCrop(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.height = 10

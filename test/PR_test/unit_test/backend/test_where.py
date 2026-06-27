@@ -15,7 +15,6 @@
 import unittest
 
 import numpy as np
-import tensorflow as tf
 import torch
 
 from fastestimator.backend import where
@@ -28,12 +27,6 @@ class TestWhere(unittest.TestCase):
         b = where(n > 4, n, -1)
         target = np.array([[-1, -1, -1], [-1, -1, 5], [6, 7, 8]])
         self.assertTrue(np.array_equal(b, target))
-
-    def test_tf(self):
-        n = tf.constant([[0, 1, 2], [3, 4, 5], [6, 7, 8]])
-        b = where(n > 4, n, -1)
-        target = np.array([[-1, -1, -1], [-1, -1, 5], [6, 7, 8]])
-        self.assertTrue(np.array_equal(b.numpy(), target))
 
     def test_torch(self):
         n = torch.Tensor([[0, 1, 2], [3, 4, 5], [6, 7, 8]])

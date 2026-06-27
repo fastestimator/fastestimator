@@ -19,7 +19,7 @@ from plotly.graph_objects import Parcoords
 
 from fastestimator.search.search import Search
 from fastestimator.search.visualize.vis_util import SearchData, _load_search_file
-from fastestimator.util.base_util import in_notebook, FigureFE
+from fastestimator.util.base_util import FigureFE, in_notebook
 
 
 def plot_parallel_coordinates(search: Union[Search, str],
@@ -61,21 +61,25 @@ def plot_parallel_coordinates(search: Union[Search, str],
     # Currently can't edit line width, but hopefully supported in the future:
     # https://github.com/plotly/plotly.js/issues/2573
 
-    fig = Parcoords(line={'colorscale': 'Viridis',
-                          'color': search.data[color_by],
-                          'colorbar': {'title': color_by},
-                          'showscale': True,
-                          'reversescale': reverse_colors},
-                    dimensions=[{'label': x,
-                                 'values': search.data[x],
-                                 'tickvals': list(
-                                     search.categorical_maps[x].values()) if x in search.categorical_maps else None,
-                                 'ticktext': list(
-                                     search.categorical_maps[x].keys()) if x in search.categorical_maps else None,
-                                 } for x in search.params + search.results],
-                    labelfont={'size': 12},
-                    tickfont={'size': 11},
-                    rangefont={'size': 12})
+    fig = Parcoords(
+        line={
+            'colorscale': 'Viridis',
+            'color': search.data[color_by],
+            'colorbar': {
+                'title': color_by
+            },
+            'showscale': True,
+            'reversescale': reverse_colors
+        },
+        dimensions=[{
+            'label': x,
+            'values': search.data[x],
+            'tickvals': list(search.categorical_maps[x].values()) if x in search.categorical_maps else None,
+            'ticktext': list(search.categorical_maps[x].keys()) if x in search.categorical_maps else None,
+        } for x in search.params + search.results],
+        labelfont={'size': 12},
+        tickfont={'size': 11},
+        rangefont={'size': 12})
 
     fig = FigureFE(data=fig, layout={'title': title, 'title_x': 0.5})
 

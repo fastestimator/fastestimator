@@ -22,6 +22,7 @@ def inputs3():
 
 
 class TestCombinedDataset(unittest.TestCase):
+
     def test_dataset(self):
         ds1 = GeneratorDataset(generator=inputs(), samples_per_epoch=10)
         ds2 = GeneratorDataset(generator=inputs(), samples_per_epoch=10)

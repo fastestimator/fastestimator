@@ -16,7 +16,19 @@ import math
 import random
 from collections import defaultdict
 from copy import deepcopy
-from typing import Any, Dict, Hashable, Iterable, List, Optional, Sequence, Tuple, Union, cast, overload
+from typing import (
+    Any,
+    Dict,
+    Hashable,
+    Iterable,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
+    cast,
+    overload,
+)
 
 import jsonpickle
 import numpy as np
@@ -98,6 +110,7 @@ class DatasetSummary:
 
 @traceable()
 class FEDataset(Dataset):
+
     def __len__(self) -> int:
         """Defines how many datapoints the dataset contains.
 

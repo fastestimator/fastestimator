@@ -15,10 +15,9 @@
 from typing import Optional, TypeVar
 
 import numpy as np
-import tensorflow as tf
 import torch
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
+Tensor = TypeVar('Tensor', torch.Tensor, np.ndarray)
 
 
 def squeeze(tensor: Tensor, axis: Optional[int] = None) -> Tensor:
@@ -30,14 +29,6 @@ def squeeze(tensor: Tensor, axis: Optional[int] = None) -> Tensor:
     b = fe.backend.squeeze(n)  # [[1, 2], [3, 4], [5, 6]]
     b = fe.backend.squeeze(n, axis=1)  # [[[1], [2]], [[3], [4]], [[5], [6]]]
     b = fe.backend.squeeze(n, axis=3)  # [[[1, 2]], [[3, 4]], [[5, 6]]]
-    ```
-
-    This method can be used with TensorFlow tensors:
-    ```python
-    t = tf.constant([[[[1],[2]]],[[[3],[4]]],[[[5],[6]]]])  # shape == (3, 1, 2, 1)
-    b = fe.backend.squeeze(t)  # [[1, 2], [3, 4], [5, 6]]
-    b = fe.backend.squeeze(t, axis=1)  # [[[1], [2]], [[3], [4]], [[5], [6]]]
-    b = fe.backend.squeeze(t, axis=3)  # [[[1, 2]], [[3, 4]], [[5, 6]]]
     ```
 
     This method can be used with PyTorch tensors:
@@ -58,9 +49,7 @@ def squeeze(tensor: Tensor, axis: Optional[int] = None) -> Tensor:
     Raises:
         ValueError: If `tensor` is an unacceptable data type.
     """
-    if tf.is_tensor(tensor):
-        return tf.squeeze(tensor, axis=axis)
-    elif isinstance(tensor, torch.Tensor):
+    if isinstance(tensor, torch.Tensor):
         if axis is None:
             return torch.squeeze(tensor)
         else:

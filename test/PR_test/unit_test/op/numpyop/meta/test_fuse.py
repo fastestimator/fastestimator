@@ -21,6 +21,7 @@ from fastestimator.op.numpyop.univariate import Minmax
 
 
 class TestFuse(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.output_shape = (28, 28, 3)

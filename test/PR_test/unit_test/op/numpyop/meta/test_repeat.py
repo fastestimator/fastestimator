@@ -21,6 +21,7 @@ from fastestimator.op.numpyop.meta import Repeat
 
 
 class TestRepeat(unittest.TestCase):
+
     def test_single_repeat_int(self):
         add_op = LambdaOp(inputs='x', outputs=('x', 'y'), fn=lambda x: (x + 1, x * x), mode='eval')
         repeat_op = Repeat(add_op, repeat=1)

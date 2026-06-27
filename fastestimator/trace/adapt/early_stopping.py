@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from operator import lt, gt
+from operator import gt, lt
 from typing import Optional
 
 import numpy as np
@@ -42,6 +42,7 @@ class EarlyStopping(Trace):
     Raises:
         ValueError: If `compare` is an invalid value or more than one `monitor` is provided.
     """
+
     def __init__(self,
                  monitor: str = "loss",
                  min_delta: float = 0.0,

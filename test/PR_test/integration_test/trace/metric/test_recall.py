@@ -14,7 +14,6 @@
 # ==============================================================================
 import unittest
 
-import tensorflow as tf
 import torch
 
 from fastestimator.test.unittest_util import TraceRun
@@ -22,6 +21,7 @@ from fastestimator.trace.metric import Recall
 
 
 class TestRecall(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.p_key = "recall"
@@ -36,8 +36,8 @@ class TestRecall(unittest.TestCase):
             with unittest.mock.patch("fastestimator.trace.metric.recall.recall_score") as fake:
                 kwargs = {"e1": "extra1", "e2": "extra2"}
                 trace = Recall(true_key="label", pred_key="pred", output_name=self.p_key, **kwargs)
-                batch = {"label": tf.constant([0, 1, 0, 1])}
-                pred = {"pred": tf.constant([[0.2], [0.6], [0.8], [0.1]])}  # [[0], [1], [1], [0]]
+                batch = {"label": torch.tensor([0, 1, 0, 1])}
+                pred = {"pred": torch.tensor([[0.2], [0.6], [0.8], [0.1]])}  # [[0], [1], [1], [0]]
                 run = TraceRun(trace=trace, batch=batch, prediction=pred)
                 run.run_trace()
 
@@ -45,25 +45,6 @@ class TestRecall(unittest.TestCase):
             for key, val in kwargs.items():
                 self.assertTrue(key in fake_kwargs)
                 self.assertEqual(val, fake_kwargs[key])
-
-    def test_tf_binary_class(self):
-        with self.subTest("ordinal label"):
-            trace = Recall(true_key="label", pred_key="pred", output_name=self.p_key)
-            # tp, tn, fp, fn = [1, 1, 1, 1]
-            batch = {"label": tf.constant([0, 1, 0, 1])}
-            pred = {"pred": tf.constant([[0.2], [0.6], [0.8], [0.1]])}  # [[0], [1], [1], [0]]
-            run = TraceRun(trace=trace, batch=batch, prediction=pred)
-            run.run_trace()
-            self.assertEqual(run.data_on_epoch_end[self.p_key], 0.5)  # recall = tp / (tp + fn) = 0.5
-
-        with self.subTest("one-hot label"):
-            trace = Recall(true_key="label", pred_key="pred", output_name=self.p_key)
-            # tp, tn, fp, fn = [2, 1, 0, 1]
-            batch = {"label": tf.constant([[1, 0], [0, 1], [0, 1], [0, 1]])}  #  [0, 1, 1, 1]
-            pred = {"pred": tf.constant([[0.2], [0.6], [0.8], [0.1]])}  #  [[0], [1], [1], [0]]
-            run = TraceRun(trace=trace, batch=batch, prediction=pred)
-            run.run_trace()
-            self.assertEqual(run.data_on_epoch_end[self.p_key], 2 / 3)  # recall = tp / (tp + fn) = 2/3
 
     def test_torch_binary_class(self):
         with self.subTest("ordinal label"):
@@ -83,43 +64,6 @@ class TestRecall(unittest.TestCase):
             run = TraceRun(trace=trace, batch=batch, prediction=pred)
             run.run_trace()
             self.assertEqual(run.data_on_epoch_end[self.p_key], 2 / 3)  # recall = tp / (tp + fn) = 2/3
-
-    def test_tf_multi_class(self):
-        with self.subTest("ordinal label"):
-            trace = Recall(true_key="label", pred_key="pred", output_name=self.p_key)
-            batch = {"label": tf.constant([0, 0, 0, 1, 1, 2])}
-            pred = {
-                "pred":
-                tf.constant([[0.2, 0.1, -0.6], [0.6, 2.0, 0.1], [0.1, 0.1, 0.8], [0.4, 0.1, -0.3], [0.2, 0.7, 0.1],
-                             [0.3, 0.6, 1.5]])  # [[0], [1], [2], [0], [1], [2]]
-            }
-            run = TraceRun(trace=trace, batch=batch, prediction=pred)
-            run.run_trace()
-            self.assertEqual(run.data_on_epoch_end[self.p_key][0],
-                             1 / 3)  # for 0, [tp, tn, fp, fn] = [1, 2, 1, 2], recall = 1/3
-            self.assertEqual(run.data_on_epoch_end[self.p_key][1],
-                             1 / 2)  # for 1, [tp, tn, fp, fn] = [1, 3, 1, 1], recall = 1/2
-            self.assertEqual(run.data_on_epoch_end[self.p_key][2],
-                             1)  # for 2, [tp, tn, fp, fn] = [1, 4, 1, 0], recall = 1
-
-        with self.subTest("one-hot label"):
-            trace = Recall(true_key="label", pred_key="pred", output_name=self.p_key)
-            batch = {
-                "label": tf.constant([[1, 0, 0], [1, 0, 0], [1, 0, 0], [0, 1, 0], [0, 1, 0], [0, 0, 1]])
-            }  # [0, 0, 0, 1, 1, 2]
-            pred = {
-                "pred":
-                tf.constant([[0.2, 0.1, -0.6], [0.6, 2.0, 0.1], [0.1, 0.1, 0.8], [0.4, 0.1, -0.3], [0.2, 0.7, 0.1],
-                             [0.3, 0.6, 1.5]])  # [[0], [1], [2], [0], [1], [2]]
-            }
-            run = TraceRun(trace=trace, batch=batch, prediction=pred)
-            run.run_trace()
-            self.assertEqual(run.data_on_epoch_end[self.p_key][0],
-                             1 / 3)  # for 0, [tp, tn, fp, fn] = [1, 2, 1, 2], recall = 1/3
-            self.assertEqual(run.data_on_epoch_end[self.p_key][1],
-                             1 / 2)  # for 1, [tp, tn, fp, fn] = [1, 3, 1, 1], recall = 1/2
-            self.assertEqual(run.data_on_epoch_end[self.p_key][2],
-                             1)  # for 2, [tp, tn, fp, fn] = [1, 4, 1, 0], recall = 1
 
     def test_torch_multi_class(self):
         with self.subTest("ordinal label"):

@@ -30,6 +30,7 @@ class NumpyDataset(InMemoryDataset):
         AssertionError: If any of the Numpy arrays or lists have differing numbers of elements.
         ValueError: If any dictionary value is not instance of Numpy array or list.
     """
+
     def __init__(self, data: Dict[str, Union[np.ndarray, List]]) -> None:
         size = None
         for val in data.values():

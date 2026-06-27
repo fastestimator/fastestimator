@@ -12,16 +12,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Set, TypeVar, Union
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Sequence,
+    Set,
+    TypeVar,
+    Union,
+)
 
-import tensorflow as tf
 import torch
 
 from fastestimator.op.op import Op
 from fastestimator.util.traceability_util import traceable
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
-Model = TypeVar('Model', tf.keras.Model, torch.nn.Module)
+Tensor = TypeVar('Tensor', bound=torch.Tensor)
+Model = TypeVar('Model', bound=torch.nn.Module)
 
 
 @traceable()
@@ -30,6 +40,7 @@ class TensorOp(Op):
 
     These Operators are used in fe.Network to perform graph-based operations like neural network training.
     """
+
     def forward(self, data: Union[Tensor, List[Tensor]], state: Dict[str, Any]) -> Union[Tensor, List[Tensor]]:
         """A method which will be invoked in order to transform data.
 
@@ -119,6 +130,7 @@ class LambdaOp(TensorOp):
         ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
             ds_ids except for a particular one, you can pass an argument like "!ds1".
     """
+
     def __init__(self,
                  fn: Callable,
                  inputs: Union[None, str, Iterable[str]] = None,
@@ -147,6 +159,7 @@ class Delete(TensorOp):
         ds_id: What dataset id(s) to execute this Op in. To execute regardless of ds_id, pass None. To execute in all
             ds_ids except for a particular one, you can pass an argument like "!ds1".
     """
+
     def __init__(self,
                  keys: Union[str, Sequence[str]],
                  mode: Union[None, str, Iterable[str]] = None,

@@ -15,13 +15,11 @@
 from typing import TypeVar
 
 import numpy as np
-import tensorflow as tf
-import tensorflow.keras.mixed_precision as mixed_precision
 import torch
 
 from fastestimator.backend._cast import cast
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
+Tensor = TypeVar('Tensor', torch.Tensor, np.ndarray)
 
 
 def convert_tensor_precision(tensor: Tensor) -> Tensor:
@@ -36,8 +34,5 @@ def convert_tensor_precision(tensor: Tensor) -> Tensor:
 
     """
     precision = 'float32'
-
-    if mixed_precision.global_policy().compute_dtype == 'float16':
-        precision = 'float16'
 
     return cast(tensor, precision)

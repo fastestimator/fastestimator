@@ -32,6 +32,7 @@ class ResNet9(nn.Module):
         ValueError: Length of `input_size` is not 3.
         ValueError: `input_size`[1] or `input_size`[2] is not a multiple of 16.
     """
+
     def __init__(self, input_size: Tuple[int, int, int] = (3, 32, 32), classes: int = 10):
         ResNet9._check_input_size(input_size)
         super().__init__()
@@ -95,6 +96,7 @@ class Residual(nn.Module):
     Args:
         channel: Number of input channels.
     """
+
     def __init__(self, channels: int):
         super().__init__()
         self.conv1 = nn.Conv2d(channels, channels, 3, padding=(1, 1))

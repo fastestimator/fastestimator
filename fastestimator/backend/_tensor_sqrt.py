@@ -15,10 +15,9 @@
 from typing import TypeVar
 
 import numpy as np
-import tensorflow as tf
 import torch
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor, np.ndarray)
+Tensor = TypeVar('Tensor', torch.Tensor, np.ndarray)
 
 
 def tensor_sqrt(tensor: Tensor) -> Tensor:
@@ -28,12 +27,6 @@ def tensor_sqrt(tensor: Tensor) -> Tensor:
     ```python
     n = np.array([[1, 4, 6], [4, 9, 16]])
     b = fe.backend.tensor_sqrt(n)  # [[1.0, 2.0, 2.44948974], [2.0, 3.0, 4.0]]
-    ```
-
-    This method can be used with TensorFlow tensors:
-    ```python
-    t = tf.constant([[1, 4, 6], [4, 9, 16]], dtype=tf.float32)
-    b = fe.backend.tensor_sqrt(t)  # [[1.0, 2.0, 2.4494898], [2.0, 3.0, 4.0]]
     ```
 
     This method can be used with PyTorch tensors:
@@ -51,9 +44,7 @@ def tensor_sqrt(tensor: Tensor) -> Tensor:
     Raises:
         ValueError: If `tensor` is an unacceptable data type.
     """
-    if tf.is_tensor(tensor):
-        return tf.sqrt(tensor)
-    elif isinstance(tensor, torch.Tensor):
+    if isinstance(tensor, torch.Tensor):
         return torch.sqrt(tensor)
     elif isinstance(tensor, np.ndarray):
         return np.sqrt(tensor)

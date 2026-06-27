@@ -14,7 +14,6 @@
 # ==============================================================================
 from typing import Any, Dict, Iterable, List, Tuple, TypeVar, Union
 
-import tensorflow as tf
 import torch
 
 from fastestimator.backend._huber import huber
@@ -24,7 +23,7 @@ from fastestimator.backend._smooth_l1_loss import smooth_l1_loss
 from fastestimator.op.tensorop.loss.loss import LossOp
 from fastestimator.util.traceability_util import traceable
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
+Tensor = TypeVar('Tensor', bound=torch.Tensor)
 
 
 @traceable()
@@ -38,7 +37,6 @@ class L1_Loss(LossOp):
         Huber loss: Is a criterion that uses squared loss if absolute element wise subtraction (y_pred - y_true) is less than
                     'beta' and a 'beta' scaled L1 loss otherwise.
 
-
     Args:
         inputs: A tuple or list like: [y_pred, y_true].
         outputs: String key under which to store the computed loss.
@@ -51,6 +49,7 @@ class L1_Loss(LossOp):
         loss_type: What type of L1 loss. Can either be 'L1' (L1 Loss), 'Smooth' (Smooth L1 Loss) or 'Huber' (Huber loss). Default:'L1'
         beta: A threshold at which to change between L1 and L2 loss. Needs to be a positive number. Default:1.0 . dtype: float16 or float32.
     """
+
     def __init__(self,
                  inputs: Union[Tuple[str, str], List[str]],
                  outputs: str,

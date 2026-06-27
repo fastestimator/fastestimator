@@ -25,25 +25,13 @@ import time
 from contextlib import ContextDecorator
 from functools import lru_cache
 from pathlib import Path
-from typing import (
-    Any,
-    Dict,
-    List,
-    MutableMapping,
-    Optional,
-    Tuple,
-    Type,
-    TypeVar,
-    Union,
-)
+from typing import Any, Dict, List, MutableMapping, Optional, Tuple, Type, TypeVar, Union
 
 import numpy as np
-import tensorflow as tf
 import torch
 import torch.backends.mps
 from cpuinfo import get_cpu_info
 from pyfiglet import Figlet
-from tensorflow.python.ops.logging_ops import print_v2
 
 from fastestimator.util.base_util import warn
 
@@ -66,21 +54,7 @@ STRING_TO_TORCH_DTYPE = {
     'bool': torch.bool
 }
 
-STRING_TO_TF_DTYPE = {
-    None: None,
-    "string": tf.string,
-    "int8": tf.int8,
-    "uint8": tf.uint8,
-    "int16": tf.int16,
-    "uint16": tf.uint16,
-    "int32": tf.int32,
-    "uint32": tf.uint32,
-    "int64": tf.int64,
-    "uint64": tf.uint64,
-    "float16": tf.float16,
-    "float32": tf.float32,
-    "float64": tf.float64
-}
+STRING_TO_TF_DTYPE = {None: None}
 
 TENSOR_TO_NP_DTYPE = {
     # Abstract types like 'float' and 'long' are intentionally not included here since they are never actually a
@@ -95,15 +69,6 @@ TENSOR_TO_NP_DTYPE = {
     torch.int32: np.int32,
     torch.int64: np.int64,
     torch.bool: bool,
-    tf.float32: np.float32,
-    tf.float64: np.float64,
-    tf.float16: np.float16,
-    tf.uint8: np.uint8,
-    tf.int8: np.int8,
-    tf.int16: np.int16,
-    tf.int32: np.int32,
-    tf.int64: np.int64,
-    tf.bool: bool,
     np.dtype('float32'): np.float32,
     np.dtype('float64'): np.float64,
     np.dtype('float16'): np.float16,
@@ -115,7 +80,7 @@ TENSOR_TO_NP_DTYPE = {
     np.dtype('bool'): bool,
 }
 
-Tensor = TypeVar('Tensor', tf.Tensor, torch.Tensor)
+Tensor = TypeVar('Tensor', bound=torch.Tensor)
 T = TypeVar('T')
 
 
@@ -161,11 +126,6 @@ class Suppressor(object):
         self.reals = [os.dup(1), os.dup(2)]  # [stdout, stderr]
         os.dup2(self.fake, 1)
         os.dup2(self.fake, 2)
-        # This avoids "OSError: [WinError 6] The handle is invalid" while logging tensorflow information in windows
-        for handler in tf.get_logger().handlers:
-            handler.setStream(sys.stderr)
-        if self.allow_pyprint:
-            tf.print = _custom_tf_print
 
     def __exit__(self, *exc: Tuple[Optional[Type], Optional[Exception], Optional[Any]]) -> None:
         # If there was an error, display any print messages
@@ -179,9 +139,6 @@ class Suppressor(object):
         # Set the python pointers back too
         sys.stdout, sys.stderr = self.py_reals[0], self.py_reals[1]
 
-        for handler in tf.get_logger().handlers:
-            handler.setStream(sys.stderr)
-
         # Clean up the descriptors
         for fd in self.reals:
             os.close(fd)
@@ -189,12 +146,6 @@ class Suppressor(object):
         if self.show_if_exception:
             # Clear the file
             open(self.stash_name, 'w').close()
-        if self.allow_pyprint:
-            tf.print = print_v2
-            with open(self.tf_print_name, 'r') as f:
-                for line in f:
-                    print(line, end='')  # Endings already included from tf.print
-            open(self.tf_print_name, 'w').close()
 
     def write(self, dummy: str) -> None:
         """A function which is invoked during print calls.
@@ -223,34 +174,38 @@ class Suppressor(object):
             pass
 
 
-def get_optimizer_name(model: Union[tf.keras.Model, torch.nn.Module]) -> str:
+def get_optimizer_name(model: torch.nn.Module) -> str:
     try:
         return type(model.optimizer).__name__
     except AttributeError:
         return model.optimizer
 
 
-def count_params(weights: List[Union[tf.Tensor, torch.Tensor]]) -> int:
+def count_params(weights: List[torch.Tensor]) -> int:
     shapes = [v.shape for v in weights]
     return int(sum(math.prod(p) for p in shapes))
 
 
-def get_model_parameters(model: Union[tf.keras.Model, torch.nn.Module]) -> Dict[str, int]:
-    if isinstance(model, tf.keras.Model):
-        trainable_params = count_params(model.trainable_weights)
-        non_trainable_params = count_params(model.non_trainable_weights)
-        total_params = trainable_params + non_trainable_params
-    elif isinstance(model, torch.nn.Module):
+def get_model_parameters(model: torch.nn.Module) -> Dict[str, int]:
+    if isinstance(model, torch.nn.Module):
         total_params = sum(p.numel() for p in model.parameters())
         trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     else:
-        raise ValueError("Model not recognized.")
+        try:
+            truncated_model = repr(model)
+        except (TypeError, RuntimeError) as e:
+            truncated_model = f'<repr failed: {e}>'
+        if len(truncated_model) > 100:
+            truncated_model = truncated_model[:100] + '...'
+        raise ValueError(
+            f"Model not recognized. Expected a torch.nn.Module, but received type '{type(model).__name__}' with value '{truncated_model}'."
+        )
     return {'total_params': total_params, 'trainable_params': trainable_params}
 
 
 def _custom_tf_print(*args, **kwargs):
     kwargs['output_stream'] = Suppressor.tf_print_name_f
-    print_v2(*args, **kwargs)
+    print(*args, **kwargs)
 
 
 def is_valid_file(file_path: str) -> bool:
@@ -268,8 +223,8 @@ def is_valid_file(file_path: str) -> bool:
     try:
         if suffix == '.zip':
             import zipfile
-            zip_file = zipfile.ZipFile(file_path)
-            _ = zip_file.namelist()
+            with zipfile.ZipFile(file_path) as zip_file:
+                _ = zip_file.namelist()
         elif suffix == '.gz':
             if file_path.endswith('.tar.gz'):
                 import tarfile
@@ -277,8 +232,8 @@ def is_valid_file(file_path: str) -> bool:
                     _ = img_tar.getmembers()
             else:
                 import gzip
-                f = gzip.open(file_path, 'rb')
-                _ = f.read()
+                with gzip.open(file_path, 'rb') as f:
+                    _ = f.read()
         return True
     except Exception as e:
         print(e)
@@ -300,8 +255,7 @@ class Timer(ContextDecorator):
     func()  # T2 took 0.14819 seconds
     ```
     """
-
-    def __init__(self, name="Task") -> None:
+    def __init__(self, name='Task') -> None:
         self.name = name
         self.start = None
         self.end = None
@@ -314,7 +268,7 @@ class Timer(ContextDecorator):
     def __exit__(self, *exc: Tuple[Optional[Type], Optional[Exception], Optional[Any]]) -> None:
         self.end = time.perf_counter()
         self.interval = self.end - self.start
-        tf.print("{} took {} seconds".format(self.name, self.interval))
+        print(f"{self.name} took {self.interval} seconds")
 
 
 def draw() -> None:
@@ -325,7 +279,7 @@ def draw() -> None:
 
 def pad_batch(batch: List[MutableMapping[str, np.ndarray]], pad_value: Union[float, int]) -> None:
     """A function to pad a batch of data in-place by appending to the ends of the tensors. Tensor type needs to be
-    numpy array otherwise would get ignored. (tf.Tensor and torch.Tensor will cause error)
+    numpy array otherwise would get ignored. (torch.Tensor will cause error)
 
     ```python
     data = [{"x": np.ones((2, 2)), "y": 8}, {"x": np.ones((3, 1)), "y": 4}]
@@ -378,26 +332,28 @@ def pad_data(data: np.ndarray, target_shape: Tuple[int, ...], pad_value: Union[f
     return np.pad(data, padded_shape, 'constant', constant_values=pad_value)
 
 
-def move_tensors_to_device(data: T, device: Union[str, torch.device]) -> T:
+def move_tensors_to_device(data: T, device: Union[str, torch.device], non_blocking: bool = False) -> T:
     """Move torch tensor (collections) between gpu and cpu recursively.
 
     Args:
         data: The input data to be moved.
         device: The target device.
+        non_blocking: Whether to perform the transfer asynchronously. When True and the source data is in pinned
+            memory, the transfer to GPU can overlap with computation.
 
     Returns:
         Output data.
     """
     if isinstance(data, dict):
-        return {key: move_tensors_to_device(value, device) for (key, value) in data.items()}
+        return {key: move_tensors_to_device(value, device, non_blocking) for (key, value) in data.items()}
     elif isinstance(data, list):
-        return [move_tensors_to_device(val, device) for val in data]
+        return [move_tensors_to_device(val, device, non_blocking) for val in data]
     elif isinstance(data, tuple):
-        return tuple([move_tensors_to_device(val, device) for val in data])
+        return tuple([move_tensors_to_device(val, device, non_blocking) for val in data])
     elif isinstance(data, set):
-        return set([move_tensors_to_device(val, device) for val in data])
+        return set([move_tensors_to_device(val, device, non_blocking) for val in data])
     elif isinstance(data, torch.Tensor):
-        return data.to(device)
+        return data.to(device, non_blocking=non_blocking)
     else:
         return data
 
@@ -572,7 +528,7 @@ def get_batch_size(data: Dict[str, Any]) -> int:
     return batch_size.pop()
 
 
-def to_number(data: Union[tf.Tensor, torch.Tensor, np.ndarray, int, float, str]) -> np.ndarray:
+def to_number(data: Union[torch.Tensor, np.ndarray, int, float, str]) -> np.ndarray:
     """Convert an input value into a Numpy ndarray.
 
     This method can be used with Python and Numpy data:
@@ -581,12 +537,6 @@ def to_number(data: Union[tf.Tensor, torch.Tensor, np.ndarray, int, float, str])
     b = fe.backend.to_number(4.0)  # 4.0 (type==np.ndarray)
     n = np.array([1, 2, 3])
     b = fe.backend.to_number(n)  # [1, 2, 3] (type==np.ndarray)
-    ```
-
-    This method can be used with TensorFlow tensors:
-    ```python
-    t = tf.constant([1, 2, 3])
-    b = fe.backend.to_number(t)  # [1, 2, 3] (type==np.ndarray)
     ```
 
     This method can be used with PyTorch tensors:
@@ -601,9 +551,7 @@ def to_number(data: Union[tf.Tensor, torch.Tensor, np.ndarray, int, float, str])
     Returns:
         An ndarray corresponding to the given `data`.
     """
-    if tf.is_tensor(data):
-        data = data.numpy()
-    elif isinstance(data, torch.Tensor):
+    if isinstance(data, torch.Tensor):
         if data.requires_grad:
             data = data.detach().numpy()
         else:

@@ -19,7 +19,7 @@ import unittest
 import cv2
 import numpy as np
 
-from fastestimator.test.unittest_util import sample_system_object
+from fastestimator.test.unittest_util import sample_system_object_torch
 from fastestimator.trace.io import ImageSaver
 from fastestimator.util.data import Data
 from fastestimator.util.img_data import BatchDisplay, GridDisplay
@@ -35,13 +35,15 @@ class TestImageSaver(unittest.TestCase):
         cls.mask = np.zeros_like(cls.input_img)
         cls.mask[0, 10:20, 10:30, :] = [1, 0, 0]
         bbox = np.array([[[3, 7, 10, 6, 'box1'], [20, 20, 8, 8, 'box2']]] * 1)
-        d = GridDisplay([BatchDisplay(text=np.ones((1, )), title='y'),
-                         BatchDisplay(image=cls.input_img, masks=cls.mask, bboxes=bbox, title='x')])
+        d = GridDisplay([
+            BatchDisplay(text=np.ones((1, )), title='y'),
+            BatchDisplay(image=cls.input_img, masks=cls.mask, bboxes=bbox, title='x')
+        ])
         cls.data = Data({'img': cls.input_img, 'img_data': d})
 
     def test_on_epoch_end(self):
         image_saver = ImageSaver(inputs='img', save_dir=self.image_dir)
-        image_saver.system = sample_system_object()
+        image_saver.system = sample_system_object_torch()
         image_saver.on_epoch_end(data=self.data)
         with self.subTest('Check if image is saved'):
             self.assertTrue(os.path.exists(self.image_path))
@@ -53,7 +55,7 @@ class TestImageSaver(unittest.TestCase):
         if os.path.exists(self.img_data_path):
             os.remove(self.img_data_path)
         image_saver = ImageSaver(inputs='img_data', save_dir=self.image_dir)
-        image_saver.system = sample_system_object()
+        image_saver.system = sample_system_object_torch()
         image_saver.on_epoch_end(data=self.data)
         with self.subTest('Check if image is saved'):
             self.assertTrue(os.path.exists(self.img_data_path))

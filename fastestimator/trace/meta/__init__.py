@@ -16,8 +16,7 @@ from typing import TYPE_CHECKING
 
 import lazy_loader as lazy
 
-__getattr__, __dir__, __all__ = lazy.attach(__name__,
-                                            submod_attrs={'_per_ds': ['per_ds']})
+__getattr__, __dir__, __all__ = lazy.attach(__name__, submod_attrs={'_per_ds': ['per_ds']})
 
 if TYPE_CHECKING:
     from fastestimator.trace.meta._per_ds import per_ds

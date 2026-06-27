@@ -13,7 +13,6 @@
 # limitations under the License.
 # ==============================================================================
 import numpy as np
-import tensorflow as tf
 import torch
 
 from fastestimator.types import ArrayT
@@ -26,12 +25,6 @@ def abs(tensor: ArrayT) -> ArrayT:
     ```python
     n = np.array([-2, 7, -19])
     b = fe.backend.abs(n)  # [2, 7, 19]
-    ```
-
-    This method can be used with TensorFlow tensors:
-    ```python
-    t = tf.constant([-2, 7, -19])
-    b = fe.backend.abs(t)  # [2, 7, 19]
     ```
 
     This method can be used with PyTorch tensors:
@@ -49,9 +42,7 @@ def abs(tensor: ArrayT) -> ArrayT:
     Raises:
         ValueError: If `tensor` is an unacceptable data type.
     """
-    if tf.is_tensor(tensor):
-        return tf.abs(tensor)
-    elif isinstance(tensor, torch.Tensor):
+    if isinstance(tensor, torch.Tensor):
         return torch.abs(tensor)
     elif isinstance(tensor, np.ndarray):
         return np.abs(tensor)
